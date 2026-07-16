@@ -8,7 +8,10 @@ import {
   RadioGroup,
   FormControlLabel,
   Radio,
-  Grid
+  Grid,
+  Select,
+  MenuItem,
+  InputLabel
 } from '@mui/material'
 import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -30,6 +33,11 @@ const tenantFormSchema = z.object({
   type: z.enum(['individual', 'company']).default('individual'),
   company_reg_no: z.string().optional().nullable(),
   representative_name: z.string().optional().nullable(),
+  preferred_language: z.enum(['ar', 'tr', 'en']).default('ar'),
+  emergency_contact_name: z.string().optional().nullable(),
+  emergency_contact_phone: z.string().optional().nullable(),
+  address: z.string().optional().nullable(),
+  notes: z.string().optional().nullable(),
   is_active: z.number().int().min(0).max(1).default(1)
 })
 
@@ -45,6 +53,11 @@ interface Tenant {
   type: 'individual' | 'company'
   company_reg_no?: string
   representative_name?: string
+  preferred_language?: string
+  emergency_contact_name?: string
+  emergency_contact_phone?: string
+  address?: string
+  notes?: string
   is_active: number
 }
 
@@ -70,6 +83,11 @@ export function TenantForm({ tenant, onSuccess, onCancel }: TenantFormProps): Re
         type: tenant.type,
         company_reg_no: tenant.company_reg_no || '',
         representative_name: tenant.representative_name || '',
+        preferred_language: (tenant.preferred_language as 'ar' | 'tr' | 'en') || 'ar',
+        emergency_contact_name: tenant.emergency_contact_name || '',
+        emergency_contact_phone: tenant.emergency_contact_phone || '',
+        address: tenant.address || '',
+        notes: tenant.notes || '',
         is_active: tenant.is_active
       }
     : {
@@ -81,6 +99,11 @@ export function TenantForm({ tenant, onSuccess, onCancel }: TenantFormProps): Re
         type: 'individual',
         company_reg_no: '',
         representative_name: '',
+        preferred_language: 'ar',
+        emergency_contact_name: '',
+        emergency_contact_phone: '',
+        address: '',
+        notes: '',
         is_active: 1
       }
 
@@ -227,6 +250,90 @@ export function TenantForm({ tenant, onSuccess, onCancel }: TenantFormProps): Re
                   label={t('tenant.email')}
                   fullWidth
                   error={!!errors.email}
+                />
+              )}
+            />
+          </Grid>
+
+          {/* Preferred communication language (FR-TEN-01) */}
+          <Grid size={{ xs: 12, sm: 6 }}>
+            <FormControl fullWidth>
+              <InputLabel>{t('tenant.preferredLanguage')}</InputLabel>
+              <Controller
+                name="preferred_language"
+                control={control}
+                render={({ field }) => (
+                  <Select {...field} label={t('tenant.preferredLanguage')}>
+                    <MenuItem value="ar">{t('tenant.langArabic')}</MenuItem>
+                    <MenuItem value="tr">{t('tenant.langTurkish')}</MenuItem>
+                    <MenuItem value="en">{t('tenant.langEnglish')}</MenuItem>
+                  </Select>
+                )}
+              />
+            </FormControl>
+          </Grid>
+
+          {/* Address */}
+          <Grid size={{ xs: 12, sm: 6 }}>
+            <Controller
+              name="address"
+              control={control}
+              render={({ field }) => (
+                <TextField
+                  {...field}
+                  value={field.value || ''}
+                  label={t('tenant.address')}
+                  fullWidth
+                />
+              )}
+            />
+          </Grid>
+
+          {/* Emergency contact name */}
+          <Grid size={{ xs: 12, sm: 6 }}>
+            <Controller
+              name="emergency_contact_name"
+              control={control}
+              render={({ field }) => (
+                <TextField
+                  {...field}
+                  value={field.value || ''}
+                  label={t('tenant.emergencyContactName')}
+                  fullWidth
+                />
+              )}
+            />
+          </Grid>
+
+          {/* Emergency contact phone */}
+          <Grid size={{ xs: 12, sm: 6 }}>
+            <Controller
+              name="emergency_contact_phone"
+              control={control}
+              render={({ field }) => (
+                <TextField
+                  {...field}
+                  value={field.value || ''}
+                  label={t('tenant.emergencyContactPhone')}
+                  fullWidth
+                />
+              )}
+            />
+          </Grid>
+
+          {/* Notes */}
+          <Grid size={12}>
+            <Controller
+              name="notes"
+              control={control}
+              render={({ field }) => (
+                <TextField
+                  {...field}
+                  value={field.value || ''}
+                  label={t('tenant.notes')}
+                  fullWidth
+                  multiline
+                  rows={2}
                 />
               )}
             />

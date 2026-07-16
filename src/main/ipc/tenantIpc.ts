@@ -2,7 +2,7 @@ import { ipcMain } from 'electron'
 import { db } from '../db/database'
 import { z } from 'zod'
 
-// Define Zod validation schemas for Tenant
+// Define Zod validation schemas for Tenant (SRS §8 + FR-TEN-01)
 const tenantCreateSchema = z.object({
   code: z
     .string()
@@ -16,6 +16,11 @@ const tenantCreateSchema = z.object({
   type: z.enum(['individual', 'company']).default('individual'),
   company_reg_no: z.string().optional().nullable(),
   representative_name: z.string().optional().nullable(),
+  preferred_language: z.enum(['ar', 'tr', 'en']).default('ar'),
+  emergency_contact_name: z.string().optional().nullable(),
+  emergency_contact_phone: z.string().optional().nullable(),
+  address: z.string().optional().nullable(),
+  notes: z.string().optional().nullable(),
   is_active: z.number().int().min(0).max(1).default(1)
 })
 
@@ -42,8 +47,14 @@ export function registerTenantIpcHandlers(): void {
             params.push(filters.is_active)
           }
           if (filters.search) {
-            query += ' AND (fullname LIKE ? OR code LIKE ? OR phone LIKE ?)'
-            params.push(`%${filters.search}%`, `%${filters.search}%`, `%${filters.search}%`)
+            // FR-TEN-05: search by name, national ID, or phone
+            query += ' AND (fullname LIKE ? OR code LIKE ? OR phone LIKE ? OR national_id LIKE ?)'
+            params.push(
+              `%${filters.search}%`,
+              `%${filters.search}%`,
+              `%${filters.search}%`,
+              `%${filters.search}%`
+            )
           }
         }
 
@@ -79,9 +90,11 @@ export function registerTenantIpcHandlers(): void {
 
       const stmt = db.prepare(`
         INSERT INTO tenants (
-          code, fullname, national_id, phone, email, type, company_reg_no, representative_name, is_active
+          code, fullname, national_id, phone, email, type, company_reg_no, representative_name,
+          preferred_language, emergency_contact_name, emergency_contact_phone, address, notes, is_active
         ) VALUES (
-          @code, @fullname, @national_id, @phone, @email, @type, @company_reg_no, @representative_name, @is_active
+          @code, @fullname, @national_id, @phone, @email, @type, @company_reg_no, @representative_name,
+          @preferred_language, @emergency_contact_name, @emergency_contact_phone, @address, @notes, @is_active
         )
       `)
 
@@ -119,6 +132,11 @@ export function registerTenantIpcHandlers(): void {
           type = @type,
           company_reg_no = @company_reg_no,
           representative_name = @representative_name,
+          preferred_language = @preferred_language,
+          emergency_contact_name = @emergency_contact_name,
+          emergency_contact_phone = @emergency_contact_phone,
+          address = @address,
+          notes = @notes,
           is_active = @is_active,
           updated_at = CURRENT_TIMESTAMP
         WHERE id = @id
