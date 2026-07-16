@@ -20,6 +20,8 @@ import DashboardIcon from '@mui/icons-material/Dashboard'
 import BusinessIcon from '@mui/icons-material/Business'
 import SettingsIcon from '@mui/icons-material/Settings'
 import TranslateIcon from '@mui/icons-material/Translate'
+import PeopleIcon from '@mui/icons-material/People'
+import DescriptionIcon from '@mui/icons-material/Description'
 
 const drawerWidth = 240
 
@@ -48,6 +50,8 @@ export default function Layout({ children }: LayoutProps): React.JSX.Element {
   const menuItems = [
     { text: t('sidebar.dashboard'), icon: <DashboardIcon />, path: '/' },
     { text: t('sidebar.properties'), icon: <BusinessIcon />, path: '/properties' },
+    { text: t('sidebar.tenants'), icon: <PeopleIcon />, path: '/tenants' },
+    { text: t('sidebar.contracts'), icon: <DescriptionIcon />, path: '/leases' },
     { text: t('sidebar.settings'), icon: <SettingsIcon />, path: '/settings' }
   ]
 

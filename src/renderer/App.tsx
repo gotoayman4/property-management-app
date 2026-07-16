@@ -8,6 +8,8 @@ import { getTheme } from './theme/theme'
 import Layout from './components/Layout'
 import Dashboard from './pages/dashboard/Dashboard'
 import PropertyList from './pages/properties/PropertyList'
+import { TenantList } from './pages/tenants/TenantList'
+import { LeaseList } from './pages/leases/LeaseList'
 import Settings from './pages/settings/Settings'
 import './i18n'
 
@@ -35,6 +37,14 @@ const router = createHashRouter([
         element: <PropertyList />
       },
       {
+        path: '/tenants',
+        element: <TenantList />
+      },
+      {
+        path: '/leases',
+        element: <LeaseList />
+      },
+      {
         path: '/settings',
         element: <Settings />
       }
@@ -52,7 +62,7 @@ export default function App(): React.JSX.Element {
   useEffect(() => {
     async function loadSettings(): Promise<void> {
       try {
-        const settings = await window.api.settings.get()
+        const settings = (await window.api.settings.get()) as { app_language?: string }
         if (settings && settings.app_language) {
           await i18n.changeLanguage(settings.app_language)
         }

@@ -73,7 +73,7 @@ export default function PropertyList(): React.JSX.Element {
         status: status || undefined,
         country: country || undefined
       })
-      setProperties(data)
+      setProperties(data as Property[])
     } catch (err: unknown) {
       console.error(err)
       setError(t('common.error'))
@@ -85,7 +85,7 @@ export default function PropertyList(): React.JSX.Element {
   const fetchCountries = useCallback(async (): Promise<void> => {
     try {
       const data = await window.api.countries.list()
-      setCountries(data)
+      setCountries(data as Country[])
     } catch (err) {
       console.error('Failed to load countries:', err)
     }
