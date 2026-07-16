@@ -19,7 +19,7 @@
 **Before filling this table, search the web or npm registry for the latest stable version of each package.** AI training data is stale — never trust AI-suggested version numbers without verification.
 
 | Layer                | Technology | Version |
-|----------------------|------------|---------|
+| -------------------- | ---------- | ------- |
 | Frontend framework   | [FILL]     | [FILL]  |
 | Language             | [FILL]     | [FILL]  |
 | Build tool           | [FILL]     | [FILL]  |
@@ -198,6 +198,7 @@ src/
 ## AI Response Format (Vibe Coder Optimized)
 
 Since the vibecoder developer cannot read the code, AI MUST optimize responses for behavioral understanding:
+
 - Describe WHAT changed in plain language (1-2 sentences), not HOW
 - Specify WHERE: file path + line range
 - Use file edit tools directly — never paste code blocks in chat
@@ -232,18 +233,18 @@ Since the vibecoder developer cannot read the code, AI MUST optimize responses f
 
 ## Installed AI Skills (scope notes)
 
-| Skill | Source | Apply to this project? |
-|-------|--------|------------------------|
-| `global-configs/skills/code-review.skill.md` | global-guidelines repo | ✅ Yes |
-| `global-configs/skills/test-generation.skill.md` | global-guidelines repo | ✅ Yes |
-| `global-configs/skills/refactoring.skill.md` | global-guidelines repo | ✅ Yes |
-| `global-configs/skills/security-audit.skill.md` | global-guidelines repo | ✅ Yes |
-| `global-configs/skills/performance-audit.skill.md` | global-guidelines repo | ✅ Yes |
-| `global-configs/skills/first-project-setup.skill.md` | global-guidelines repo | ✅ Yes |
-| `global-configs/skills/inno-setup.skill.md` | global-guidelines repo | ✅ Yes |
-| `global-configs/skills/deploy-production.skill.md` | global-guidelines repo | ✅ Yes |
-| `global-configs/skills/debug-without-code.skill.md` | global-guidelines repo | ✅ Yes |
-| [FILL additional skills] | [FILL] | [FILL] |
+| Skill                                                | Source                 | Apply to this project? |
+| ---------------------------------------------------- | ---------------------- | ---------------------- |
+| `global-configs/skills/code-review.skill.md`         | global-guidelines repo | ✅ Yes                 |
+| `global-configs/skills/test-generation.skill.md`     | global-guidelines repo | ✅ Yes                 |
+| `global-configs/skills/refactoring.skill.md`         | global-guidelines repo | ✅ Yes                 |
+| `global-configs/skills/security-audit.skill.md`      | global-guidelines repo | ✅ Yes                 |
+| `global-configs/skills/performance-audit.skill.md`   | global-guidelines repo | ✅ Yes                 |
+| `global-configs/skills/first-project-setup.skill.md` | global-guidelines repo | ✅ Yes                 |
+| `global-configs/skills/inno-setup.skill.md`          | global-guidelines repo | ✅ Yes                 |
+| `global-configs/skills/deploy-production.skill.md`   | global-guidelines repo | ✅ Yes                 |
+| `global-configs/skills/debug-without-code.skill.md`  | global-guidelines repo | ✅ Yes                 |
+| [FILL additional skills]                             | [FILL]                 | [FILL]                 |
 
 ---
 

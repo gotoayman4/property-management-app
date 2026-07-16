@@ -1,24 +1,24 @@
 ﻿{
-    "chat.useAgentsMdFile":  true,
-    "github.copilot.chat.commitMessageGeneration.instructions":  [
-                                                                     {
-                                                                         "file":  "AGENTS.md"
-                                                                     }
-                                                                 ],
-    "github.copilot.chat.codeGeneration.instructions":  [
-                                                            {
-                                                                "file":  "AGENTS.md"
-                                                            }
-                                                        ],
-    "chat.useNestedAgentsMdFiles":  true,
-    "github.copilot.chat.reviewSelection.instructions":  [
-                                                             {
-                                                                 "file":  "AGENTS.md"
-                                                             }
-                                                         ],
-    "github.copilot.chat.testGeneration.instructions":  [
-                                                            {
-                                                                "file":  "AGENTS.md"
-                                                            }
-                                                        ]
+  "chat.useAgentsMdFile": true,
+  "github.copilot.chat.commitMessageGeneration.instructions": [
+    {
+      "file": "AGENTS.md"
+    }
+  ],
+  "github.copilot.chat.codeGeneration.instructions": [
+    {
+      "file": "AGENTS.md"
+    }
+  ],
+  "chat.useNestedAgentsMdFiles": true,
+  "github.copilot.chat.reviewSelection.instructions": [
+    {
+      "file": "AGENTS.md"
+    }
+  ],
+  "github.copilot.chat.testGeneration.instructions": [
+    {
+      "file": "AGENTS.md"
+    }
+  ]
 }

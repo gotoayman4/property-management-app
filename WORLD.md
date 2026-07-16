@@ -45,6 +45,7 @@ The interface is **Arabic-first with full RTL layout**. English is fully support
 These are the boundaries. AI must not suggest features that cross these lines.
 
 ### NOT: A Cloud or Network Application
+
 - No cloud database (Firebase, Supabase, PostgreSQL on a server, MongoDB Atlas)
 - No REST API server, no GraphQL server, no NestJS backend, no Express server
 - No WebSockets, no real-time sync, no live collaboration
@@ -53,18 +54,21 @@ These are the boundaries. AI must not suggest features that cross these lines.
 - No SaaS subscription model, no multi-tenant cloud architecture
 
 ### NOT: A Mobile Application
+
 - No React Native, no Expo, no Capacitor, no Ionic
 - No mobile-first or touch-first design decisions
 - No responsive layout for screens smaller than 1280px — this is a desktop app
 - No PWA, no service workers
 
 ### NOT: A Multi-User or Enterprise System
+
 - No role-based cloud access control (RBAC with server enforcement)
 - No concurrent multi-user editing (SQLite is single-writer by design)
 - No Active Directory / LDAP / SSO integration
 - No audit sharing or collaborative workflow between multiple offices
 
 ### NOT: A Full Accounting System
+
 - No general ledger beyond property income/expense
 - No payroll, no tax filing, no VAT return submission to government APIs
 - No accounts payable / accounts receivable beyond rent and security deposits
@@ -77,29 +81,29 @@ These are the boundaries. AI must not suggest features that cross these lines.
 
 These features have been specifically considered and rejected. AI must not re-propose them.
 
-| Feature | Reason for Rejection | Date Decided |
-|---|---|---|
-| Cloud sync / remote database | Contradicts offline-first architecture; adds security surface | 2026-07-16 |
-| Mobile app (iOS / Android) | Windows desktop only; different UX paradigm; out of scope for v1 | 2026-07-16 |
-| Tenant-facing portal (web) | Adds web server requirement; violates offline-first constraint | 2026-07-16 |
-| Government e-invoicing API integration (Fatoorah, ZATCA) | External network dependency; regulatory complexity; future roadmap only | 2026-07-16 |
-| Email / SMS notifications | Requires network; SMTP server config; out of scope for v1 | 2026-07-16 |
-| Online payment collection (PayTabs, HyperPay) | Requires payment gateway API and internet; not offline-first | 2026-07-16 |
-| WhatsApp / Telegram messaging | External service dependency; not offline-first | 2026-07-16 |
-| Utility billing integration (electricity/water APIs) | External dependency; country-specific; future roadmap only | 2026-07-16 |
-| Predictive analytics / AI rent pricing | Requires cloud ML; out of scope for a local desktop tool | 2026-07-16 |
-| Multi-company / franchise management | Multi-tenant architecture; contradicts single-install model | 2026-07-16 |
-| Blockchain-based contract signing | No practical value for target users; tech complexity | 2026-07-16 |
+| Feature                                                  | Reason for Rejection                                                    | Date Decided |
+| -------------------------------------------------------- | ----------------------------------------------------------------------- | ------------ |
+| Cloud sync / remote database                             | Contradicts offline-first architecture; adds security surface           | 2026-07-16   |
+| Mobile app (iOS / Android)                               | Windows desktop only; different UX paradigm; out of scope for v1        | 2026-07-16   |
+| Tenant-facing portal (web)                               | Adds web server requirement; violates offline-first constraint          | 2026-07-16   |
+| Government e-invoicing API integration (Fatoorah, ZATCA) | External network dependency; regulatory complexity; future roadmap only | 2026-07-16   |
+| Email / SMS notifications                                | Requires network; SMTP server config; out of scope for v1               | 2026-07-16   |
+| Online payment collection (PayTabs, HyperPay)            | Requires payment gateway API and internet; not offline-first            | 2026-07-16   |
+| WhatsApp / Telegram messaging                            | External service dependency; not offline-first                          | 2026-07-16   |
+| Utility billing integration (electricity/water APIs)     | External dependency; country-specific; future roadmap only              | 2026-07-16   |
+| Predictive analytics / AI rent pricing                   | Requires cloud ML; out of scope for a local desktop tool                | 2026-07-16   |
+| Multi-company / franchise management                     | Multi-tenant architecture; contradicts single-install model             | 2026-07-16   |
+| Blockchain-based contract signing                        | No practical value for target users; tech complexity                    | 2026-07-16   |
 
 ---
 
 ## Target Users
 
-| Role | Description | Primary Needs |
-|---|---|---|
-| **Property Owner** | Non-technical individual who owns 10–200 rental units; primary decision-maker; uses the app directly | Dashboard KPIs, financial summary, tenant overview, quick rent collection status |
-| **Property Manager** | Day-to-day operator; may or may not be the owner; manages contracts, maintenance, and tenant communication | Tenant records, contract management, maintenance requests, invoice generation, payment recording |
-| **Accountant / Finance Officer** | Tracks income and expenses; produces reports for the owner | Ledger entries, payment history, recurring expenses, financial reports, Excel/HTML export |
+| Role                             | Description                                                                                                | Primary Needs                                                                                    |
+| -------------------------------- | ---------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
+| **Property Owner**               | Non-technical individual who owns 10–200 rental units; primary decision-maker; uses the app directly       | Dashboard KPIs, financial summary, tenant overview, quick rent collection status                 |
+| **Property Manager**             | Day-to-day operator; may or may not be the owner; manages contracts, maintenance, and tenant communication | Tenant records, contract management, maintenance requests, invoice generation, payment recording |
+| **Accountant / Finance Officer** | Tracks income and expenses; produces reports for the owner                                                 | Ledger entries, payment history, recurring expenses, financial reports, Excel/HTML export        |
 
 ---
 
@@ -117,14 +121,14 @@ These features have been specifically considered and rejected. AI must not re-pr
 
 ## Scale Expectations
 
-| Metric | Launch | 12-Month Projection | 24-Month Projection |
-|---|---|---|---|
-| Users per install | 1 (single-user) | 1–3 (owner + staff on same PC) | 1–3 |
-| Properties per install | 1–5 | 1–10 | 1–20 |
-| Units per install | 10–100 | 10–200 | 10–500 |
-| Tenants per install | 10–200 | 10–500 | 10–1,000 |
-| Ledger entries per install | 500–5,000/year | 1,000–20,000/year | up to 50,000/year |
-| Concurrent users | 1 (SQLite single-writer) | 1 | 1 |
+| Metric                     | Launch                   | 12-Month Projection            | 24-Month Projection |
+| -------------------------- | ------------------------ | ------------------------------ | ------------------- |
+| Users per install          | 1 (single-user)          | 1–3 (owner + staff on same PC) | 1–3                 |
+| Properties per install     | 1–5                      | 1–10                           | 1–20                |
+| Units per install          | 10–100                   | 10–200                         | 10–500              |
+| Tenants per install        | 10–200                   | 10–500                         | 10–1,000            |
+| Ledger entries per install | 500–5,000/year           | 1,000–20,000/year              | up to 50,000/year   |
+| Concurrent users           | 1 (SQLite single-writer) | 1                              | 1                   |
 
 SQLite handles these volumes with ease. No sharding, partitioning, or caching strategy is needed for the foreseeable future.
 
@@ -177,6 +181,7 @@ This app has no network state. There is no SWR, React Query, or any server-state
 ---
 
 **Cross-References:**
+
 - Canonical requirements: `SRS_Property_Management_App_EN.md`
 - Project constitution: `AGENTS.md`
 - Document navigation: `ARCHITECTURE_INDEX.md`

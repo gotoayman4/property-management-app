@@ -3,6 +3,26 @@ import { ElectronAPI } from '@electron-toolkit/preload'
 declare global {
   interface Window {
     electron: ElectronAPI
-    api: unknown
+    api: {
+      countries: {
+        list: () => Promise<unknown[]>
+      }
+      properties: {
+        list: (filters?: {
+          type?: string
+          status?: string
+          country?: string
+          search?: string
+        }) => Promise<unknown[]>
+        get: (id: number) => Promise<unknown>
+        create: (data: unknown) => Promise<unknown>
+        update: (data: unknown) => Promise<unknown>
+        delete: (id: number) => Promise<{ success: boolean }>
+      }
+      settings: {
+        get: () => Promise<unknown>
+        update: (data: unknown) => Promise<{ success: boolean; settings: unknown }>
+      }
+    }
   }
 }

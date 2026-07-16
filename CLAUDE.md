@@ -16,16 +16,16 @@
 
 ## Tech Stack (pinned versions — do not suggest alternatives)
 
-| Layer                | Technology            | Version          |
-|----------------------|-----------------------|------------------|
-| Frontend framework   | [FILL]                | [FILL]           |
-| Language             | [FILL]                | [FILL]           |
-| Build tool           | [FILL]                | [FILL]           |
-| UI component library | [FILL]                | [FILL]           |
-| Backend framework    | [FILL]                | [FILL]           |
-| Database             | [FILL]                | [FILL]           |
-| Auth                 | [FILL]                | [FILL]           |
-| Hosting              | [FILL]                | [FILL]           |
+| Layer                | Technology | Version |
+| -------------------- | ---------- | ------- |
+| Frontend framework   | [FILL]     | [FILL]  |
+| Language             | [FILL]     | [FILL]  |
+| Build tool           | [FILL]     | [FILL]  |
+| UI component library | [FILL]     | [FILL]  |
+| Backend framework    | [FILL]     | [FILL]  |
+| Database             | [FILL]     | [FILL]  |
+| Auth                 | [FILL]     | [FILL]  |
+| Hosting              | [FILL]     | [FILL]  |
 
 **Do not suggest:** [FILL — e.g., Next.js, Tailwind, Redux, Firebase]
 
@@ -198,6 +198,7 @@ src/
 ## AI Response Format (Vibe Coder Optimized)
 
 Since the developer cannot read code, AI MUST optimize responses for behavioral understanding:
+
 - Describe WHAT changed in plain language (1-2 sentences), not HOW
 - Specify WHERE: file path + line range
 - Use file edit tools directly — never paste code blocks in chat
@@ -229,6 +230,7 @@ Since the developer cannot read code, AI MUST optimize responses for behavioral 
 [FILL — Add rules specific to this project. Examples below:]
 
 ### [Project-specific category]
+
 - [FILL — project-specific mandate]
 - [FILL]
 

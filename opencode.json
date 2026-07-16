@@ -1,8 +1,6 @@
 ﻿{
   "$schema": "https://opencode.ai/config.json",
-  "instructions": [
-    "D:\\WebApps\\global-guidelines-for-a-vibe-coder\\_index\\RETRIEVAL_RULES.md"
-  ],
+  "instructions": ["D:\\WebApps\\global-guidelines-for-a-vibe-coder\\_index\\RETRIEVAL_RULES.md"],
   "permission": {
     "skill": { "*": "allow" }
   }
