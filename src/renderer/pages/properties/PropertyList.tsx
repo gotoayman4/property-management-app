@@ -19,7 +19,12 @@ import EditIcon from '@mui/icons-material/Edit'
 import DeleteIcon from '@mui/icons-material/Delete'
 import { GridColDef } from '@mui/x-data-grid'
 import StandardTable from '../../components/StandardTable'
+import ConfirmDialog from '../../components/ConfirmDialog'
+import GlobalSnackbar from '../../components/GlobalSnackbar'
+import PageHeader from '../../components/PageHeader'
+import { useSnackbar } from '../../hooks/useSnackbar'
 import PropertyForm from './PropertyForm'
+import BusinessIcon from '@mui/icons-material/Business'
 
 interface Property {
   id: number
@@ -46,6 +51,7 @@ interface Country {
 export default function PropertyList(): React.JSX.Element {
   const { t, i18n } = useTranslation()
   const isRtl = i18n.language === 'ar'
+  const { snack, showError, showSuccess, hideSnackbar } = useSnackbar()
 
   // State
   const [properties, setProperties] = useState<Property[]>([])
@@ -62,6 +68,8 @@ export default function PropertyList(): React.JSX.Element {
   // Dialog State
   const [dialogOpen, setDialogOpen] = useState(false)
   const [editingProperty, setEditingProperty] = useState<Property | null>(null)
+  // Property awaiting deletion confirmation (null = dialog closed)
+  const [pendingDeleteId, setPendingDeleteId] = useState<number | null>(null)
 
   const fetchProperties = useCallback(async (): Promise<void> => {
     setLoading(true)
@@ -111,20 +119,23 @@ export default function PropertyList(): React.JSX.Element {
     setDialogOpen(true)
   }
 
-  const handleDeleteClick = async (id: number): Promise<void> => {
-    const confirmDelete = window.confirm(
-      isRtl
-        ? 'هل أنت متأكد من رغبتك في أرشفة هذا العقار؟'
-        : 'Are you sure you want to archive this property?'
-    )
-    if (!confirmDelete) return
+  // Open the shared confirm dialog instead of window.confirm()
+  const handleDeleteClick = (id: number): void => {
+    setPendingDeleteId(id)
+  }
 
+  // Actually archive the property after the user confirms in ConfirmDialog
+  const confirmDelete = async (): Promise<void> => {
+    if (pendingDeleteId === null) return
+    const id = pendingDeleteId
+    setPendingDeleteId(null)
     try {
       await window.api.properties.delete(id)
+      showSuccess('common.deleteSuccess')
       fetchProperties()
     } catch (err) {
       console.error('Failed to delete property:', err)
-      alert(t('common.error'))
+      showError('common.deleteError')
     }
   }
 
@@ -231,19 +242,20 @@ export default function PropertyList(): React.JSX.Element {
 
   return (
     <Box>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-        <Typography variant="h4" sx={{ fontWeight: 700 }}>
-          {t('property.title')}
-        </Typography>
-        <Button
-          variant="contained"
-          color="primary"
-          startIcon={<AddIcon />}
-          onClick={handleAddClick}
-        >
-          {t('property.add')}
-        </Button>
-      </Box>
+      <PageHeader
+        icon={<BusinessIcon />}
+        title={t('property.title')}
+        action={
+          <Button
+            variant="contained"
+            color="primary"
+            startIcon={<AddIcon />}
+            onClick={handleAddClick}
+          >
+            {t('property.add')}
+          </Button>
+        }
+      />
 
       <Card sx={{ p: 2, mb: 3 }}>
         <Grid container spacing={2}>
@@ -318,7 +330,7 @@ export default function PropertyList(): React.JSX.Element {
               }}
               fullWidth
             >
-              {isRtl ? 'إعادة تعيين' : 'Reset'}
+              {t('common.reset')}
             </Button>
           </Grid>
         </Grid>
@@ -351,6 +363,18 @@ export default function PropertyList(): React.JSX.Element {
           countries={countries}
         />
       )}
+
+      {/* Archive confirmation */}
+      <ConfirmDialog
+        open={pendingDeleteId !== null}
+        title={t('common.confirmArchive')}
+        message={t('common.confirmArchive')}
+        confirmLabel={t('common.archive')}
+        onConfirm={confirmDelete}
+        onCancel={() => setPendingDeleteId(null)}
+      />
+
+      <GlobalSnackbar state={snack} onClose={hideSnackbar} />
     </Box>
   )
 }

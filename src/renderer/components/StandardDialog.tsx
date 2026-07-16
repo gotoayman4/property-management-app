@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useState } from 'react'
 import {
   Dialog,
   DialogTitle,
@@ -10,6 +10,7 @@ import {
 } from '@mui/material'
 import { Close as CloseIcon } from '@mui/icons-material'
 import { useTranslation } from 'react-i18next'
+import ConfirmDialog from './ConfirmDialog'
 
 interface StandardDialogProps {
   open: boolean
@@ -32,8 +33,10 @@ export default function StandardDialog({
   maxWidth = 'sm',
   fullWidth = true
 }: StandardDialogProps): React.JSX.Element {
-  const { i18n } = useTranslation()
+  const { t, i18n } = useTranslation()
   const isRtl = i18n.language === 'ar'
+  // Tracks whether the unsaved-changes sub-confirmation is open (2-level dialog max).
+  const [confirmCloseOpen, setConfirmCloseOpen] = useState(false)
 
   const handleClose = (_event: unknown, reason: 'backdropClick' | 'escapeKeyDown'): void => {
     // If the form has unsaved changes, prevent accidental closing by backdrop/escape
@@ -45,14 +48,9 @@ export default function StandardDialog({
 
   const handleCancelClick = (): void => {
     if (isDirty) {
-      const confirmClose = window.confirm(
-        isRtl
-          ? 'لديك تغييرات غير محفوظة، هل أنت متأكد من رغبتك في الإغلاق؟'
-          : 'You have unsaved changes. Are you sure you want to close?'
-      )
-      if (!confirmClose) {
-        return
-      }
+      // Dirty form — ask before discarding via the shared ConfirmDialog (not window.confirm)
+      setConfirmCloseOpen(true)
+      return
     }
     onClose()
   }
@@ -80,11 +78,11 @@ export default function StandardDialog({
           {title}
         </Typography>
         <IconButton
-          aria-label="close"
+          aria-label={t('common.close')}
           onClick={handleCancelClick}
           sx={{
             color: 'text.secondary',
-            [isRtl ? 'marginRight' : 'marginLeft']: 'auto'
+            marginInlineStart: 'auto'
           }}
         >
           <CloseIcon />
@@ -98,6 +96,20 @@ export default function StandardDialog({
       {actions && (
         <DialogActions sx={{ p: 2, justifyContent: 'flex-end', gap: 1 }}>{actions}</DialogActions>
       )}
+
+      {/* Unsaved-changes confirmation (sub-dialog, 2-level max) */}
+      <ConfirmDialog
+        open={confirmCloseOpen}
+        title={t('common.unsavedChanges')}
+        message={t('common.unsavedChanges')}
+        confirmLabel={t('common.close')}
+        severity="warning"
+        onConfirm={() => {
+          setConfirmCloseOpen(false)
+          onClose()
+        }}
+        onCancel={() => setConfirmCloseOpen(false)}
+      />
     </Dialog>
   )
 }

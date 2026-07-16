@@ -34,7 +34,6 @@ export default function Layout({ children }: LayoutProps): React.JSX.Element {
   const location = useLocation()
 
   const currentLanguage = i18n.language
-  const isRtl = currentLanguage === 'ar'
 
   const toggleLanguage = async (): Promise<void> => {
     const nextLang = currentLanguage === 'ar' ? 'en' : 'ar'
@@ -59,7 +58,7 @@ export default function Layout({ children }: LayoutProps): React.JSX.Element {
     <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
       <Toolbar sx={{ justifyContent: 'center' }}>
         <Typography variant="h5" color="primary" sx={{ fontWeight: 700 }}>
-          {isRtl ? 'أثـيـر العقاري' : 'Atheer Property'}
+          {t('app.brand')}
         </Typography>
       </Toolbar>
       <Divider />

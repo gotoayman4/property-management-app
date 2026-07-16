@@ -14,6 +14,8 @@ import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { useTranslation } from 'react-i18next'
+import GlobalSnackbar from '../../components/GlobalSnackbar'
+import { useSnackbar } from '../../hooks/useSnackbar'
 
 const tenantFormSchema = z.object({
   code: z
@@ -55,6 +57,7 @@ interface TenantFormProps {
 export function TenantForm({ tenant, onSuccess, onCancel }: TenantFormProps): React.ReactElement {
   const { t, i18n } = useTranslation()
   const isRtl = i18n.language === 'ar'
+  const { snack, showError, showSuccess, hideSnackbar } = useSnackbar()
   const isEdit = !!tenant
 
   const defaultValues: Partial<TenantFormValues> = tenant
@@ -101,6 +104,7 @@ export function TenantForm({ tenant, onSuccess, onCancel }: TenantFormProps): Re
       } else {
         await window.api.tenants.create(data)
       }
+      showSuccess('common.saveSuccess')
       onSuccess()
     } catch (err: unknown) {
       console.error(err)
@@ -108,176 +112,179 @@ export function TenantForm({ tenant, onSuccess, onCancel }: TenantFormProps): Re
       if (errorMessage === 'TENANT_CODE_DUPLICATE') {
         setError('code', { type: 'manual', message: t('tenant.codeUnique') })
       } else {
-        alert(t('common.error'))
+        showError('common.saveError')
       }
     }
   }
 
   return (
-    <Box component="form" onSubmit={handleSubmit(onSubmit)} sx={{ mt: 1 }}>
-      <Grid container spacing={3}>
-        {/* Tenant Type (Radio) */}
-        <Grid size={12}>
-          <FormControl component="fieldset">
-            <FormLabel component="legend">{t('tenant.type')}</FormLabel>
+    <>
+      <Box component="form" onSubmit={handleSubmit(onSubmit)} sx={{ mt: 1 }}>
+        <Grid container spacing={3}>
+          {/* Tenant Type (Radio) */}
+          <Grid size={12}>
+            <FormControl component="fieldset">
+              <FormLabel component="legend">{t('tenant.type')}</FormLabel>
+              <Controller
+                name="type"
+                control={control}
+                render={({ field }) => (
+                  <RadioGroup row {...field} sx={{ flexDirection: isRtl ? 'row-reverse' : 'row' }}>
+                    <FormControlLabel
+                      value="individual"
+                      control={<Radio />}
+                      label={t('tenant.individual')}
+                    />
+                    <FormControlLabel
+                      value="company"
+                      control={<Radio />}
+                      label={t('tenant.company')}
+                    />
+                  </RadioGroup>
+                )}
+              />
+            </FormControl>
+          </Grid>
+
+          {/* Tenant Code */}
+          <Grid size={{ xs: 12, sm: 6 }}>
             <Controller
-              name="type"
+              name="code"
               control={control}
               render={({ field }) => (
-                <RadioGroup row {...field} sx={{ flexDirection: isRtl ? 'row-reverse' : 'row' }}>
-                  <FormControlLabel
-                    value="individual"
-                    control={<Radio />}
-                    label={t('tenant.individual')}
-                  />
-                  <FormControlLabel
-                    value="company"
-                    control={<Radio />}
-                    label={t('tenant.company')}
-                  />
-                </RadioGroup>
+                <TextField
+                  {...field}
+                  label={t('tenant.code')}
+                  fullWidth
+                  error={!!errors.code}
+                  helperText={errors.code ? t(`tenant.${errors.code.message}`) : ''}
+                  disabled={isEdit}
+                />
               )}
             />
-          </FormControl>
+          </Grid>
+
+          {/* Full Name */}
+          <Grid size={{ xs: 12, sm: 6 }}>
+            <Controller
+              name="fullname"
+              control={control}
+              render={({ field }) => (
+                <TextField
+                  {...field}
+                  label={t('tenant.fullname')}
+                  fullWidth
+                  error={!!errors.fullname}
+                  helperText={errors.fullname ? t(`tenant.${errors.fullname.message}`) : ''}
+                />
+              )}
+            />
+          </Grid>
+
+          {/* National ID */}
+          <Grid size={{ xs: 12, sm: 6 }}>
+            <Controller
+              name="national_id"
+              control={control}
+              render={({ field }) => (
+                <TextField
+                  {...field}
+                  value={field.value || ''}
+                  label={t('tenant.nationalId')}
+                  fullWidth
+                  error={!!errors.national_id}
+                />
+              )}
+            />
+          </Grid>
+
+          {/* Phone */}
+          <Grid size={{ xs: 12, sm: 6 }}>
+            <Controller
+              name="phone"
+              control={control}
+              render={({ field }) => (
+                <TextField
+                  {...field}
+                  label={t('tenant.phone')}
+                  fullWidth
+                  error={!!errors.phone}
+                  helperText={errors.phone ? t(`tenant.${errors.phone.message}`) : ''}
+                />
+              )}
+            />
+          </Grid>
+
+          {/* Email */}
+          <Grid size={12}>
+            <Controller
+              name="email"
+              control={control}
+              render={({ field }) => (
+                <TextField
+                  {...field}
+                  value={field.value || ''}
+                  label={t('tenant.email')}
+                  fullWidth
+                  error={!!errors.email}
+                />
+              )}
+            />
+          </Grid>
+
+          {/* Company Conditional Fields */}
+          {tenantType === 'company' && (
+            <>
+              <Grid size={{ xs: 12, sm: 6 }}>
+                <Controller
+                  name="company_reg_no"
+                  control={control}
+                  render={({ field }) => (
+                    <TextField
+                      {...field}
+                      value={field.value || ''}
+                      label={t('tenant.companyRegNo')}
+                      fullWidth
+                    />
+                  )}
+                />
+              </Grid>
+              <Grid size={{ xs: 12, sm: 6 }}>
+                <Controller
+                  name="representative_name"
+                  control={control}
+                  render={({ field }) => (
+                    <TextField
+                      {...field}
+                      value={field.value || ''}
+                      label={t('tenant.representativeName')}
+                      fullWidth
+                    />
+                  )}
+                />
+              </Grid>
+            </>
+          )}
         </Grid>
 
-        {/* Tenant Code */}
-        <Grid size={{ xs: 12, sm: 6 }}>
-          <Controller
-            name="code"
-            control={control}
-            render={({ field }) => (
-              <TextField
-                {...field}
-                label={t('tenant.code')}
-                fullWidth
-                error={!!errors.code}
-                helperText={errors.code ? t(`tenant.${errors.code.message}`) : ''}
-                disabled={isEdit}
-              />
-            )}
-          />
-        </Grid>
-
-        {/* Full Name */}
-        <Grid size={{ xs: 12, sm: 6 }}>
-          <Controller
-            name="fullname"
-            control={control}
-            render={({ field }) => (
-              <TextField
-                {...field}
-                label={t('tenant.fullname')}
-                fullWidth
-                error={!!errors.fullname}
-                helperText={errors.fullname ? t(`tenant.${errors.fullname.message}`) : ''}
-              />
-            )}
-          />
-        </Grid>
-
-        {/* National ID */}
-        <Grid size={{ xs: 12, sm: 6 }}>
-          <Controller
-            name="national_id"
-            control={control}
-            render={({ field }) => (
-              <TextField
-                {...field}
-                value={field.value || ''}
-                label={t('tenant.nationalId')}
-                fullWidth
-                error={!!errors.national_id}
-              />
-            )}
-          />
-        </Grid>
-
-        {/* Phone */}
-        <Grid size={{ xs: 12, sm: 6 }}>
-          <Controller
-            name="phone"
-            control={control}
-            render={({ field }) => (
-              <TextField
-                {...field}
-                label={t('tenant.phone')}
-                fullWidth
-                error={!!errors.phone}
-                helperText={errors.phone ? t(`tenant.${errors.phone.message}`) : ''}
-              />
-            )}
-          />
-        </Grid>
-
-        {/* Email */}
-        <Grid size={12}>
-          <Controller
-            name="email"
-            control={control}
-            render={({ field }) => (
-              <TextField
-                {...field}
-                value={field.value || ''}
-                label={t('tenant.email')}
-                fullWidth
-                error={!!errors.email}
-              />
-            )}
-          />
-        </Grid>
-
-        {/* Company Conditional Fields */}
-        {tenantType === 'company' && (
-          <>
-            <Grid size={{ xs: 12, sm: 6 }}>
-              <Controller
-                name="company_reg_no"
-                control={control}
-                render={({ field }) => (
-                  <TextField
-                    {...field}
-                    value={field.value || ''}
-                    label={t('tenant.companyRegNo')}
-                    fullWidth
-                  />
-                )}
-              />
-            </Grid>
-            <Grid size={{ xs: 12, sm: 6 }}>
-              <Controller
-                name="representative_name"
-                control={control}
-                render={({ field }) => (
-                  <TextField
-                    {...field}
-                    value={field.value || ''}
-                    label={t('tenant.representativeName')}
-                    fullWidth
-                  />
-                )}
-              />
-            </Grid>
-          </>
-        )}
-      </Grid>
-
-      <Box
-        sx={{
-          display: 'flex',
-          justifyContent: 'flex-end',
-          gap: 2,
-          mt: 4,
-          flexDirection: isRtl ? 'row-reverse' : 'row'
-        }}
-      >
-        <Button variant="outlined" onClick={onCancel} disabled={isSubmitting}>
-          {t('common.cancel')}
-        </Button>
-        <Button type="submit" variant="contained" disabled={isSubmitting}>
-          {t('common.save')}
-        </Button>
+        <Box
+          sx={{
+            display: 'flex',
+            justifyContent: 'flex-end',
+            gap: 2,
+            mt: 4,
+            flexDirection: isRtl ? 'row-reverse' : 'row'
+          }}
+        >
+          <Button variant="outlined" onClick={onCancel} disabled={isSubmitting}>
+            {t('common.cancel')}
+          </Button>
+          <Button type="submit" variant="contained" disabled={isSubmitting}>
+            {t('common.save')}
+          </Button>
+        </Box>
       </Box>
-    </Box>
+      <GlobalSnackbar state={snack} onClose={hideSnackbar} />
+    </>
   )
 }

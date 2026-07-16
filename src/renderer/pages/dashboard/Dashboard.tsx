@@ -25,8 +25,7 @@ export default function Dashboard(): React.JSX.Element {
                   bgcolor: 'primary.lighter',
                   color: 'primary.main',
                   display: 'flex',
-                  mr: 2,
-                  ml: 2
+                  marginInline: 2
                 }}
               >
                 <BusinessIcon fontSize="large" />
@@ -52,8 +51,7 @@ export default function Dashboard(): React.JSX.Element {
                   bgcolor: 'secondary.lighter',
                   color: 'secondary.main',
                   display: 'flex',
-                  mr: 2,
-                  ml: 2
+                  marginInline: 2
                 }}
               >
                 <PeopleIcon fontSize="large" />
@@ -79,8 +77,7 @@ export default function Dashboard(): React.JSX.Element {
                   bgcolor: 'success.lighter',
                   color: 'success.main',
                   display: 'flex',
-                  mr: 2,
-                  ml: 2
+                  marginInline: 2
                 }}
               >
                 <WalletIcon fontSize="large" />

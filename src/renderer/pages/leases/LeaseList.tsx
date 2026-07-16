@@ -1,9 +1,13 @@
 import React, { useEffect, useState } from 'react'
-import { Box, Typography, Button, Chip, Alert } from '@mui/material'
-import { Add as AddIcon } from '@mui/icons-material'
+import { Box, Typography, Button, Chip } from '@mui/material'
+import { Add as AddIcon, Description as DescriptionIcon } from '@mui/icons-material'
 import { useTranslation } from 'react-i18next'
 import StandardTable from '../../components/StandardTable'
 import StandardDialog from '../../components/StandardDialog'
+import ConfirmDialog from '../../components/ConfirmDialog'
+import GlobalSnackbar from '../../components/GlobalSnackbar'
+import PageHeader from '../../components/PageHeader'
+import { useSnackbar } from '../../hooks/useSnackbar'
 import { LeaseForm } from './LeaseForm'
 import { GridColDef } from '@mui/x-data-grid'
 
@@ -26,9 +30,13 @@ interface Lease {
   notes?: string
 }
 
+/** Tracks which destructive action is pending confirmation. */
+type PendingAction = { id: number; kind: 'terminate' | 'delete' } | null
+
 export function LeaseList(): React.ReactElement {
   const { t, i18n } = useTranslation()
   const isRtl = i18n.language === 'ar'
+  const { snack, showError, showSuccess, hideSnackbar } = useSnackbar()
   const [leases, setLeases] = useState<Lease[]>([])
   const [loading, setLoading] = useState<boolean>(true)
   const [error, setError] = useState<string | null>(null)
@@ -36,6 +44,7 @@ export function LeaseList(): React.ReactElement {
   // Dialog state
   const [openDialog, setOpenDialog] = useState<boolean>(false)
   const [selectedLease, setSelectedLease] = useState<Lease | null>(null)
+  const [pendingAction, setPendingAction] = useState<PendingAction>(null)
 
   const fetchLeases = async (): Promise<void> => {
     try {
@@ -54,7 +63,6 @@ export function LeaseList(): React.ReactElement {
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchLeases()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   const handleAddClick = (): void => {
@@ -67,27 +75,33 @@ export function LeaseList(): React.ReactElement {
     setOpenDialog(true)
   }
 
-  const handleTerminateClick = async (id: number): Promise<void> => {
-    if (confirm(t('lease.terminateConfirm'))) {
-      try {
-        await window.api.leases.terminate(id)
-        fetchLeases()
-      } catch (err) {
-        console.error(err)
-        alert(t('common.error'))
-      }
-    }
+  // Open confirm dialog for terminate; actual call happens in confirmAction
+  const handleTerminateClick = (id: number): void => {
+    setPendingAction({ id, kind: 'terminate' })
   }
 
-  const handleDeleteClick = async (id: number): Promise<void> => {
-    if (confirm(t('common.confirm'))) {
-      try {
+  // Open confirm dialog for delete; actual call happens in confirmAction
+  const handleDeleteClick = (id: number): void => {
+    setPendingAction({ id, kind: 'delete' })
+  }
+
+  // Execute whichever destructive action the user confirmed
+  const confirmAction = async (): Promise<void> => {
+    if (!pendingAction) return
+    const { id, kind } = pendingAction
+    setPendingAction(null)
+    try {
+      if (kind === 'terminate') {
+        await window.api.leases.terminate(id)
+        showSuccess('common.saveSuccess')
+      } else {
         await window.api.leases.delete(id)
-        fetchLeases()
-      } catch (err) {
-        console.error(err)
-        alert(t('common.error'))
+        showSuccess('common.deleteSuccess')
       }
+      fetchLeases()
+    } catch (err) {
+      console.error(err)
+      showError('common.deleteError')
     }
   }
 
@@ -218,39 +232,28 @@ export function LeaseList(): React.ReactElement {
 
   return (
     <Box sx={{ py: 3, px: 4 }}>
-      <Box
-        sx={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          mb: 4,
-          flexDirection: isRtl ? 'row-reverse' : 'row'
-        }}
-      >
-        <Typography variant="h4" sx={{ fontWeight: 800 }}>
-          {t('lease.title')}
-        </Typography>
-        <Button
-          variant="contained"
-          startIcon={isRtl ? undefined : <AddIcon />}
-          endIcon={isRtl ? <AddIcon /> : undefined}
-          onClick={handleAddClick}
-          sx={{ px: 3, py: 1, borderRadius: 2 }}
-        >
-          {t('lease.add')}
-        </Button>
-      </Box>
-
-      {error && (
-        <Alert severity="error" sx={{ mb: 3 }}>
-          {error}
-        </Alert>
-      )}
+      <PageHeader
+        icon={<DescriptionIcon />}
+        title={t('lease.title')}
+        action={
+          <Button
+            variant="contained"
+            startIcon={isRtl ? undefined : <AddIcon />}
+            endIcon={isRtl ? <AddIcon /> : undefined}
+            onClick={handleAddClick}
+            sx={{ px: 3, py: 1, borderRadius: 2 }}
+          >
+            {t('lease.add')}
+          </Button>
+        }
+      />
 
       <StandardTable
         columns={columns}
         rows={leases}
         loading={loading}
+        error={error ?? undefined}
+        onRetry={fetchLeases}
         emptyMessage={t('lease.noLeases')}
       />
 
@@ -268,6 +271,29 @@ export function LeaseList(): React.ReactElement {
           onCancel={() => setOpenDialog(false)}
         />
       </StandardDialog>
+
+      {/* Terminate / delete confirmation — adapts labels to the pending action */}
+      <ConfirmDialog
+        open={pendingAction !== null}
+        title={
+          pendingAction?.kind === 'terminate'
+            ? t('lease.terminateConfirm')
+            : t('common.confirmDelete')
+        }
+        message={
+          pendingAction?.kind === 'terminate'
+            ? t('lease.terminateConfirm')
+            : t('common.confirmDelete')
+        }
+        confirmLabel={
+          pendingAction?.kind === 'terminate' ? t('lease.terminate') : t('common.delete')
+        }
+        severity={pendingAction?.kind === 'terminate' ? 'warning' : 'error'}
+        onConfirm={confirmAction}
+        onCancel={() => setPendingAction(null)}
+      />
+
+      <GlobalSnackbar state={snack} onClose={hideSnackbar} />
     </Box>
   )
 }

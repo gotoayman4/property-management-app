@@ -1,9 +1,13 @@
-import React, { useEffect, useState } from 'react'
-import { Box, Typography, Button, TextField, Chip, Alert } from '@mui/material'
-import { Add as AddIcon, Search as SearchIcon } from '@mui/icons-material'
+import React, { useCallback, useEffect, useState } from 'react'
+import { Box, Typography, Button, TextField, Chip } from '@mui/material'
+import { Add as AddIcon, Search as SearchIcon, People as PeopleIcon } from '@mui/icons-material'
 import { useTranslation } from 'react-i18next'
 import StandardTable from '../../components/StandardTable'
 import StandardDialog from '../../components/StandardDialog'
+import ConfirmDialog from '../../components/ConfirmDialog'
+import GlobalSnackbar from '../../components/GlobalSnackbar'
+import PageHeader from '../../components/PageHeader'
+import { useSnackbar } from '../../hooks/useSnackbar'
 import { TenantForm } from './TenantForm'
 import { GridColDef } from '@mui/x-data-grid'
 
@@ -23,6 +27,7 @@ interface Tenant {
 export function TenantList(): React.ReactElement {
   const { t, i18n } = useTranslation()
   const isRtl = i18n.language === 'ar'
+  const { snack, showError, showSuccess, hideSnackbar } = useSnackbar()
   const [tenants, setTenants] = useState<Tenant[]>([])
   const [loading, setLoading] = useState<boolean>(true)
   const [error, setError] = useState<string | null>(null)
@@ -33,8 +38,10 @@ export function TenantList(): React.ReactElement {
   // Dialog state
   const [openDialog, setOpenDialog] = useState<boolean>(false)
   const [selectedTenant, setSelectedTenant] = useState<Tenant | null>(null)
+  // Tenant id awaiting archive confirmation (null = dialog closed)
+  const [pendingDeleteId, setPendingDeleteId] = useState<number | null>(null)
 
-  const fetchTenants = async (): Promise<void> => {
+  const fetchTenants = useCallback(async (): Promise<void> => {
     try {
       setLoading(true)
       setError(null)
@@ -46,13 +53,15 @@ export function TenantList(): React.ReactElement {
     } finally {
       setLoading(false)
     }
-  }
+  }, [search, t])
 
+  // Refetch when the search filter changes. fetchTenants calls setLoading/setTenants internally,
+  // so the react-hooks/set-state-in-effect rule flags it — this is the canonical data-fetch
+  // pattern with a stable useCallback dependency, so the warning is a known false positive here.
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchTenants()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [search])
+  }, [fetchTenants])
 
   const handleAddClick = (): void => {
     setSelectedTenant(null)
@@ -64,15 +73,23 @@ export function TenantList(): React.ReactElement {
     setOpenDialog(true)
   }
 
-  const handleDeleteClick = async (id: number): Promise<void> => {
-    if (confirm(t('common.confirm'))) {
-      try {
-        await window.api.tenants.delete(id)
-        fetchTenants()
-      } catch (err) {
-        console.error(err)
-        alert(t('common.error'))
-      }
+  // Open the shared confirm dialog instead of confirm()
+  const handleDeleteClick = (id: number): void => {
+    setPendingDeleteId(id)
+  }
+
+  // Actually deactivate the tenant after the user confirms
+  const confirmDelete = async (): Promise<void> => {
+    if (pendingDeleteId === null) return
+    const id = pendingDeleteId
+    setPendingDeleteId(null)
+    try {
+      await window.api.tenants.delete(id)
+      showSuccess('common.deleteSuccess')
+      fetchTenants()
+    } catch (err) {
+      console.error(err)
+      showError('common.deleteError')
     }
   }
 
@@ -159,28 +176,21 @@ export function TenantList(): React.ReactElement {
 
   return (
     <Box sx={{ py: 3, px: 4 }}>
-      <Box
-        sx={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          mb: 4,
-          flexDirection: isRtl ? 'row-reverse' : 'row'
-        }}
-      >
-        <Typography variant="h4" sx={{ fontWeight: 800 }}>
-          {t('tenant.title')}
-        </Typography>
-        <Button
-          variant="contained"
-          startIcon={isRtl ? undefined : <AddIcon />}
-          endIcon={isRtl ? <AddIcon /> : undefined}
-          onClick={handleAddClick}
-          sx={{ px: 3, py: 1, borderRadius: 2 }}
-        >
-          {t('tenant.add')}
-        </Button>
-      </Box>
+      <PageHeader
+        icon={<PeopleIcon />}
+        title={t('tenant.title')}
+        action={
+          <Button
+            variant="contained"
+            startIcon={isRtl ? undefined : <AddIcon />}
+            endIcon={isRtl ? <AddIcon /> : undefined}
+            onClick={handleAddClick}
+            sx={{ px: 3, py: 1, borderRadius: 2 }}
+          >
+            {t('tenant.add')}
+          </Button>
+        }
+      />
 
       {/* Filters Bar */}
       <Box
@@ -206,16 +216,12 @@ export function TenantList(): React.ReactElement {
         />
       </Box>
 
-      {error && (
-        <Alert severity="error" sx={{ mb: 3 }}>
-          {error}
-        </Alert>
-      )}
-
       <StandardTable
         columns={columns}
         rows={tenants}
         loading={loading}
+        error={error ?? undefined}
+        onRetry={fetchTenants}
         emptyMessage={search ? t('tenant.noTenantsFiltered') : t('tenant.noTenants')}
       />
 
@@ -233,6 +239,18 @@ export function TenantList(): React.ReactElement {
           onCancel={() => setOpenDialog(false)}
         />
       </StandardDialog>
+
+      {/* Archive confirmation */}
+      <ConfirmDialog
+        open={pendingDeleteId !== null}
+        title={t('common.confirmArchive')}
+        message={t('common.confirmArchive')}
+        confirmLabel={t('common.archive')}
+        onConfirm={confirmDelete}
+        onCancel={() => setPendingDeleteId(null)}
+      />
+
+      <GlobalSnackbar state={snack} onClose={hideSnackbar} />
     </Box>
   )
 }

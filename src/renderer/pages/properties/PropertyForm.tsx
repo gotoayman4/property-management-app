@@ -14,6 +14,9 @@ import {
   FormHelperText
 } from '@mui/material'
 import StandardDialog from '../../components/StandardDialog'
+import GlobalSnackbar from '../../components/GlobalSnackbar'
+import { AmountField } from '../../components/AmountField'
+import { useSnackbar } from '../../hooks/useSnackbar'
 
 interface Property {
   id: number
@@ -71,6 +74,7 @@ export default function PropertyForm({
   countries
 }: PropertyFormProps): React.JSX.Element {
   const { t, i18n } = useTranslation()
+  const { snack, showError, showSuccess, hideSnackbar } = useSnackbar()
   const isEdit = !!property
 
   const {
@@ -115,6 +119,7 @@ export default function PropertyForm({
       } else {
         await window.api.properties.create(data)
       }
+      showSuccess('common.saveSuccess')
       onSuccess()
     } catch (err: unknown) {
       console.error(err)
@@ -122,7 +127,7 @@ export default function PropertyForm({
       if (errorMessage === 'PROPERTY_CODE_DUPLICATE') {
         setError('code', { type: 'manual', message: t('property.codeUnique') })
       } else {
-        alert(t('common.error'))
+        showError('common.saveError')
       }
     }
   }
@@ -145,176 +150,169 @@ export default function PropertyForm({
   )
 
   return (
-    <StandardDialog
-      open={open}
-      onClose={onClose}
-      title={isEdit ? t('property.editTitle') : t('property.add')}
-      actions={actions}
-      isDirty={isDirty}
-      maxWidth="md"
-    >
-      <form onSubmit={handleSubmit(onSubmit)}>
-        <Grid container spacing={2}>
-          <Grid size={{ xs: 12, sm: 6 }}>
-            <Controller
-              name="code"
-              control={control}
-              render={({ field }) => (
-                <TextField
-                  {...field}
-                  fullWidth
-                  label={t('property.code')}
-                  error={!!errors.code}
-                  helperText={errors.code ? t(`property.${errors.code.message}`) : ''}
-                  disabled={isEdit} // Disable editing the code once created
-                />
-              )}
-            />
-          </Grid>
-          <Grid size={{ xs: 12, sm: 6 }}>
-            <Controller
-              name="name"
-              control={control}
-              render={({ field }) => (
-                <TextField
-                  {...field}
-                  fullWidth
-                  label={t('property.name')}
-                  error={!!errors.name}
-                  helperText={errors.name ? t(`property.${errors.name.message}`) : ''}
-                />
-              )}
-            />
-          </Grid>
-          <Grid size={{ xs: 12, sm: 6 }}>
-            <FormControl fullWidth size="small" error={!!errors.type}>
-              <InputLabel>{t('property.type')}</InputLabel>
+    <>
+      <StandardDialog
+        open={open}
+        onClose={onClose}
+        title={isEdit ? t('property.editTitle') : t('property.add')}
+        actions={actions}
+        isDirty={isDirty}
+        maxWidth="md"
+      >
+        <form onSubmit={handleSubmit(onSubmit)}>
+          <Grid container spacing={2}>
+            <Grid size={{ xs: 12, sm: 6 }}>
               <Controller
-                name="type"
+                name="code"
                 control={control}
                 render={({ field }) => (
-                  <Select {...field} label={t('property.type')}>
-                    <MenuItem value="apartment">{t('property.apartment')}</MenuItem>
-                    <MenuItem value="shop">{t('property.shop')}</MenuItem>
-                  </Select>
+                  <TextField
+                    {...field}
+                    fullWidth
+                    label={t('property.code')}
+                    error={!!errors.code}
+                    helperText={errors.code ? t(`property.${errors.code.message}`) : ''}
+                    disabled={isEdit} // Disable editing the code once created
+                  />
                 )}
               />
-              {errors.type && (
-                <FormHelperText>{t(`property.${errors.type.message}`)}</FormHelperText>
-              )}
-            </FormControl>
-          </Grid>
-          <Grid size={{ xs: 12, sm: 6 }}>
-            <FormControl fullWidth size="small" error={!!errors.country}>
-              <InputLabel>{t('property.country')}</InputLabel>
+            </Grid>
+            <Grid size={{ xs: 12, sm: 6 }}>
               <Controller
-                name="country"
+                name="name"
                 control={control}
                 render={({ field }) => (
-                  <Select {...field} label={t('property.country')}>
-                    {countries.map((c) => (
-                      <MenuItem key={c.code} value={c.code}>
-                        {c.code === 'JO' && (i18n.language === 'ar' ? 'الأردن' : 'Jordan')}
-                        {c.code === 'TR' && (i18n.language === 'ar' ? 'تركيا' : 'Turkey')}
-                        {c.code === 'QA' && (i18n.language === 'ar' ? 'قطر' : 'Qatar')}
-                      </MenuItem>
-                    ))}
-                  </Select>
+                  <TextField
+                    {...field}
+                    fullWidth
+                    label={t('property.name')}
+                    error={!!errors.name}
+                    helperText={errors.name ? t(`property.${errors.name.message}`) : ''}
+                  />
                 )}
               />
-              {errors.country && (
-                <FormHelperText>{t(`property.${errors.country.message}`)}</FormHelperText>
-              )}
-            </FormControl>
-          </Grid>
-          <Grid size={{ xs: 12, sm: 6 }}>
-            <Controller
-              name="currency"
-              control={control}
-              render={({ field }) => (
-                <TextField
-                  {...field}
-                  fullWidth
-                  label={t('property.currency')}
-                  error={!!errors.currency}
-                  helperText={errors.currency ? t(`property.${errors.currency.message}`) : ''}
+            </Grid>
+            <Grid size={{ xs: 12, sm: 6 }}>
+              <FormControl fullWidth size="small" error={!!errors.type}>
+                <InputLabel>{t('property.type')}</InputLabel>
+                <Controller
+                  name="type"
+                  control={control}
+                  render={({ field }) => (
+                    <Select {...field} label={t('property.type')}>
+                      <MenuItem value="apartment">{t('property.apartment')}</MenuItem>
+                      <MenuItem value="shop">{t('property.shop')}</MenuItem>
+                    </Select>
+                  )}
                 />
-              )}
-            />
-          </Grid>
-          <Grid size={{ xs: 12, sm: 6 }}>
-            <Controller
-              name="monthly_rent_default"
-              control={control}
-              render={({ field: { value, onChange, ...rest } }) => (
-                <TextField
-                  {...rest}
-                  value={value}
-                  onChange={(e) => onChange(Number(e.target.value))}
-                  type="number"
-                  fullWidth
-                  label={t('property.monthlyRent')}
-                  error={!!errors.monthly_rent_default}
-                  helperText={errors.monthly_rent_default ? t('property.rentRequired') : ''}
+                {errors.type && (
+                  <FormHelperText>{t(`property.${errors.type.message}`)}</FormHelperText>
+                )}
+              </FormControl>
+            </Grid>
+            <Grid size={{ xs: 12, sm: 6 }}>
+              <FormControl fullWidth size="small" error={!!errors.country}>
+                <InputLabel>{t('property.country')}</InputLabel>
+                <Controller
+                  name="country"
+                  control={control}
+                  render={({ field }) => (
+                    <Select {...field} label={t('property.country')}>
+                      {countries.map((c) => (
+                        <MenuItem key={c.code} value={c.code}>
+                          {c.code === 'JO' && (i18n.language === 'ar' ? 'الأردن' : 'Jordan')}
+                          {c.code === 'TR' && (i18n.language === 'ar' ? 'تركيا' : 'Turkey')}
+                          {c.code === 'QA' && (i18n.language === 'ar' ? 'قطر' : 'Qatar')}
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  )}
                 />
-              )}
-            />
-          </Grid>
-          <Grid size={{ xs: 12, sm: 6 }}>
-            <Controller
-              name="area_sqm"
-              control={control}
-              render={({ field: { value, onChange, ...rest } }) => (
-                <TextField
-                  {...rest}
-                  value={value || ''}
-                  onChange={(e) => onChange(e.target.value === '' ? null : Number(e.target.value))}
-                  type="number"
-                  fullWidth
-                  label={t('property.area')}
-                  error={!!errors.area_sqm}
-                  helperText={errors.area_sqm ? t('property.areaInvalid') : ''}
-                />
-              )}
-            />
-          </Grid>
-          <Grid size={{ xs: 12, sm: 6 }}>
-            <FormControl fullWidth size="small" error={!!errors.status}>
-              <InputLabel>{t('common.status')}</InputLabel>
+                {errors.country && (
+                  <FormHelperText>{t(`property.${errors.country.message}`)}</FormHelperText>
+                )}
+              </FormControl>
+            </Grid>
+            <Grid size={{ xs: 12, sm: 6 }}>
               <Controller
-                name="status"
+                name="currency"
                 control={control}
                 render={({ field }) => (
-                  <Select {...field} label={t('common.status')}>
-                    <MenuItem value="vacant">{t('property.statusVacant')}</MenuItem>
-                    <MenuItem value="rented">{t('property.statusRented')}</MenuItem>
-                    <MenuItem value="maintenance">{t('property.statusMaintenance')}</MenuItem>
-                  </Select>
+                  <TextField
+                    {...field}
+                    fullWidth
+                    label={t('property.currency')}
+                    error={!!errors.currency}
+                    helperText={errors.currency ? t(`property.${errors.currency.message}`) : ''}
+                  />
                 )}
               />
-              {errors.status && <FormHelperText>{errors.status.message}</FormHelperText>}
-            </FormControl>
+            </Grid>
+            <Grid size={{ xs: 12, sm: 6 }}>
+              <AmountField
+                name="monthly_rent_default"
+                control={control}
+                label={t('property.monthlyRent')}
+                required
+                min={0}
+                allowEmpty={false}
+                errorText={errors.monthly_rent_default ? t('property.rentRequired') : undefined}
+              />
+            </Grid>
+            <Grid size={{ xs: 12, sm: 6 }}>
+              <AmountField
+                name="area_sqm"
+                control={control}
+                label={t('property.area')}
+                min={0}
+                errorText={errors.area_sqm ? t('property.areaInvalid') : undefined}
+              />
+            </Grid>
+            <Grid size={{ xs: 12, sm: 6 }}>
+              <FormControl fullWidth size="small" error={!!errors.status}>
+                <InputLabel>{t('common.status')}</InputLabel>
+                <Controller
+                  name="status"
+                  control={control}
+                  render={({ field }) => (
+                    <Select {...field} label={t('common.status')}>
+                      <MenuItem value="vacant">{t('property.statusVacant')}</MenuItem>
+                      <MenuItem value="rented">{t('property.statusRented')}</MenuItem>
+                      <MenuItem value="maintenance">{t('property.statusMaintenance')}</MenuItem>
+                    </Select>
+                  )}
+                />
+                {errors.status && <FormHelperText>{errors.status.message}</FormHelperText>}
+              </FormControl>
+            </Grid>
+            <Grid size={{ xs: 12 }}>
+              <Controller
+                name="address"
+                control={control}
+                render={({ field }) => (
+                  <TextField
+                    {...field}
+                    fullWidth
+                    multiline
+                    rows={2}
+                    label={t('property.address')}
+                  />
+                )}
+              />
+            </Grid>
+            <Grid size={{ xs: 12 }}>
+              <Controller
+                name="notes"
+                control={control}
+                render={({ field }) => (
+                  <TextField {...field} fullWidth multiline rows={2} label={t('property.notes')} />
+                )}
+              />
+            </Grid>
           </Grid>
-          <Grid size={{ xs: 12 }}>
-            <Controller
-              name="address"
-              control={control}
-              render={({ field }) => (
-                <TextField {...field} fullWidth multiline rows={2} label={t('property.address')} />
-              )}
-            />
-          </Grid>
-          <Grid size={{ xs: 12 }}>
-            <Controller
-              name="notes"
-              control={control}
-              render={({ field }) => (
-                <TextField {...field} fullWidth multiline rows={2} label={t('property.notes')} />
-              )}
-            />
-          </Grid>
-        </Grid>
-      </form>
-    </StandardDialog>
+        </form>
+      </StandardDialog>
+      <GlobalSnackbar state={snack} onClose={hideSnackbar} />
+    </>
   )
 }

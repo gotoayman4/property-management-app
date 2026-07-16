@@ -14,6 +14,8 @@ import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { useTranslation } from 'react-i18next'
+import GlobalSnackbar from '../../components/GlobalSnackbar'
+import { useSnackbar } from '../../hooks/useSnackbar'
 
 const leaseFormSchema = z
   .object({
@@ -81,6 +83,7 @@ interface LeaseFormProps {
 export function LeaseForm({ lease, onSuccess, onCancel }: LeaseFormProps): React.ReactElement {
   const { t, i18n } = useTranslation()
   const isRtl = i18n.language === 'ar'
+  const { snack, showError, showSuccess, hideSnackbar } = useSnackbar()
   const isEdit = !!lease
 
   const [properties, setProperties] = useState<Property[]>([])
@@ -164,6 +167,7 @@ export function LeaseForm({ lease, onSuccess, onCancel }: LeaseFormProps): React
       } else {
         await window.api.leases.create(data)
       }
+      showSuccess('common.saveSuccess')
       onSuccess()
     } catch (err: unknown) {
       console.error(err)
@@ -173,258 +177,261 @@ export function LeaseForm({ lease, onSuccess, onCancel }: LeaseFormProps): React
       } else if (errorMessage === 'LEASE_NUMBER_DUPLICATE') {
         setError('contract_number', { type: 'manual', message: t('lease.numberUnique') })
       } else {
-        alert(t('common.error'))
+        showError('common.saveError')
       }
     }
   }
 
   return (
-    <Box component="form" onSubmit={handleSubmit(onSubmit)} sx={{ mt: 1 }}>
-      <Grid container spacing={3}>
-        {/* Contract Number */}
-        <Grid size={{ xs: 12, sm: 6 }}>
-          <Controller
-            name="contract_number"
-            control={control}
-            render={({ field }) => (
-              <TextField
-                {...field}
-                label={t('lease.contractNumber')}
-                fullWidth
-                error={!!errors.contract_number}
-                helperText={
-                  errors.contract_number ? t(`lease.${errors.contract_number.message}`) : ''
-                }
-              />
-            )}
-          />
-        </Grid>
-
-        {/* Status */}
-        <Grid size={{ xs: 12, sm: 6 }}>
-          <FormControl fullWidth error={!!errors.status}>
-            <InputLabel id="lease-status-label">{t('lease.status')}</InputLabel>
+    <>
+      <Box component="form" onSubmit={handleSubmit(onSubmit)} sx={{ mt: 1 }}>
+        <Grid container spacing={3}>
+          {/* Contract Number */}
+          <Grid size={{ xs: 12, sm: 6 }}>
             <Controller
-              name="status"
+              name="contract_number"
               control={control}
               render={({ field }) => (
-                <Select labelId="lease-status-label" label={t('lease.status')} {...field}>
-                  <MenuItem value="draft">{t('lease.draft')}</MenuItem>
-                  <MenuItem value="active">{t('lease.active')}</MenuItem>
-                  <MenuItem value="expired">{t('lease.expired')}</MenuItem>
-                  <MenuItem value="terminated">{t('lease.terminated')}</MenuItem>
-                </Select>
+                <TextField
+                  {...field}
+                  label={t('lease.contractNumber')}
+                  fullWidth
+                  error={!!errors.contract_number}
+                  helperText={
+                    errors.contract_number ? t(`lease.${errors.contract_number.message}`) : ''
+                  }
+                />
               )}
             />
-          </FormControl>
-        </Grid>
+          </Grid>
 
-        {/* Property Selector */}
-        <Grid size={{ xs: 12, sm: 6 }}>
-          <FormControl fullWidth error={!!errors.property_id}>
-            <InputLabel id="property-select-label">{t('lease.property')}</InputLabel>
+          {/* Status */}
+          <Grid size={{ xs: 12, sm: 6 }}>
+            <FormControl fullWidth error={!!errors.status}>
+              <InputLabel id="lease-status-label">{t('lease.status')}</InputLabel>
+              <Controller
+                name="status"
+                control={control}
+                render={({ field }) => (
+                  <Select labelId="lease-status-label" label={t('lease.status')} {...field}>
+                    <MenuItem value="draft">{t('lease.draft')}</MenuItem>
+                    <MenuItem value="active">{t('lease.active')}</MenuItem>
+                    <MenuItem value="expired">{t('lease.expired')}</MenuItem>
+                    <MenuItem value="terminated">{t('lease.terminated')}</MenuItem>
+                  </Select>
+                )}
+              />
+            </FormControl>
+          </Grid>
+
+          {/* Property Selector */}
+          <Grid size={{ xs: 12, sm: 6 }}>
+            <FormControl fullWidth error={!!errors.property_id}>
+              <InputLabel id="property-select-label">{t('lease.property')}</InputLabel>
+              <Controller
+                name="property_id"
+                control={control}
+                render={({ field }) => (
+                  <Select
+                    labelId="property-select-label"
+                    label={t('lease.property')}
+                    {...field}
+                    value={field.value || ''}
+                    onChange={(e) => field.onChange(Number(e.target.value))}
+                  >
+                    {properties.map((p) => (
+                      <MenuItem key={p.id} value={p.id}>
+                        {p.name} ({p.code})
+                      </MenuItem>
+                    ))}
+                  </Select>
+                )}
+              />
+              {errors.property_id && (
+                <FormHelperText>{t(`lease.${errors.property_id.message}`)}</FormHelperText>
+              )}
+            </FormControl>
+          </Grid>
+
+          {/* Tenant Selector */}
+          <Grid size={{ xs: 12, sm: 6 }}>
+            <FormControl fullWidth error={!!errors.tenant_id}>
+              <InputLabel id="tenant-select-label">{t('lease.tenant')}</InputLabel>
+              <Controller
+                name="tenant_id"
+                control={control}
+                render={({ field }) => (
+                  <Select
+                    labelId="tenant-select-label"
+                    label={t('lease.tenant')}
+                    {...field}
+                    value={field.value || ''}
+                    onChange={(e) => field.onChange(Number(e.target.value))}
+                  >
+                    {tenants.map((t) => (
+                      <MenuItem key={t.id} value={t.id}>
+                        {t.fullname} ({t.code})
+                      </MenuItem>
+                    ))}
+                  </Select>
+                )}
+              />
+              {errors.tenant_id && (
+                <FormHelperText>{t(`lease.${errors.tenant_id.message}`)}</FormHelperText>
+              )}
+            </FormControl>
+          </Grid>
+
+          {/* Start Date */}
+          <Grid size={{ xs: 12, sm: 6 }}>
             <Controller
-              name="property_id"
+              name="start_date"
               control={control}
               render={({ field }) => (
-                <Select
-                  labelId="property-select-label"
-                  label={t('lease.property')}
+                <TextField
+                  {...field}
+                  label={t('lease.startDate')}
+                  type="date"
+                  fullWidth
+                  slotProps={{ inputLabel: { shrink: true } }}
+                  error={!!errors.start_date}
+                  helperText={errors.start_date ? t(`lease.${errors.start_date.message}`) : ''}
+                />
+              )}
+            />
+          </Grid>
+
+          {/* End Date */}
+          <Grid size={{ xs: 12, sm: 6 }}>
+            <Controller
+              name="end_date"
+              control={control}
+              render={({ field }) => (
+                <TextField
+                  {...field}
+                  label={t('lease.endDate')}
+                  type="date"
+                  fullWidth
+                  slotProps={{ inputLabel: { shrink: true } }}
+                  error={!!errors.end_date}
+                  helperText={errors.end_date ? t(`lease.${errors.end_date.message}`) : ''}
+                />
+              )}
+            />
+          </Grid>
+
+          {/* Rent Amount */}
+          <Grid size={{ xs: 12, sm: 6 }}>
+            <Controller
+              name="rent_amount"
+              control={control}
+              render={({ field }) => (
+                <TextField
                   {...field}
                   value={field.value || ''}
                   onChange={(e) => field.onChange(Number(e.target.value))}
-                >
-                  {properties.map((p) => (
-                    <MenuItem key={p.id} value={p.id}>
-                      {p.name} ({p.code})
-                    </MenuItem>
-                  ))}
-                </Select>
+                  label={t('lease.rentAmount')}
+                  type="number"
+                  fullWidth
+                  error={!!errors.rent_amount}
+                  helperText={errors.rent_amount ? t(`lease.${errors.rent_amount.message}`) : ''}
+                />
               )}
             />
-            {errors.property_id && (
-              <FormHelperText>{t(`lease.${errors.property_id.message}`)}</FormHelperText>
-            )}
-          </FormControl>
-        </Grid>
+          </Grid>
 
-        {/* Tenant Selector */}
-        <Grid size={{ xs: 12, sm: 6 }}>
-          <FormControl fullWidth error={!!errors.tenant_id}>
-            <InputLabel id="tenant-select-label">{t('lease.tenant')}</InputLabel>
+          {/* Currency (Locked based on property currency) */}
+          <Grid size={{ xs: 12, sm: 6 }}>
             <Controller
-              name="tenant_id"
+              name="currency"
               control={control}
               render={({ field }) => (
-                <Select
-                  labelId="tenant-select-label"
-                  label={t('lease.tenant')}
+                <TextField
+                  {...field}
+                  label={t('lease.currency')}
+                  fullWidth
+                  disabled
+                  error={!!errors.currency}
+                />
+              )}
+            />
+          </Grid>
+
+          {/* Payment Frequency */}
+          <Grid size={{ xs: 12, sm: 6 }}>
+            <FormControl fullWidth error={!!errors.payment_frequency}>
+              <InputLabel id="payment-frequency-label">{t('lease.frequency')}</InputLabel>
+              <Controller
+                name="payment_frequency"
+                control={control}
+                render={({ field }) => (
+                  <Select labelId="payment-frequency-label" label={t('lease.frequency')} {...field}>
+                    <MenuItem value="monthly">{t('lease.monthly')}</MenuItem>
+                    <MenuItem value="quarterly">{t('lease.quarterly')}</MenuItem>
+                    <MenuItem value="semi-annual">{t('lease.semiAnnual')}</MenuItem>
+                    <MenuItem value="annual">{t('lease.annual')}</MenuItem>
+                  </Select>
+                )}
+              />
+            </FormControl>
+          </Grid>
+
+          {/* Security Deposit */}
+          <Grid size={{ xs: 12, sm: 6 }}>
+            <Controller
+              name="security_deposit"
+              control={control}
+              render={({ field }) => (
+                <TextField
                   {...field}
                   value={field.value || ''}
                   onChange={(e) => field.onChange(Number(e.target.value))}
-                >
-                  {tenants.map((t) => (
-                    <MenuItem key={t.id} value={t.id}>
-                      {t.fullname} ({t.code})
-                    </MenuItem>
-                  ))}
-                </Select>
+                  label={t('lease.securityDeposit')}
+                  type="number"
+                  fullWidth
+                  error={!!errors.security_deposit}
+                />
               )}
             />
-            {errors.tenant_id && (
-              <FormHelperText>{t(`lease.${errors.tenant_id.message}`)}</FormHelperText>
-            )}
-          </FormControl>
-        </Grid>
+          </Grid>
 
-        {/* Start Date */}
-        <Grid size={{ xs: 12, sm: 6 }}>
-          <Controller
-            name="start_date"
-            control={control}
-            render={({ field }) => (
-              <TextField
-                {...field}
-                label={t('lease.startDate')}
-                type="date"
-                fullWidth
-                slotProps={{ inputLabel: { shrink: true } }}
-                error={!!errors.start_date}
-                helperText={errors.start_date ? t(`lease.${errors.start_date.message}`) : ''}
-              />
-            )}
-          />
-        </Grid>
-
-        {/* End Date */}
-        <Grid size={{ xs: 12, sm: 6 }}>
-          <Controller
-            name="end_date"
-            control={control}
-            render={({ field }) => (
-              <TextField
-                {...field}
-                label={t('lease.endDate')}
-                type="date"
-                fullWidth
-                slotProps={{ inputLabel: { shrink: true } }}
-                error={!!errors.end_date}
-                helperText={errors.end_date ? t(`lease.${errors.end_date.message}`) : ''}
-              />
-            )}
-          />
-        </Grid>
-
-        {/* Rent Amount */}
-        <Grid size={{ xs: 12, sm: 6 }}>
-          <Controller
-            name="rent_amount"
-            control={control}
-            render={({ field }) => (
-              <TextField
-                {...field}
-                value={field.value || ''}
-                onChange={(e) => field.onChange(Number(e.target.value))}
-                label={t('lease.rentAmount')}
-                type="number"
-                fullWidth
-                error={!!errors.rent_amount}
-                helperText={errors.rent_amount ? t(`lease.${errors.rent_amount.message}`) : ''}
-              />
-            )}
-          />
-        </Grid>
-
-        {/* Currency (Locked based on property currency) */}
-        <Grid size={{ xs: 12, sm: 6 }}>
-          <Controller
-            name="currency"
-            control={control}
-            render={({ field }) => (
-              <TextField
-                {...field}
-                label={t('lease.currency')}
-                fullWidth
-                disabled
-                error={!!errors.currency}
-              />
-            )}
-          />
-        </Grid>
-
-        {/* Payment Frequency */}
-        <Grid size={{ xs: 12, sm: 6 }}>
-          <FormControl fullWidth error={!!errors.payment_frequency}>
-            <InputLabel id="payment-frequency-label">{t('lease.frequency')}</InputLabel>
+          {/* Notes */}
+          <Grid size={12}>
             <Controller
-              name="payment_frequency"
+              name="notes"
               control={control}
               render={({ field }) => (
-                <Select labelId="payment-frequency-label" label={t('lease.frequency')} {...field}>
-                  <MenuItem value="monthly">{t('lease.monthly')}</MenuItem>
-                  <MenuItem value="quarterly">{t('lease.quarterly')}</MenuItem>
-                  <MenuItem value="semi-annual">{t('lease.semiAnnual')}</MenuItem>
-                  <MenuItem value="annual">{t('lease.annual')}</MenuItem>
-                </Select>
+                <TextField
+                  {...field}
+                  value={field.value || ''}
+                  label={t('lease.notes')}
+                  multiline
+                  rows={3}
+                  fullWidth
+                />
               )}
             />
-          </FormControl>
+          </Grid>
         </Grid>
 
-        {/* Security Deposit */}
-        <Grid size={{ xs: 12, sm: 6 }}>
-          <Controller
-            name="security_deposit"
-            control={control}
-            render={({ field }) => (
-              <TextField
-                {...field}
-                value={field.value || ''}
-                onChange={(e) => field.onChange(Number(e.target.value))}
-                label={t('lease.securityDeposit')}
-                type="number"
-                fullWidth
-                error={!!errors.security_deposit}
-              />
-            )}
-          />
-        </Grid>
-
-        {/* Notes */}
-        <Grid size={12}>
-          <Controller
-            name="notes"
-            control={control}
-            render={({ field }) => (
-              <TextField
-                {...field}
-                value={field.value || ''}
-                label={t('lease.notes')}
-                multiline
-                rows={3}
-                fullWidth
-              />
-            )}
-          />
-        </Grid>
-      </Grid>
-
-      <Box
-        sx={{
-          display: 'flex',
-          justifyContent: 'flex-end',
-          gap: 2,
-          mt: 4,
-          flexDirection: isRtl ? 'row-reverse' : 'row'
-        }}
-      >
-        <Button variant="outlined" onClick={onCancel} disabled={isSubmitting}>
-          {t('common.cancel')}
-        </Button>
-        <Button type="submit" variant="contained" disabled={isSubmitting}>
-          {t('common.save')}
-        </Button>
+        <Box
+          sx={{
+            display: 'flex',
+            justifyContent: 'flex-end',
+            gap: 2,
+            mt: 4,
+            flexDirection: isRtl ? 'row-reverse' : 'row'
+          }}
+        >
+          <Button variant="outlined" onClick={onCancel} disabled={isSubmitting}>
+            {t('common.cancel')}
+          </Button>
+          <Button type="submit" variant="contained" disabled={isSubmitting}>
+            {t('common.save')}
+          </Button>
+        </Box>
       </Box>
-    </Box>
+      <GlobalSnackbar state={snack} onClose={hideSnackbar} />
+    </>
   )
 }
