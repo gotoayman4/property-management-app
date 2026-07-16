@@ -45,6 +45,10 @@ coverage/
 .trae/
 .windsurf/
 .gemini/
+.zcode/
+
+# Lint cache
+.eslintcache
 
 # Mirrored global guidelines and skills (do commit these if desired, but we keep guidelines and skills as local references)
 _guidelines/
