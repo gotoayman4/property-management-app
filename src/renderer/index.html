@@ -2,12 +2,36 @@
 <html>
   <head>
     <meta charset="UTF-8" />
-    <title>Electron</title>
-    <!-- https://developer.mozilla.org/en-US/docs/Web/HTTP/CSP -->
+    <title>Atheer Property</title>
+    <!-- https://developer.mozilla.org/en-US/docs/Web/HTTP/CSP
+         'unsafe-inline' allowed on script-src solely for the first-paint direction
+         flicker script below (sets <html dir> before React mounts). -->
     <meta
       http-equiv="Content-Security-Policy"
-      content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:"
+      content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:"
     />
+    <script>
+      // INTENT: Set document direction before first paint to prevent an LTR->RTL flicker
+      //          on Arabic launches. Reads the persisted preference from localStorage,
+      //          falling back to navigator.language. Mirrors mui-rtl-bidirectional.md.
+      (function () {
+        try {
+          var saved = localStorage.getItem('app-dir')
+          if (saved === 'rtl' || saved === 'ltr') {
+            document.documentElement.setAttribute('dir', saved)
+          } else {
+            var lang = (navigator.language || '').toLowerCase()
+            if (lang.startsWith('ar') || lang.startsWith('he') || lang.startsWith('fa')) {
+              document.documentElement.setAttribute('dir', 'rtl')
+            } else {
+              document.documentElement.setAttribute('dir', 'ltr')
+            }
+          }
+        } catch (e) {
+          /* localStorage unavailable — ignore, React will set direction on mount */
+        }
+      })()
+    </script>
   </head>
 
   <body>

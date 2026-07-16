@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo } from 'react'
+import React, { useEffect, useMemo } from 'react'
 import { createHashRouter, RouterProvider, Outlet } from 'react-router-dom'
 import { CacheProvider } from '@emotion/react'
 import { ThemeProvider, CssBaseline } from '@mui/material'
@@ -54,25 +54,26 @@ const router = createHashRouter([
 
 export default function App(): React.JSX.Element {
   const { i18n } = useTranslation()
-  const [loading, setLoading] = useState(true)
 
   const direction = i18n.language === 'ar' ? 'rtl' : 'ltr'
 
-  // Fetch initial language setting from local SQLite database
+  // Reconcile the persisted DB language preference on launch. This runs AFTER first paint
+  // (i18n already initialized from localStorage 'app-dir' synchronously in i18n.ts), so the
+  // UI renders immediately with the correct direction. The DB is the canonical source per
+  // FR-SET-09; if it disagrees with localStorage we follow the DB and the languageChanged
+  // listener re-persists 'app-dir' to keep them aligned.
   useEffect(() => {
-    async function loadSettings(): Promise<void> {
+    async function reconcileLanguage(): Promise<void> {
       try {
         const settings = (await window.api.settings.get()) as { app_language?: string }
-        if (settings && settings.app_language) {
+        if (settings?.app_language && settings.app_language !== i18n.language) {
           await i18n.changeLanguage(settings.app_language)
         }
       } catch (err) {
         console.error('Failed to load initial settings from database:', err)
-      } finally {
-        setLoading(false)
       }
     }
-    loadSettings()
+    reconcileLanguage()
   }, [i18n])
 
   // Update layout direction whenever language changes
@@ -85,16 +86,6 @@ export default function App(): React.JSX.Element {
 
   const theme = useMemo(() => getTheme(direction), [direction])
   const cache = direction === 'rtl' ? cacheRtl : cacheLtr
-
-  if (loading) {
-    return (
-      <div
-        style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}
-      >
-        Loading Application...
-      </div>
-    )
-  }
 
   return (
     <CacheProvider value={cache} key={direction}>

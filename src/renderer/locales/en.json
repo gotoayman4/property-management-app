@@ -1,4 +1,8 @@
 {
+  "app": {
+    "brand": "Atheer Property",
+    "title": "Atheer Property"
+  },
   "sidebar": {
     "dashboard": "Dashboard",
     "properties": "Properties & Units",
@@ -16,13 +20,23 @@
     "actions": "Actions",
     "search": "Search...",
     "all": "All",
+    "reset": "Reset",
     "loading": "Loading...",
     "error": "An error occurred",
     "retry": "Retry",
     "noData": "No data available",
     "confirm": "Confirm",
     "status": "Status",
-    "success": "Operation completed successfully"
+    "success": "Operation completed successfully",
+    "saveSuccess": "Saved successfully",
+    "saveError": "Failed to save",
+    "deleteSuccess": "Deleted successfully",
+    "deleteError": "Failed to delete",
+    "confirmDelete": "Are you sure you want to delete this item?",
+    "confirmArchive": "Are you sure you want to archive this item?",
+    "unsavedChanges": "You have unsaved changes. Are you sure you want to close?",
+    "noRateAvailable": "No exchange rate on file",
+    "close": "Close"
   },
   "property": {
     "title": "Property Management",

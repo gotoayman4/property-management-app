@@ -10,6 +10,11 @@ import { resolve } from 'node:path'
  *           without leaking native-module loads into jsdom or DOM globals into Node.
  */
 export default defineConfig({
+  // Exclude Playwright E2E specs and config from Vitest discovery — they use
+  // @playwright/test, not vitest, and must not be collected here.
+  test: {
+    exclude: ['**/node_modules/**', '**/dist/**', '**/out/**', 'e2e/**', 'playwright.config.ts']
+  },
   resolve: {
     alias: {
       '@renderer': resolve(__dirname, 'src/renderer')
