@@ -6,6 +6,9 @@ import { initDatabase } from './db/database'
 import { registerPropertyIpcHandlers } from './ipc/propertyIpc'
 import { registerTenantIpcHandlers } from './ipc/tenantIpc'
 import { registerContractIpcHandlers } from './ipc/contractIpc'
+import { registerPaymentIpcHandlers } from './ipc/paymentIpc'
+import { registerExpenseIpcHandlers } from './ipc/expenseIpc'
+import { registerLedgerIpcHandlers } from './ipc/ledgerIpc'
 
 function createWindow(): void {
   // Create the browser window.
@@ -50,6 +53,10 @@ app.whenReady().then(() => {
   registerPropertyIpcHandlers()
   registerTenantIpcHandlers()
   registerContractIpcHandlers()
+  // Phase 4: financial core (payments, expenses, ledger) — BR-20/21/22 invariants enforced here.
+  registerPaymentIpcHandlers()
+  registerExpenseIpcHandlers()
+  registerLedgerIpcHandlers()
 
   // Set app user model id for windows
   electronApp.setAppUserModelId('com.electron')

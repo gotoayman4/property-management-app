@@ -31,6 +31,31 @@ const api = {
       ipcRenderer.invoke('contracts:terminate', payload),
     delete: (id: number) => ipcRenderer.invoke('contracts:delete', id)
   },
+  payments: {
+    list: (filters?: unknown) => ipcRenderer.invoke('payments:list', filters),
+    get: (id: number) => ipcRenderer.invoke('payments:get', id),
+    create: (data: unknown) => ipcRenderer.invoke('payments:create', data),
+    void: (payload: { id: number; reason: string }) => ipcRenderer.invoke('payments:void', payload)
+  },
+  expenses: {
+    list: (filters?: unknown) => ipcRenderer.invoke('expenses:list', filters),
+    get: (id: number) => ipcRenderer.invoke('expenses:get', id),
+    create: (data: unknown) => ipcRenderer.invoke('expenses:create', data),
+    void: (payload: { id: number; reason: string }) => ipcRenderer.invoke('expenses:void', payload)
+  },
+  expenseCategories: {
+    list: () => ipcRenderer.invoke('expenseCategories:list'),
+    create: (data: unknown) => ipcRenderer.invoke('expenseCategories:create', data)
+  },
+  ledger: {
+    list: (payload: { property_id: number; from_date?: string; to_date?: string }) =>
+      ipcRenderer.invoke('ledger:list', payload),
+    summary: (payload: { property_id: number; from_date?: string; to_date?: string }) =>
+      ipcRenderer.invoke('ledger:summary', payload),
+    reconstructBalance: (payload: { property_id: number; as_of_date: string }) =>
+      ipcRenderer.invoke('ledger:reconstructBalance', payload),
+    addManualAdjustment: (data: unknown) => ipcRenderer.invoke('ledger:addManualAdjustment', data)
+  },
   settings: {
     get: () => ipcRenderer.invoke('settings:get'),
     update: (data: unknown) => ipcRenderer.invoke('settings:update', data)
