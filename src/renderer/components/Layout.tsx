@@ -22,6 +22,9 @@ import SettingsIcon from '@mui/icons-material/Settings'
 import TranslateIcon from '@mui/icons-material/Translate'
 import PeopleIcon from '@mui/icons-material/People'
 import DescriptionIcon from '@mui/icons-material/Description'
+import PaymentsIcon from '@mui/icons-material/Payments'
+import ReceiptLongIcon from '@mui/icons-material/ReceiptLong'
+import AccountBalanceWalletIcon from '@mui/icons-material/AccountBalanceWallet'
 
 const drawerWidth = 240
 
@@ -51,6 +54,9 @@ export default function Layout({ children }: LayoutProps): React.JSX.Element {
     { text: t('sidebar.properties'), icon: <BusinessIcon />, path: '/properties' },
     { text: t('sidebar.tenants'), icon: <PeopleIcon />, path: '/tenants' },
     { text: t('sidebar.contracts'), icon: <DescriptionIcon />, path: '/contracts' },
+    { text: t('sidebar.payments'), icon: <PaymentsIcon />, path: '/payments' },
+    { text: t('sidebar.expenses'), icon: <ReceiptLongIcon />, path: '/expenses' },
+    { text: t('sidebar.ledger'), icon: <AccountBalanceWalletIcon />, path: '/ledger' },
     { text: t('sidebar.settings'), icon: <SettingsIcon />, path: '/settings' }
   ]
 
@@ -131,6 +137,11 @@ export default function Layout({ children }: LayoutProps): React.JSX.Element {
           <Typography variant="h6" component="div" sx={{ fontWeight: 600 }}>
             {location.pathname === '/' && t('sidebar.dashboard')}
             {location.pathname === '/properties' && t('sidebar.properties')}
+            {location.pathname === '/tenants' && t('sidebar.tenants')}
+            {location.pathname === '/contracts' && t('sidebar.contracts')}
+            {location.pathname === '/payments' && t('sidebar.payments')}
+            {location.pathname === '/expenses' && t('sidebar.expenses')}
+            {location.pathname === '/ledger' && t('sidebar.ledger')}
             {location.pathname === '/settings' && t('sidebar.settings')}
           </Typography>
           <IconButton color="inherit" onClick={toggleLanguage}>

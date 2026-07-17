@@ -10,6 +10,9 @@ import Dashboard from './pages/dashboard/Dashboard'
 import PropertyList from './pages/properties/PropertyList'
 import { TenantList } from './pages/tenants/TenantList'
 import { ContractList } from './pages/contracts/ContractList'
+import { PaymentList } from './pages/payments/PaymentList'
+import { ExpenseList } from './pages/expenses/ExpenseList'
+import Ledger from './pages/ledger/Ledger'
 import Settings from './pages/settings/Settings'
 import './i18n'
 
@@ -43,6 +46,18 @@ const router = createHashRouter([
       {
         path: '/contracts',
         element: <ContractList />
+      },
+      {
+        path: '/payments',
+        element: <PaymentList />
+      },
+      {
+        path: '/expenses',
+        element: <ExpenseList />
+      },
+      {
+        path: '/ledger',
+        element: <Ledger />
       },
       {
         path: '/settings',
