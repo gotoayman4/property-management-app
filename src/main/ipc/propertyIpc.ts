@@ -28,9 +28,14 @@ const settingsUpdateSchema = z.object({
   app_language: z.enum(['ar', 'en']).optional(),
   theme: z.enum(['light', 'dark']).optional(),
   font_size: z.enum(['small', 'medium', 'large']).optional(),
-  reporting_currency: z.string().optional(),
-  default_payment_method: z.string().optional(),
-  backup_path: z.string().optional()
+  reporting_currency: z.string().min(3).max(3).optional(),
+  default_payment_method: z.enum(['cash', 'bank_transfer', 'cheque', 'other']).optional(),
+  backup_path: z.string().optional(),
+  date_format: z.string().optional(),
+  reminder_days_before_due: z.number().int().min(0).max(90).optional(),
+  reminder_days_before_contract_end: z.number().int().min(0).max(365).optional(),
+  reminder_days_before_document_expiry: z.number().int().min(0).max(365).optional(),
+  reminder_days_before_recurring_expense: z.number().int().min(0).max(30).optional()
 })
 
 export function registerPropertyIpcHandlers(): void {

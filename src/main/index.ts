@@ -1,4 +1,4 @@
-import { app, shell, BrowserWindow } from 'electron'
+import { app, shell, BrowserWindow, session } from 'electron'
 import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
@@ -9,12 +9,22 @@ import { registerContractIpcHandlers } from './ipc/contractIpc'
 import { registerPaymentIpcHandlers } from './ipc/paymentIpc'
 import { registerExpenseIpcHandlers } from './ipc/expenseIpc'
 import { registerLedgerIpcHandlers } from './ipc/ledgerIpc'
+import { registerAuthIpcHandlers } from './ipc/authIpc'
+import { registerDashboardIpcHandlers } from './ipc/dashboardIpc'
+import { registerExchangeRateIpcHandlers } from './ipc/exchangeRateIpc'
+import {
+  registerRecurringExpenseIpcHandlers,
+  evaluateRecurringExpenses
+} from './ipc/recurringExpenseIpc'
+import { registerDocumentIpcHandlers } from './ipc/documentIpc'
+import { registerNotificationIpcHandlers, evaluateNotifications } from './ipc/notificationIpc'
+import { registerSearchIpcHandlers } from './ipc/searchIpc'
 
 function createWindow(): void {
   // Create the browser window.
   const mainWindow = new BrowserWindow({
-    width: 900,
-    height: 670,
+    width: 1280,
+    height: 800,
     show: false,
     autoHideMenuBar: true,
     ...(process.platform === 'linux' ? { icon } : {}),
@@ -57,6 +67,19 @@ app.whenReady().then(() => {
   registerPaymentIpcHandlers()
   registerExpenseIpcHandlers()
   registerLedgerIpcHandlers()
+  registerAuthIpcHandlers()
+  registerDashboardIpcHandlers()
+  registerExchangeRateIpcHandlers()
+  registerRecurringExpenseIpcHandlers()
+  registerDocumentIpcHandlers()
+  registerNotificationIpcHandlers()
+  registerSearchIpcHandlers()
+
+  // Evaluate notifications on startup — check for rent due, contract expiry, etc.
+  evaluateNotifications()
+
+  // Evaluate recurring expense templates — generates expenses for any due dates since last run
+  evaluateRecurringExpenses()
 
   // Set app user model id for windows
   electronApp.setAppUserModelId('com.electron')
@@ -69,6 +92,22 @@ app.whenReady().then(() => {
   })
 
   createWindow()
+
+  // NFR-SEC-03: Security headers — CSP for the renderer process.
+  // CONSTRAINT: offline-only app; no external scripts, styles, or connections allowed.
+  session.defaultSession.webRequest.onHeadersReceived((details, callback) => {
+    callback({
+      responseHeaders: {
+        ...details.responseHeaders,
+        'Content-Security-Policy': [
+          "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:; connect-src 'self'; frame-src 'none'; object-src 'none'; base-uri 'self'"
+        ],
+        'X-Frame-Options': ['DENY'],
+        'X-Content-Type-Options': ['nosniff'],
+        'Referrer-Policy': ['no-referrer']
+      }
+    })
+  })
 
   app.on('activate', function () {
     // On macOS it's common to re-create a window in the app when the

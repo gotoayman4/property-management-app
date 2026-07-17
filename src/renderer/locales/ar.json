@@ -11,6 +11,7 @@
     "payments": "المدفوعات والإيرادات",
     "expenses": "المصروفات",
     "ledger": "الدفتر المالي",
+    "currency": "سعر الصرف",
     "settings": "الإعدادات"
   },
   "common": {
@@ -94,6 +95,8 @@
   },
   "settings": {
     "title": "الإعدادات العامة",
+    "subtitle": "إدارة تفضيلات التطبيق",
+    "appearance": "المظهر واللغة",
     "language": "لغة التطبيق",
     "theme": "المظهر",
     "themeLight": "فاتح",
@@ -102,8 +105,21 @@
     "fontSmall": "صغير",
     "fontMedium": "متوسط",
     "fontLarge": "كبير",
+    "financialDefaults": "الإعدادات المالية الافتراضية",
     "reportingCurrency": "عملة التقارير الموحدة",
-    "backupPath": "مسار النسخ الاحتياطي"
+    "defaultPaymentMethod": "طريقة الدفع الافتراضية",
+    "reminders": "أيام التذكير",
+    "reminderHelp": "حدد عدد الأيام قبل تاريخ الاستحقاق لإرسال تذكير بالدفع، أو انتهاء العقد، أو انتهاء صلاحية المستند، أو إنشاء المصروفات الدورية.",
+    "reminderDaysBeforeDue": "أيام قبل موعد إيجار",
+    "reminderDaysBeforeContractEnd": "أيام قبل انتهاء العقد",
+    "reminderDaysBeforeDocumentExpiry": "أيام قبل انتهاء المستند",
+    "reminderDaysBeforeRecurringExpense": "أيام قبل استحقاق المصروف الدوري",
+    "backupAndData": "النسخ الاحتياطي والبيانات",
+    "backupPath": "مسار النسخ الاحتياطي",
+    "backupPathPlaceholder": "C:\\Backups\\property-management",
+    "backupPathHelp": "المسار المطلق للنسخ الاحتياطي التلقائي لقاعدة البيانات",
+    "langAr": "العربية",
+    "langEn": "الإنجليزية"
   },
   "tenant": {
     "title": "إدارة المستأجرين",
@@ -261,7 +277,18 @@
     "expenseDate": "تاريخ المصروف",
     "vendor": "المورّد / المستفيد",
     "amount": "المبلغ المدفوع",
-    "category": "الفئة",
+    "category": {
+      "maintenance": "صيانة",
+      "electricity": "كهرباء",
+      "water": "مياه",
+      "municipality": "بلدية",
+      "taxes": "ضرائب",
+      "insurance": "تأمين",
+      "cleaning": "تنظيف",
+      "repairs": "إصلاحات",
+      "administrative": "إدارية",
+      "miscellaneous": "متفرقات"
+    },
     "selectCategory": "اختر فئة",
     "newCategory": "فئة جديدة",
     "categoryExists": "هذه الفئة موجودة مسبقاً.",
@@ -277,19 +304,21 @@
     "currencyMismatch": "يجب أن تطابق عملة المصروف عملة العقار المرتبط.",
     "noExpenses": "لا توجد مصروفات مسجلة بعد.",
     "noExpensesFiltered": "لا توجد مصروفات تطابق التصفية المحددة.",
-    "voidedBadge": "ملغى",
-    "category": {
-      "maintenance": "صيانة",
-      "electricity": "كهرباء",
-      "water": "مياه",
-      "municipality": "بلدية",
-      "taxes": "ضرائب",
-      "insurance": "تأمين",
-      "cleaning": "تنظيف",
-      "repairs": "إصلاحات",
-      "administrative": "إدارية",
-      "miscellaneous": "متفرقات"
-    }
+    "voidedBadge": "ملغى"
+  },
+  "dashboard": {
+    "subtitle": "نظرة عامة على محفظة عقاراتك",
+    "totalProperties": "إجمالي العقارات",
+    "rentedProperties": "مؤجرة",
+    "activeTenants": "المستأجرين النشطين",
+    "activeContracts": "العقود النشطة",
+    "totalPayments": "إجمالي المدفوعات",
+    "totalExpenses": "إجمالي المصروفات",
+    "netBalance": "صافي الرصيد",
+    "recentPayments": "أحدث المدفوعات",
+    "recentExpenses": "أحدث المصروفات",
+    "noPayments": "لا توجد مدفوعات مسجلة بعد.",
+    "noExpenses": "لا توجد مصروفات مسجلة بعد."
   },
   "ledger": {
     "title": "الدفتر المالي",
@@ -324,5 +353,84 @@
     "exportHtml": "تصدير إلى HTML",
     "exportComingSoon": "يتوفر التصدير إلى Excel و HTML مع مرحلة التقارير لاحقاً.",
     "noEntries": "لا توجد قيود في دفتر هذا العقار بعد. تُنشأ القيود تلقائياً عند تسجيل المدفوعات أو المصروفات."
+  },
+  "propertyDetail": {
+    "contracts": "العقود",
+    "payments": "المدفوعات",
+    "ledger": "الدفتر المالي",
+    "documents": "المستندات",
+    "noContracts": "لا توجد عقود لهذا العقار.",
+    "noPayments": "لا توجد مدفوعات لهذا العقار.",
+    "noLedger": "لا توجد قيود في الدفتر لهذا العقار.",
+    "noDocuments": "لم يتم رفع أي مستندات."
+  },
+  "tenantDetail": {
+    "contracts": "العقود",
+    "payments": "المدفوعات",
+    "documents": "المستندات",
+    "noContracts": "لا توجد عقود لهذا المستأجر.",
+    "noPayments": "لا توجد مدفوعات لهذا المستأجر.",
+    "noDocuments": "لم يتم رفع أي مستندات."
+  },
+  "documents": {
+    "fileName": "اسم الملف",
+    "mimeType": "النوع",
+    "uploadedAt": "تاريخ الرفع"
+  },
+  "currency": {
+    "title": "أسعار الصرف",
+    "subtitle": "إدارة أسعار الصرف للتحويلات متعددة العملات",
+    "addRate": "إضافة سعر",
+    "from": "من",
+    "to": "إلى",
+    "rate": "السعر",
+    "effectiveDate": "تاريخ السريان",
+    "source": "المصدر",
+    "sourceOnline": "إنترنت",
+    "sourceManual": "يدوي",
+    "fetchOnline": "جلب من الإنترنت",
+    "fetchFailed": "الشبكة غير متاحة — أدخل السعر يدوياً",
+    "fetchedSuccessfully": "تم جلب السعر: {{rate}}",
+    "offlineDefault": "تُدخل أسعار الصرف يدوياً بشكل افتراضي. الجلب من الإنترنت ميزة تكميلية — التطبيق يعمل بدون إنترنت بالكامل.",
+    "noRates": "لا توجد أسعار صرف مسجلة بعد. أضف أول سعر أعلاه.",
+    "name": {
+      "JOD": "دينار أردني",
+      "TRY": "ليرة تركية",
+      "QAR": "ريال قطري",
+      "USD": "دولار أمريكي",
+      "EUR": "يورو",
+      "SAR": "ريال سعودي"
+    }
+  },
+  "search": {
+    "placeholder": "بحث في العقارات، المستأجرين..."
+  },
+  "notifications": {
+    "title": "الإشعارات",
+    "label": "الإشعارات",
+    "empty": "لا توجد إشعارات",
+    "markAllRead": "تعليم الكل كمقروء",
+    "type": {
+      "rent_due": "استحقاق الإيجار",
+      "contract_expiry": "انتهاء العقد",
+      "document_expiry": "انتهاء المستند",
+      "recurring_expense_due": "مصروف دوري"
+    }
+  },
+  "auth": {
+    "login": "تسجيل الدخول",
+    "createAccount": "إنشاء حساب المدير",
+    "username": "اسم المستخدم",
+    "password": "كلمة المرور",
+    "confirmPassword": "تأكيد كلمة المرور",
+    "displayName": "الاسم المعروض (اختياري)",
+    "loginDescription": "سجّل الدخول لإدارة عقاراتك",
+    "firstLaunchDescription": "أنشئ حساب المدير للبدء",
+    "invalidCredentials": "اسم المستخدم أو كلمة المرور غير صحيحة",
+    "accountDisabled": "تم تعطيل هذا الحساب",
+    "registrationDisabled": "التسجيل معطل — يوجد حساب مدير بالفعل",
+    "invalidInput": "تحقق من بياناتك وأعد المحاولة",
+    "hidePassword": "إخفاء كلمة المرور",
+    "showPassword": "إظهار كلمة المرور"
   }
 }

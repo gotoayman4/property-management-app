@@ -107,6 +107,108 @@ declare global {
         get: () => Promise<unknown>
         update: (data: unknown) => Promise<{ success: boolean; settings: unknown }>
       }
+      auth: {
+        hasUsers: () => Promise<{ hasUsers: boolean }>
+        register: (data: unknown) => Promise<{
+          id: number
+          username: string
+          display_name: string | null
+        }>
+        login: (data: unknown) => Promise<{
+          id: number
+          username: string
+          display_name: string | null
+        }>
+        changePassword: (data: unknown) => Promise<{ success: boolean }>
+      }
+      dashboard: {
+        summary: () => Promise<{
+          totalProperties: number
+          rentedProperties: number
+          totalTenants: number
+          activeContracts: number
+          totalPayments: number
+          totalExpenses: number
+          netBalance: number
+        }>
+        recentPayments: () => Promise<unknown[]>
+        recentExpenses: () => Promise<unknown[]>
+      }
+      exchangeRates: {
+        list: (filters?: { currency_from?: string; currency_to?: string }) => Promise<unknown[]>
+        latest: (data: { currency_from: string; currency_to: string }) => Promise<{
+          id: number
+          currency_from: string
+          currency_to: string
+          rate: number
+          effective_date: string
+          source: string
+          fetched_at: string | null
+        } | null>
+        add: (data: unknown) => Promise<{ id: number; upserted: boolean }>
+        fetchOnline: (data: { currency_from: string; currency_to: string }) => Promise<{
+          currency_from: string
+          currency_to: string
+          rate: number
+          effective_date: string
+          source: 'online'
+        }>
+      }
+      recurringExpenses: {
+        list: (filters?: { property_id?: number; is_active?: boolean }) => Promise<unknown[]>
+        get: (id: number) => Promise<unknown>
+        create: (data: unknown) => Promise<{ id: number }>
+        update: (data: unknown) => Promise<{ success: boolean }>
+        deactivate: (id: number) => Promise<{ success: boolean }>
+        activate: (id: number) => Promise<{ success: boolean }>
+      }
+      documents: {
+        upload: (data: unknown) => Promise<{ id: number; mime_type: string }>
+        list: (data: { entity_type: string; entity_id: number }) => Promise<
+          {
+            id: number
+            entity_type: string
+            entity_id: number
+            file_name: string
+            mime_type: string
+            file_size: number
+            description: string | null
+            uploaded_at: string
+          }[]
+        >
+        get: (id: number) => Promise<unknown>
+        read: (id: number) => Promise<{ data: string; mime_type: string }>
+        delete: (id: number) => Promise<{ success: boolean }>
+      }
+      notifications: {
+        list: (filters?: { unread_only?: boolean }) => Promise<
+          {
+            id: number
+            notification_type: string
+            entity_type: string
+            entity_id: number
+            title: string
+            message: string
+            due_date: string | null
+            is_read: number
+            read_at: string | null
+            created_at: string
+          }[]
+        >
+        unreadCount: () => Promise<{ count: number }>
+        markRead: (id: number) => Promise<{ success: boolean }>
+        markAllRead: () => Promise<{ success: boolean }>
+      }
+      search: {
+        global: (query: string) => Promise<
+          {
+            entity_type: string
+            entity_id: number
+            title: string
+            subtitle: string
+          }[]
+        >
+      }
     }
   }
 }

@@ -11,6 +11,7 @@
     "payments": "Payments & Income",
     "expenses": "Expenses",
     "ledger": "Financial Ledger",
+    "currency": "Exchange Rates",
     "settings": "Settings"
   },
   "common": {
@@ -94,16 +95,31 @@
   },
   "settings": {
     "title": "Global Settings",
+    "subtitle": "Manage application preferences",
+    "appearance": "Appearance & Language",
     "language": "Application Language",
-    "theme": "Theme Theme",
+    "langAr": "Arabic",
+    "langEn": "English",
+    "theme": "Theme",
     "themeLight": "Light",
     "themeDark": "Dark",
     "fontSize": "Font Size",
     "fontSmall": "Small",
     "fontMedium": "Medium",
     "fontLarge": "Large",
+    "financialDefaults": "Financial Defaults",
     "reportingCurrency": "Consolidated Reporting Currency",
-    "backupPath": "Backup Directory Path"
+    "defaultPaymentMethod": "Default Payment Method",
+    "reminders": "Reminder Days",
+    "reminderHelp": "Set how many days in advance to be notified before a due date, contract end, document expiry, or recurring expense generation.",
+    "reminderDaysBeforeDue": "Days before rent due date",
+    "reminderDaysBeforeContractEnd": "Days before contract end",
+    "reminderDaysBeforeDocumentExpiry": "Days before document expiry",
+    "reminderDaysBeforeRecurringExpense": "Days before recurring expense due",
+    "backupAndData": "Backup & Data",
+    "backupPath": "Backup Directory Path",
+    "backupPathPlaceholder": "C:\\Backups\\property-management",
+    "backupPathHelp": "Absolute path for automatic database backups"
   },
   "tenant": {
     "title": "Tenant Management",
@@ -261,7 +277,18 @@
     "expenseDate": "Expense Date",
     "vendor": "Vendor / Payee",
     "amount": "Amount Paid",
-    "category": "Category",
+    "category": {
+      "maintenance": "Maintenance",
+      "electricity": "Electricity",
+      "water": "Water",
+      "municipality": "Municipality",
+      "taxes": "Taxes",
+      "insurance": "Insurance",
+      "cleaning": "Cleaning",
+      "repairs": "Repairs",
+      "administrative": "Administrative",
+      "miscellaneous": "Miscellaneous"
+    },
     "selectCategory": "Select a category",
     "newCategory": "New Category",
     "categoryExists": "This category already exists.",
@@ -277,19 +304,21 @@
     "currencyMismatch": "The expense currency must match the linked property's currency.",
     "noExpenses": "No expenses recorded yet.",
     "noExpensesFiltered": "No expenses match the selected filters.",
-    "voidedBadge": "Voided",
-    "category": {
-      "maintenance": "Maintenance",
-      "electricity": "Electricity",
-      "water": "Water",
-      "municipality": "Municipality",
-      "taxes": "Taxes",
-      "insurance": "Insurance",
-      "cleaning": "Cleaning",
-      "repairs": "Repairs",
-      "administrative": "Administrative",
-      "miscellaneous": "Miscellaneous"
-    }
+    "voidedBadge": "Voided"
+  },
+  "dashboard": {
+    "subtitle": "Overview of your property portfolio",
+    "totalProperties": "Total Properties",
+    "rentedProperties": "Rented",
+    "activeTenants": "Active Tenants",
+    "activeContracts": "Active Contracts",
+    "totalPayments": "Total Payments",
+    "totalExpenses": "Total Expenses",
+    "netBalance": "Net Balance",
+    "recentPayments": "Recent Payments",
+    "recentExpenses": "Recent Expenses",
+    "noPayments": "No payments recorded yet.",
+    "noExpenses": "No expenses recorded yet."
   },
   "ledger": {
     "title": "Financial Ledger",
@@ -324,5 +353,84 @@
     "exportHtml": "Export to HTML",
     "exportComingSoon": "Excel & HTML export arrives with the Reports phase.",
     "noEntries": "No ledger entries for this property yet. Entries are created automatically when you record payments or expenses."
+  },
+  "propertyDetail": {
+    "contracts": "Contracts",
+    "payments": "Payments",
+    "ledger": "Ledger",
+    "documents": "Documents",
+    "noContracts": "No contracts for this property.",
+    "noPayments": "No payments for this property.",
+    "noLedger": "No ledger entries for this property.",
+    "noDocuments": "No documents uploaded."
+  },
+  "tenantDetail": {
+    "contracts": "Contracts",
+    "payments": "Payments",
+    "documents": "Documents",
+    "noContracts": "No contracts for this tenant.",
+    "noPayments": "No payments for this tenant.",
+    "noDocuments": "No documents uploaded."
+  },
+  "documents": {
+    "fileName": "File Name",
+    "mimeType": "Type",
+    "uploadedAt": "Uploaded"
+  },
+  "currency": {
+    "title": "Exchange Rates",
+    "subtitle": "Manage exchange rates for multi-currency conversions",
+    "addRate": "Add Rate",
+    "from": "From",
+    "to": "To",
+    "rate": "Rate",
+    "effectiveDate": "Effective Date",
+    "source": "Source",
+    "sourceOnline": "Online",
+    "sourceManual": "Manual",
+    "fetchOnline": "Fetch Online",
+    "fetchFailed": "Network unavailable — enter rate manually",
+    "fetchedSuccessfully": "Rate fetched: {{rate}}",
+    "offlineDefault": "Exchange rates are entered manually by default. The online fetch is a convenience — the app works fully offline.",
+    "noRates": "No exchange rates recorded yet. Add your first rate above.",
+    "name": {
+      "JOD": "JOD — Jordanian Dinar",
+      "TRY": "TRY — Turkish Lira",
+      "QAR": "QAR — Qatari Riyal",
+      "USD": "USD — US Dollar",
+      "EUR": "EUR — Euro",
+      "SAR": "SAR — Saudi Riyal"
+    }
+  },
+  "search": {
+    "placeholder": "Search properties, tenants..."
+  },
+  "notifications": {
+    "title": "Notifications",
+    "label": "Notifications",
+    "empty": "No notifications",
+    "markAllRead": "Mark all read",
+    "type": {
+      "rent_due": "Rent Due",
+      "contract_expiry": "Contract Expiry",
+      "document_expiry": "Document Expiry",
+      "recurring_expense_due": "Recurring Expense"
+    }
+  },
+  "auth": {
+    "login": "Login",
+    "createAccount": "Create Admin Account",
+    "username": "Username",
+    "password": "Password",
+    "confirmPassword": "Confirm Password",
+    "displayName": "Display Name (optional)",
+    "loginDescription": "Sign in to manage your properties",
+    "firstLaunchDescription": "Set up your admin account to get started",
+    "invalidCredentials": "Invalid username or password",
+    "accountDisabled": "This account has been disabled",
+    "registrationDisabled": "Registration is disabled — an admin account already exists",
+    "invalidInput": "Please check your input and try again",
+    "hidePassword": "Hide password",
+    "showPassword": "Show password"
   }
 }

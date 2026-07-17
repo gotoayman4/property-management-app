@@ -26,7 +26,8 @@
     "pretest:watch": "npm run rebuild:node",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:e2e": "npm run build && playwright test"
+    "test:e2e": "npm run build && playwright test",
+    "check:i18n": "node scripts/check-i18n-parity.js"
   },
   "dependencies": {
     "@electron-toolkit/preload": "^3.0.2",

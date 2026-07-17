@@ -59,6 +59,47 @@ const api = {
   settings: {
     get: () => ipcRenderer.invoke('settings:get'),
     update: (data: unknown) => ipcRenderer.invoke('settings:update', data)
+  },
+  auth: {
+    hasUsers: () => ipcRenderer.invoke('auth:hasUsers'),
+    register: (data: unknown) => ipcRenderer.invoke('auth:register', data),
+    login: (data: unknown) => ipcRenderer.invoke('auth:login', data),
+    changePassword: (data: unknown) => ipcRenderer.invoke('auth:changePassword', data)
+  },
+  dashboard: {
+    summary: () => ipcRenderer.invoke('dashboard:summary'),
+    recentPayments: () => ipcRenderer.invoke('dashboard:recentPayments'),
+    recentExpenses: () => ipcRenderer.invoke('dashboard:recentExpenses')
+  },
+  exchangeRates: {
+    list: (filters?: unknown) => ipcRenderer.invoke('exchangeRates:list', filters),
+    latest: (data: unknown) => ipcRenderer.invoke('exchangeRates:latest', data),
+    add: (data: unknown) => ipcRenderer.invoke('exchangeRates:add', data),
+    fetchOnline: (data: unknown) => ipcRenderer.invoke('exchangeRates:fetchOnline', data)
+  },
+  recurringExpenses: {
+    list: (filters?: unknown) => ipcRenderer.invoke('recurringExpenses:list', filters),
+    get: (id: number) => ipcRenderer.invoke('recurringExpenses:get', id),
+    create: (data: unknown) => ipcRenderer.invoke('recurringExpenses:create', data),
+    update: (data: unknown) => ipcRenderer.invoke('recurringExpenses:update', data),
+    deactivate: (id: number) => ipcRenderer.invoke('recurringExpenses:deactivate', id),
+    activate: (id: number) => ipcRenderer.invoke('recurringExpenses:activate', id)
+  },
+  documents: {
+    upload: (data: unknown) => ipcRenderer.invoke('documents:upload', data),
+    list: (data: unknown) => ipcRenderer.invoke('documents:list', data),
+    get: (id: number) => ipcRenderer.invoke('documents:get', id),
+    read: (id: number) => ipcRenderer.invoke('documents:read', id),
+    delete: (id: number) => ipcRenderer.invoke('documents:delete', id)
+  },
+  notifications: {
+    list: (filters?: unknown) => ipcRenderer.invoke('notifications:list', filters),
+    unreadCount: () => ipcRenderer.invoke('notifications:unreadCount'),
+    markRead: (id: number) => ipcRenderer.invoke('notifications:markRead', id),
+    markAllRead: () => ipcRenderer.invoke('notifications:markAllRead')
+  },
+  search: {
+    global: (query: string) => ipcRenderer.invoke('search:global', query)
   }
 }
 

@@ -5,15 +5,20 @@ import { ThemeProvider, CssBaseline } from '@mui/material'
 import { useTranslation } from 'react-i18next'
 import { cacheLtr, cacheRtl } from './utils/emotionCache'
 import { getTheme } from './theme/theme'
+import { AuthProvider } from './contexts/AuthContext'
+import AuthGate from './components/AuthGate'
 import Layout from './components/Layout'
 import Dashboard from './pages/dashboard/Dashboard'
 import PropertyList from './pages/properties/PropertyList'
+import PropertyDetail from './pages/properties/PropertyDetail'
 import { TenantList } from './pages/tenants/TenantList'
+import TenantDetail from './pages/tenants/TenantDetail'
 import { ContractList } from './pages/contracts/ContractList'
 import { PaymentList } from './pages/payments/PaymentList'
 import { ExpenseList } from './pages/expenses/ExpenseList'
 import Ledger from './pages/ledger/Ledger'
 import Settings from './pages/settings/Settings'
+import ExchangeRateManager from './pages/currency/ExchangeRateManager'
 import './i18n'
 
 // Layout wrapper for routing
@@ -40,8 +45,16 @@ const router = createHashRouter([
         element: <PropertyList />
       },
       {
+        path: '/properties/:id',
+        element: <PropertyDetail />
+      },
+      {
         path: '/tenants',
         element: <TenantList />
+      },
+      {
+        path: '/tenants/:id',
+        element: <TenantDetail />
       },
       {
         path: '/contracts',
@@ -62,6 +75,10 @@ const router = createHashRouter([
       {
         path: '/settings',
         element: <Settings />
+      },
+      {
+        path: '/currency',
+        element: <ExchangeRateManager />
       }
     ]
   }
@@ -106,7 +123,11 @@ export default function App(): React.JSX.Element {
     <CacheProvider value={cache} key={direction}>
       <ThemeProvider theme={theme}>
         <CssBaseline />
-        <RouterProvider router={router} />
+        <AuthProvider>
+          <AuthGate>
+            <RouterProvider router={router} />
+          </AuthGate>
+        </AuthProvider>
       </ThemeProvider>
     </CacheProvider>
   )
