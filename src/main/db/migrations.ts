@@ -1,5 +1,10 @@
 import { Database } from 'better-sqlite3'
 
+// INTENT: Silence migration progress logs in production (AGENTS: no console.log in prod code).
+// DECISION: Gate on NODE_ENV rather than electron's isDev so this module works identically
+//           under Vitest (NODE_ENV=test) without importing electron.
+const isVerbose = process.env['NODE_ENV'] !== 'production'
+
 // Eagerly load all SQL migration files as raw strings at build time using Vite glob import
 const migrationFiles = import.meta.glob('./migrations/*.sql', {
   query: '?raw',
@@ -25,7 +30,7 @@ export function runMigrations(db: Database): void {
     const isApplied = db.prepare('SELECT 1 FROM migrations WHERE name = ?').get(filename)
 
     if (!isApplied) {
-      console.log(`Applying migration: ${filename}`)
+      if (isVerbose) console.log(`Applying migration: ${filename}`)
       const sqlContent = migrationFiles[path]
 
       if (!sqlContent || typeof sqlContent !== 'string') {
@@ -38,7 +43,7 @@ export function runMigrations(db: Database): void {
         db.prepare('INSERT INTO migrations (name) VALUES (?)').run(filename)
       })()
 
-      console.log(`Successfully applied migration: ${filename}`)
+      if (isVerbose) console.log(`Successfully applied migration: ${filename}`)
     }
   }
 }

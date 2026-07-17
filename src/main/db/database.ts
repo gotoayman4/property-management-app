@@ -27,6 +27,6 @@ db.pragma('journal_mode = WAL')
 db.pragma('foreign_keys = ON')
 
 export function initDatabase(): void {
-  console.log(`Database connected at: ${dbPath}`)
+  if (isDev) console.log(`Database connected at: ${dbPath}`)
   runMigrations(db)
 }
