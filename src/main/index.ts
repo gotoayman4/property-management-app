@@ -5,7 +5,7 @@ import icon from '../../resources/icon.png?asset'
 import { initDatabase } from './db/database'
 import { registerPropertyIpcHandlers } from './ipc/propertyIpc'
 import { registerTenantIpcHandlers } from './ipc/tenantIpc'
-import { registerLeaseIpcHandlers } from './ipc/leaseIpc'
+import { registerContractIpcHandlers } from './ipc/contractIpc'
 
 function createWindow(): void {
   // Create the browser window.
@@ -46,10 +46,10 @@ app.whenReady().then(() => {
   // Initialize SQLite database and run pending migrations
   initDatabase()
 
-  // Register Electron IPC handlers for properties, tenants, leases, and settings
+  // Register Electron IPC handlers for properties, tenants, contracts, and settings
   registerPropertyIpcHandlers()
   registerTenantIpcHandlers()
-  registerLeaseIpcHandlers()
+  registerContractIpcHandlers()
 
   // Set app user model id for windows
   electronApp.setAppUserModelId('com.electron')

@@ -15,7 +15,7 @@ describe('Tenant & Lease Database Queries & Constraints', () => {
 
   it('should apply both initial schema and tenant/lease migrations', () => {
     const migrations = db.prepare('SELECT name FROM migrations ORDER BY id ASC').all()
-    expect(migrations.length).toBe(3)
+    expect(migrations.length).toBe(4)
     expect(migrations[0]).toEqual({ name: '001_initial_schema.sql' })
     expect(migrations[1]).toEqual({ name: '002_tenant_lease_schema.sql' })
   })
@@ -66,9 +66,9 @@ describe('Tenant & Lease Database Queries & Constraints', () => {
       tenantId = tenantInfo.lastInsertRowid
     })
 
-    it('should create a lease contract successfully', () => {
+    it('should create a contract successfully', () => {
       const stmt = db.prepare(`
-        INSERT INTO leases (contract_number, property_id, tenant_id, start_date, end_date, rent_amount, currency, status)
+        INSERT INTO contracts (contract_number, property_id, tenant_id, start_date, end_date, rent_amount, currency, status)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?)
       `)
       const info = stmt.run(
@@ -83,19 +83,21 @@ describe('Tenant & Lease Database Queries & Constraints', () => {
       )
       expect(info.changes).toBe(1)
 
-      const lease = db.prepare('SELECT * FROM leases WHERE id = ?').get(info.lastInsertRowid) as {
+      const contract = db
+        .prepare('SELECT * FROM contracts WHERE id = ?')
+        .get(info.lastInsertRowid) as {
         contract_number: string
         rent_amount: number
         status: string
       }
-      expect(lease.contract_number).toBe('LEASE-2026-001')
-      expect(lease.rent_amount).toBe(500.0)
-      expect(lease.status).toBe('active')
+      expect(contract.contract_number).toBe('LEASE-2026-001')
+      expect(contract.rent_amount).toBe(500.0)
+      expect(contract.status).toBe('active')
     })
 
-    it('should prevent inserting a lease with a duplicate contract number due to unique constraint', () => {
+    it('should prevent inserting a contract with a duplicate contract number due to unique constraint', () => {
       const stmt = db.prepare(`
-        INSERT INTO leases (contract_number, property_id, tenant_id, start_date, end_date, rent_amount, currency)
+        INSERT INTO contracts (contract_number, property_id, tenant_id, start_date, end_date, rent_amount, currency)
         VALUES (?, ?, ?, ?, ?, ?, ?)
       `)
       stmt.run('L-DUP', propertyId, tenantId, '2026-01-01', '2026-12-31', 500, 'JOD')

@@ -31,7 +31,7 @@ test('app boots and sidebar navigation works', async () => {
   // so the same selector resolves correctly in both RTL (Arabic) and LTR (English).
   await nav.locator('a[href="#/properties"]').click()
   await nav.locator('a[href="#/tenants"]').click()
-  await nav.locator('a[href="#/leases"]').click()
+  await nav.locator('a[href="#/contracts"]').click()
   await nav.locator('a[href="#/settings"]').click()
 })
 

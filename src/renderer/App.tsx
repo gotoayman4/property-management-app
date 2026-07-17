@@ -9,7 +9,7 @@ import Layout from './components/Layout'
 import Dashboard from './pages/dashboard/Dashboard'
 import PropertyList from './pages/properties/PropertyList'
 import { TenantList } from './pages/tenants/TenantList'
-import { LeaseList } from './pages/leases/LeaseList'
+import { ContractList } from './pages/contracts/ContractList'
 import Settings from './pages/settings/Settings'
 import './i18n'
 
@@ -41,8 +41,8 @@ const router = createHashRouter([
         element: <TenantList />
       },
       {
-        path: '/leases',
-        element: <LeaseList />
+        path: '/contracts',
+        element: <ContractList />
       },
       {
         path: '/settings',

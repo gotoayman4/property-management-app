@@ -50,7 +50,7 @@ export default function Layout({ children }: LayoutProps): React.JSX.Element {
     { text: t('sidebar.dashboard'), icon: <DashboardIcon />, path: '/' },
     { text: t('sidebar.properties'), icon: <BusinessIcon />, path: '/properties' },
     { text: t('sidebar.tenants'), icon: <PeopleIcon />, path: '/tenants' },
-    { text: t('sidebar.contracts'), icon: <DescriptionIcon />, path: '/leases' },
+    { text: t('sidebar.contracts'), icon: <DescriptionIcon />, path: '/contracts' },
     { text: t('sidebar.settings'), icon: <SettingsIcon />, path: '/settings' }
   ]
 

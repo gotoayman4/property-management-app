@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from 'react'
-import { Box, Typography, Button, Chip } from '@mui/material'
+import React, { useCallback, useEffect, useState } from 'react'
+import { Box, Button, Chip } from '@mui/material'
 import { Add as AddIcon, Description as DescriptionIcon } from '@mui/icons-material'
 import { useTranslation } from 'react-i18next'
 import StandardTable from '../../components/StandardTable'
@@ -8,10 +8,10 @@ import ConfirmDialog from '../../components/ConfirmDialog'
 import GlobalSnackbar from '../../components/GlobalSnackbar'
 import PageHeader from '../../components/PageHeader'
 import { useSnackbar } from '../../hooks/useSnackbar'
-import { LeaseForm } from './LeaseForm'
+import { ContractForm } from './ContractForm'
 import { GridColDef } from '@mui/x-data-grid'
 
-interface Lease {
+interface Contract {
   id: number
   contract_number: string
   property_id: number
@@ -27,78 +27,76 @@ interface Lease {
   payment_frequency: 'monthly' | 'quarterly' | 'semi-annual' | 'annual'
   security_deposit: number
   status: 'draft' | 'active' | 'expired' | 'terminated'
+  contract_term_years: number
+  has_variable_escalation: number
   notes?: string
 }
 
 /** Tracks which destructive action is pending confirmation. */
 type PendingAction = { id: number; kind: 'terminate' | 'delete' } | null
 
-export function LeaseList(): React.ReactElement {
+export function ContractList(): React.ReactElement {
   const { t, i18n } = useTranslation()
   const isRtl = i18n.language === 'ar'
   const { snack, showError, showSuccess, hideSnackbar } = useSnackbar()
-  const [leases, setLeases] = useState<Lease[]>([])
+  const [contracts, setContracts] = useState<Contract[]>([])
   const [loading, setLoading] = useState<boolean>(true)
   const [error, setError] = useState<string | null>(null)
 
-  // Dialog state
   const [openDialog, setOpenDialog] = useState<boolean>(false)
-  const [selectedLease, setSelectedLease] = useState<Lease | null>(null)
+  const [selectedContract, setSelectedContract] = useState<Contract | null>(null)
   const [pendingAction, setPendingAction] = useState<PendingAction>(null)
 
-  const fetchLeases = async (): Promise<void> => {
+  const fetchContracts = useCallback(async (): Promise<void> => {
     try {
       setLoading(true)
       setError(null)
-      const data = await window.api.leases.list()
-      setLeases(data as Lease[])
+      const data = await window.api.contracts.list()
+      setContracts(data as Contract[])
     } catch (err: unknown) {
       console.error(err)
       setError(t('common.error'))
     } finally {
       setLoading(false)
     }
-  }
+  }, [t])
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    fetchLeases()
-  }, [])
+    fetchContracts()
+  }, [fetchContracts])
 
   const handleAddClick = (): void => {
-    setSelectedLease(null)
+    setSelectedContract(null)
     setOpenDialog(true)
   }
 
-  const handleEditClick = (lease: Lease): void => {
-    setSelectedLease(lease)
+  const handleEditClick = (contract: Contract): void => {
+    setSelectedContract(contract)
     setOpenDialog(true)
   }
 
-  // Open confirm dialog for terminate; actual call happens in confirmAction
   const handleTerminateClick = (id: number): void => {
     setPendingAction({ id, kind: 'terminate' })
   }
 
-  // Open confirm dialog for delete; actual call happens in confirmAction
   const handleDeleteClick = (id: number): void => {
     setPendingAction({ id, kind: 'delete' })
   }
 
-  // Execute whichever destructive action the user confirmed
   const confirmAction = async (): Promise<void> => {
     if (!pendingAction) return
     const { id, kind } = pendingAction
     setPendingAction(null)
     try {
       if (kind === 'terminate') {
-        await window.api.leases.terminate(id)
+        await window.api.contracts.terminate({ id })
         showSuccess('common.saveSuccess')
       } else {
-        await window.api.leases.delete(id)
+        await window.api.contracts.delete(id)
         showSuccess('common.deleteSuccess')
       }
-      fetchLeases()
+      fetchContracts()
     } catch (err) {
       console.error(err)
       showError('common.deleteError')
@@ -119,74 +117,46 @@ export function LeaseList(): React.ReactElement {
   }
 
   const columns: GridColDef[] = [
-    {
-      field: 'contract_number',
-      headerName: t('lease.contractNumber'),
-      flex: 1.2
-    },
+    { field: 'contract_number', headerName: t('contract.contractNumber'), flex: 1.2 },
     {
       field: 'property_name',
       headerName: t('sidebar.properties'),
-      flex: 1.5,
-      renderCell: (params) => {
-        const row = params.row as Lease
-        return (
-          <Box>
-            <Typography variant="body2" sx={{ fontWeight: 600 }}>
-              {row.property_name}
-            </Typography>
-            <Typography variant="caption" color="text.secondary">
-              {row.property_code}
-            </Typography>
-          </Box>
-        )
-      }
+      flex: 1.5
     },
     {
       field: 'tenant_fullname',
       headerName: t('sidebar.tenants'),
-      flex: 1.5,
-      renderCell: (params) => {
-        const row = params.row as Lease
-        return (
-          <Box>
-            <Typography variant="body2" sx={{ fontWeight: 600 }}>
-              {row.tenant_fullname}
-            </Typography>
-            <Typography variant="caption" color="text.secondary">
-              {row.tenant_code}
-            </Typography>
-          </Box>
-        )
-      }
+      flex: 1.5
     },
     {
       field: 'duration',
-      headerName: `${t('lease.startDate')} - ${t('lease.endDate')}`,
+      headerName: `${t('contract.startDate')} - ${t('contract.endDate')}`,
       flex: 2,
       renderCell: (params) => {
-        const row = params.row as Lease
+        const row = params.row as Contract
         return `${row.start_date} / ${row.end_date}`
       }
     },
     {
       field: 'rent_amount',
-      headerName: t('lease.rentAmount'),
+      headerName: t('contract.rentAmount'),
       flex: 1.3,
       renderCell: (params) => {
-        const row = params.row as Lease
-        return `${row.rent_amount.toLocaleString()} ${row.currency} (${t(`lease.${row.payment_frequency}`)})`
+        const row = params.row as Contract
+        return `${row.rent_amount.toLocaleString()} ${row.currency} (${t(
+          `contract.${row.payment_frequency}`
+        )})`
       }
     },
     {
       field: 'status',
-      headerName: t('lease.status'),
+      headerName: t('contract.status'),
       flex: 1,
       renderCell: (params) => {
-        const row = params.row as Lease
+        const row = params.row as Contract
         return (
           <Chip
-            label={t(`lease.${row.status}`)}
+            label={t(`contract.${row.status}`)}
             color={getStatusColor(row.status)}
             size="small"
             variant="outlined"
@@ -200,7 +170,7 @@ export function LeaseList(): React.ReactElement {
       flex: 2.2,
       sortable: false,
       renderCell: (params) => {
-        const row = params.row as Lease
+        const row = params.row as Contract
         return (
           <Box sx={{ display: 'flex', gap: 1 }}>
             <Button size="small" variant="outlined" onClick={() => handleEditClick(row)}>
@@ -213,7 +183,7 @@ export function LeaseList(): React.ReactElement {
                 color="warning"
                 onClick={() => handleTerminateClick(row.id)}
               >
-                {t('lease.terminate')}
+                {t('contract.terminate')}
               </Button>
             )}
             <Button
@@ -234,7 +204,7 @@ export function LeaseList(): React.ReactElement {
     <Box sx={{ py: 3, px: 4 }}>
       <PageHeader
         icon={<DescriptionIcon />}
-        title={t('lease.title')}
+        title={t('contract.title')}
         action={
           <Button
             variant="contained"
@@ -243,50 +213,51 @@ export function LeaseList(): React.ReactElement {
             onClick={handleAddClick}
             sx={{ px: 3, py: 1, borderRadius: 2 }}
           >
-            {t('lease.add')}
+            {t('contract.add')}
           </Button>
         }
       />
 
       <StandardTable
         columns={columns}
-        rows={leases}
+        rows={contracts}
         loading={loading}
         error={error ?? undefined}
-        onRetry={fetchLeases}
-        emptyMessage={t('lease.noLeases')}
+        onRetry={fetchContracts}
+        emptyMessage={t('contract.noContracts')}
       />
 
       <StandardDialog
         open={openDialog}
         onClose={() => setOpenDialog(false)}
-        title={selectedLease ? t('lease.editTitle') : t('lease.add')}
+        title={selectedContract ? t('contract.editTitle') : t('contract.add')}
+        maxWidth="lg"
       >
-        <LeaseForm
-          lease={selectedLease}
+        <ContractForm
+          contract={selectedContract}
           onSuccess={() => {
             setOpenDialog(false)
-            fetchLeases()
+            fetchContracts()
           }}
           onCancel={() => setOpenDialog(false)}
         />
       </StandardDialog>
 
-      {/* Terminate / delete confirmation — adapts labels to the pending action */}
+      {/* Terminate / delete confirmation */}
       <ConfirmDialog
         open={pendingAction !== null}
         title={
           pendingAction?.kind === 'terminate'
-            ? t('lease.terminateConfirm')
+            ? t('contract.terminateConfirm')
             : t('common.confirmDelete')
         }
         message={
           pendingAction?.kind === 'terminate'
-            ? t('lease.terminateConfirm')
+            ? t('contract.terminateConfirm')
             : t('common.confirmDelete')
         }
         confirmLabel={
-          pendingAction?.kind === 'terminate' ? t('lease.terminate') : t('common.delete')
+          pendingAction?.kind === 'terminate' ? t('contract.terminate') : t('common.delete')
         }
         severity={pendingAction?.kind === 'terminate' ? 'warning' : 'error'}
         onConfirm={confirmAction}
