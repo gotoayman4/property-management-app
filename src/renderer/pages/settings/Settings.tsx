@@ -17,6 +17,7 @@ import {
   RadioGroup,
   FormControlLabel,
   Radio,
+  Switch,
   TextField,
   Select,
   MenuItem,
@@ -40,6 +41,7 @@ interface SettingsData {
   reminder_days_before_contract_end: number
   reminder_days_before_document_expiry: number
   reminder_days_before_recurring_expense: number
+  require_auth: number
 }
 
 const CURRENCIES = ['JOD', 'TRY', 'QAR', 'USD', 'EUR', 'SAR']
@@ -176,6 +178,32 @@ export default function Settings(): React.JSX.Element {
                   />
                 </RadioGroup>
               </FormControl>
+            </CardContent>
+          </Card>
+        </Grid>
+
+        {/* Security */}
+        <Grid size={{ xs: 12, md: 6 }}>
+          <Card>
+            <CardContent sx={{ p: 3 }}>
+              <Typography variant="h5" sx={{ mb: 2.5 }}>
+                {t('settings.security')}
+              </Typography>
+
+              <Alert severity="info" sx={{ mb: 2 }}>
+                {t('settings.requireAuthHelp')}
+              </Alert>
+
+              <FormControlLabel
+                control={
+                  <Switch
+                    checked={!!settings.require_auth}
+                    onChange={(e) => updateField('require_auth', e.target.checked ? 1 : 0)}
+                    color="primary"
+                  />
+                }
+                label={t('settings.requireAuth')}
+              />
             </CardContent>
           </Card>
         </Grid>

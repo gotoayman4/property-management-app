@@ -35,7 +35,8 @@ const settingsUpdateSchema = z.object({
   reminder_days_before_due: z.number().int().min(0).max(90).optional(),
   reminder_days_before_contract_end: z.number().int().min(0).max(365).optional(),
   reminder_days_before_document_expiry: z.number().int().min(0).max(365).optional(),
-  reminder_days_before_recurring_expense: z.number().int().min(0).max(30).optional()
+  reminder_days_before_recurring_expense: z.number().int().min(0).max(30).optional(),
+  require_auth: z.number().int().min(0).max(1).optional()
 })
 
 export function registerPropertyIpcHandlers(): void {
