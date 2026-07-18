@@ -64,7 +64,11 @@ const api = {
     hasUsers: () => ipcRenderer.invoke('auth:hasUsers'),
     register: (data: unknown) => ipcRenderer.invoke('auth:register', data),
     login: (data: unknown) => ipcRenderer.invoke('auth:login', data),
-    changePassword: (data: unknown) => ipcRenderer.invoke('auth:changePassword', data)
+    changePassword: (data: unknown) => ipcRenderer.invoke('auth:changePassword', data),
+    getSavedCredentials: () => ipcRenderer.invoke('auth:getSavedCredentials'),
+    saveCredentials: (data: { username: string; password: string }) =>
+      ipcRenderer.invoke('auth:saveCredentials', data),
+    clearSavedCredentials: () => ipcRenderer.invoke('auth:clearSavedCredentials')
   },
   dashboard: {
     summary: () => ipcRenderer.invoke('dashboard:summary'),

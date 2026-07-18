@@ -120,6 +120,14 @@ declare global {
           display_name: string | null
         }>
         changePassword: (data: unknown) => Promise<{ success: boolean }>
+        getSavedCredentials: () => Promise<{
+          credentials: { username: string; password: string } | null
+        }>
+        saveCredentials: (data: {
+          username: string
+          password: string
+        }) => Promise<{ success: boolean }>
+        clearSavedCredentials: () => Promise<{ success: boolean }>
       }
       dashboard: {
         summary: () => Promise<{

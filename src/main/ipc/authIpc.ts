@@ -1,14 +1,18 @@
 /**
- * INTENT: Authentication IPC handlers — register, login, verify.
+ * INTENT: Authentication IPC handlers — register, login, verify, remember-me.
  *         Single-user offline desktop app: one admin account, bcrypt hashing,
  *         session held in renderer memory only (no JWT, no persisted token).
+ *         Optional "remember me" uses Electron safeStorage (OS keychain) to
+ *         encrypt + persist credentials so the user can skip re-entry on launch.
  * CONSTRAINT (NFR-SEC-01): app requires authentication before any data access.
  * CONSTRAINT (AGENTS.md): all DB queries use parameterized statements, no console.log in prod.
  */
-import { ipcMain } from 'electron'
+import { ipcMain, safeStorage, app } from 'electron'
 import { db } from '../db/database'
 import { z } from 'zod'
 import bcrypt from 'bcrypt'
+import fs from 'fs'
+import path from 'path'
 
 const BCRYPT_ROUNDS = 10
 
@@ -159,4 +163,58 @@ export function registerAuthIpcHandlers(): void {
       }
     }
   )
+
+  // --- Remember-me: encrypted credential persistence via OS keychain ---
+
+  ipcMain.handle('auth:getSavedCredentials', async () => {
+    try {
+      const filePath = getCredentialsFilePath()
+      if (!fs.existsSync(filePath)) {
+        return { credentials: null }
+      }
+      const raw = fs.readFileSync(filePath)
+      const encrypted = JSON.parse(raw.toString('utf-8')) as {
+        username: string
+        password: string
+      }
+      const username = safeStorage.decryptString(Buffer.from(encrypted.username, 'base64'))
+      const password = safeStorage.decryptString(Buffer.from(encrypted.password, 'base64'))
+      return { credentials: { username, password } }
+    } catch {
+      return { credentials: null }
+    }
+  })
+
+  ipcMain.handle(
+    'auth:saveCredentials',
+    async (_, data: { username: string; password: string }) => {
+      try {
+        const filePath = getCredentialsFilePath()
+        const payload = {
+          username: safeStorage.encryptString(data.username).toString('base64'),
+          password: safeStorage.encryptString(data.password).toString('base64')
+        }
+        fs.writeFileSync(filePath, JSON.stringify(payload), 'utf-8')
+        return { success: true }
+      } catch {
+        throw new Error('FAILED_TO_SAVE_CREDENTIALS')
+      }
+    }
+  )
+
+  ipcMain.handle('auth:clearSavedCredentials', async () => {
+    try {
+      const filePath = getCredentialsFilePath()
+      if (fs.existsSync(filePath)) {
+        fs.unlinkSync(filePath)
+      }
+      return { success: true }
+    } catch {
+      throw new Error('FAILED_TO_CLEAR_CREDENTIALS')
+    }
+  })
+}
+
+function getCredentialsFilePath(): string {
+  return path.join(app.getPath('userData'), 'saved-credentials.json')
 }

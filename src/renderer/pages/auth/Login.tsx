@@ -19,7 +19,9 @@ import {
   Alert,
   CircularProgress,
   InputAdornment,
-  IconButton
+  IconButton,
+  Checkbox,
+  FormControlLabel
 } from '@mui/material'
 import LockOutlinedIcon from '@mui/icons-material/LockOutlined'
 import Visibility from '@mui/icons-material/Visibility'
@@ -55,6 +57,7 @@ export default function Login(): React.JSX.Element {
   const [mode, setMode] = useState<'loading' | 'login' | 'register'>('loading')
   const [error, setError] = useState<string | null>(null)
   const [showPassword, setShowPassword] = useState(false)
+  const [rememberMe, setRememberMe] = useState(false)
 
   const loginForm = useForm<LoginForm>({
     resolver: zodResolver(loginSchema),
@@ -67,22 +70,37 @@ export default function Login(): React.JSX.Element {
   })
 
   useEffect(() => {
-    async function checkUsers(): Promise<void> {
+    async function init(): Promise<void> {
       try {
         const result = await window.api.auth.hasUsers()
-        setMode(result.hasUsers ? 'login' : 'register')
+        if (result.hasUsers) {
+          setMode('login')
+          const saved = await window.api.auth.getSavedCredentials()
+          if (saved.credentials) {
+            loginForm.setValue('username', saved.credentials.username)
+            loginForm.setValue('password', saved.credentials.password)
+            setRememberMe(true)
+          }
+        } else {
+          setMode('register')
+        }
       } catch {
         setError(t('common.error'))
         setMode('login')
       }
     }
-    checkUsers()
-  }, [t])
+    init()
+  }, [t, loginForm])
 
   const handleLogin = async (data: LoginForm): Promise<void> => {
     setError(null)
     try {
       const user = await window.api.auth.login(data)
+      if (rememberMe) {
+        await window.api.auth.saveCredentials({ username: data.username, password: data.password })
+      } else {
+        await window.api.auth.clearSavedCredentials()
+      }
       authLogin(user)
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'UNKNOWN'
@@ -288,6 +306,17 @@ export default function Login(): React.JSX.Element {
                     )
                   }
                 }}
+              />
+              <FormControlLabel
+                control={
+                  <Checkbox
+                    checked={rememberMe}
+                    onChange={(e) => setRememberMe(e.target.checked)}
+                    color="primary"
+                  />
+                }
+                label={t('auth.rememberMe')}
+                sx={{ mt: 1, justifyContent: 'start' }}
               />
               <Button
                 fullWidth

@@ -432,7 +432,8 @@
     "registrationDisabled": "التسجيل معطل — يوجد حساب مدير بالفعل",
     "invalidInput": "تحقق من بياناتك وأعد المحاولة",
     "hidePassword": "إخفاء كلمة المرور",
-    "showPassword": "إظهار كلمة المرور"
+    "showPassword": "إظهار كلمة المرور",
+    "rememberMe": "تذكرني"
   },
   "reports": {
     "title": "التقارير والتصدير",

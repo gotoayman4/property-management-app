@@ -432,7 +432,8 @@
     "registrationDisabled": "Registration is disabled — an admin account already exists",
     "invalidInput": "Please check your input and try again",
     "hidePassword": "Hide password",
-    "showPassword": "Show password"
+    "showPassword": "Show password",
+    "rememberMe": "Remember me"
   },
   "reports": {
     "title": "Reports & Exports",
