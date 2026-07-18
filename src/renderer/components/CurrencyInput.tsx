@@ -1,7 +1,7 @@
-import React from 'react'
 import { Box } from '@mui/material'
-import { AmountField, ConversionPreview } from './AmountField'
+import React from 'react'
 import type { ControllerProps, FieldPath, FieldValues } from 'react-hook-form'
+import { AmountField, ConversionPreview } from './AmountField'
 
 /**
  * INTENT: Monetary amount field with a read-only currency-code adornment and optional

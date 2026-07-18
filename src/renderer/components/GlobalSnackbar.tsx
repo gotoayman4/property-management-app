@@ -1,5 +1,5 @@
-import React from 'react'
 import { Snackbar, Alert, Slide } from '@mui/material'
+import React from 'react'
 import { useTranslation } from 'react-i18next'
 import type { SnackbarState } from '../hooks/useSnackbar'
 

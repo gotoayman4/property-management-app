@@ -1,5 +1,7 @@
-import React, { useEffect, useState, useCallback } from 'react'
-import { useTranslation } from 'react-i18next'
+import AddIcon from '@mui/icons-material/Add'
+import BusinessIcon from '@mui/icons-material/Business'
+import DeleteIcon from '@mui/icons-material/Delete'
+import EditIcon from '@mui/icons-material/Edit'
 import {
   Box,
   Typography,
@@ -12,19 +14,18 @@ import {
   IconButton,
   Chip,
   Card,
-  Grid
+  Grid,
+  Tooltip
 } from '@mui/material'
-import AddIcon from '@mui/icons-material/Add'
-import EditIcon from '@mui/icons-material/Edit'
-import DeleteIcon from '@mui/icons-material/Delete'
 import { GridColDef } from '@mui/x-data-grid'
-import StandardTable from '../../components/StandardTable'
+import React, { useEffect, useState, useCallback } from 'react'
+import { useTranslation } from 'react-i18next'
 import ConfirmDialog from '../../components/ConfirmDialog'
 import GlobalSnackbar from '../../components/GlobalSnackbar'
 import PageHeader from '../../components/PageHeader'
+import StandardTable from '../../components/StandardTable'
 import { useSnackbar } from '../../hooks/useSnackbar'
 import PropertyForm from './PropertyForm'
-import BusinessIcon from '@mui/icons-material/Business'
 
 interface Property {
   id: number
@@ -49,8 +50,7 @@ interface Country {
 }
 
 export default function PropertyList(): React.JSX.Element {
-  const { t, i18n } = useTranslation()
-  const isRtl = i18n.language === 'ar'
+  const { t } = useTranslation()
   const { snack, showError, showSuccess, hideSnackbar } = useSnackbar()
 
   // State
@@ -219,22 +219,26 @@ export default function PropertyList(): React.JSX.Element {
       minWidth: 110,
       renderCell: (params) => (
         <Box sx={{ display: 'flex', gap: 0.5 }}>
-          <IconButton
-            size="small"
-            color="primary"
-            onClick={() => handleEditClick(params.row)}
-            aria-label={t('common.edit')}
-          >
-            <EditIcon fontSize="small" />
-          </IconButton>
-          <IconButton
-            size="small"
-            color="error"
-            onClick={() => handleDeleteClick(params.row.id)}
-            aria-label={t('common.delete')}
-          >
-            <DeleteIcon fontSize="small" />
-          </IconButton>
+          <Tooltip title={t('common.edit')}>
+            <IconButton
+              size="small"
+              color="primary"
+              onClick={() => handleEditClick(params.row)}
+              aria-label={t('common.edit')}
+            >
+              <EditIcon fontSize="small" />
+            </IconButton>
+          </Tooltip>
+          <Tooltip title={t('common.delete')}>
+            <IconButton
+              size="small"
+              color="error"
+              onClick={() => handleDeleteClick(params.row.id)}
+              aria-label={t('common.delete')}
+            >
+              <DeleteIcon fontSize="small" />
+            </IconButton>
+          </Tooltip>
         </Box>
       )
     }
@@ -308,9 +312,7 @@ export default function PropertyList(): React.JSX.Element {
                 <MenuItem value="">{t('common.all')}</MenuItem>
                 {countries.map((c) => (
                   <MenuItem key={c.code} value={c.code}>
-                    {c.code === 'JO' && (isRtl ? 'الأردن' : 'Jordan')}
-                    {c.code === 'TR' && (isRtl ? 'تركيا' : 'Turkey')}
-                    {c.code === 'QA' && (isRtl ? 'قطر' : 'Qatar')}
+                    {t(`countries.${c.code}`, c.code)}
                   </MenuItem>
                 ))}
               </Select>

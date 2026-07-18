@@ -9,13 +9,12 @@
  *
  * CONSTRAINT: Electron and the save dialog are mocked; a temp dir holds the exported files.
  */
-import { describe, it, expect, beforeEach, vi, afterAll } from 'vitest'
-import { ipcMain } from 'electron'
-import { makeRegistry, invoke, resetDb, type IpcRegistry } from './ipcTestUtils'
 import { mkdtempSync, rmSync, readFileSync, existsSync } from 'fs'
 import { tmpdir } from 'os'
 import { join } from 'path'
-
+import { ipcMain, dialog } from 'electron'
+// eslint-disable-next-line import-x/order -- vitest vi.mock pattern forces structural separation
+import { describe, it, expect, beforeEach, vi, afterAll } from 'vitest'
 const { testDb } = vi.hoisted(() => {
   // eslint-disable-next-line @typescript-eslint/no-require-imports -- required inside hoisted scope
   const Database = require('better-sqlite3')
@@ -51,10 +50,9 @@ vi.mock('electron', () => ({
 
 vi.mock('../../db/database', () => ({ db: testDb, initDatabase: () => undefined }))
 
-import { registerReportsIpcHandlers } from '../reportsIpc'
 import { runMigrations } from '../../db/migrations'
-import { dialog } from 'electron'
-
+import { registerReportsIpcHandlers } from '../reportsIpc'
+import { makeRegistry, invoke, resetDb, type IpcRegistry } from './ipcTestUtils'
 describe('reportsIpc', () => {
   let registry: IpcRegistry
   let propertyId: number

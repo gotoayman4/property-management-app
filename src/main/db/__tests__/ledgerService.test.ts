@@ -1,6 +1,5 @@
-import { describe, it, expect, beforeEach } from 'vitest'
 import Database from 'better-sqlite3'
-import { runMigrations } from '../migrations'
+import { describe, it, expect, beforeEach } from 'vitest'
 import {
   appendLedgerEntry,
   computeRunningBalances,
@@ -10,6 +9,7 @@ import {
   LedgerError,
   type LedgerEntryInput
 } from '../ledgerService'
+import { runMigrations } from '../migrations'
 
 /**
  * INTENT: Exhaustively verify the immutable-ledger invariants (BR-20/22) and the receipt-number

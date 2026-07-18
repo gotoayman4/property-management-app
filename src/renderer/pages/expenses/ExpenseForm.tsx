@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import { zodResolver } from '@hookform/resolvers/zod'
 import {
   Box,
   Button,
@@ -11,13 +11,14 @@ import {
   Grid,
   Typography
 } from '@mui/material'
+import React, { useEffect, useState } from 'react'
 import { useForm, Controller } from 'react-hook-form'
-import { zodResolver } from '@hookform/resolvers/zod'
-import { z } from 'zod'
 import { useTranslation } from 'react-i18next'
-import GlobalSnackbar from '../../components/GlobalSnackbar'
-import { CurrencyInput } from '../../components/CurrencyInput'
+import { z } from 'zod'
 import { AmountField } from '../../components/AmountField'
+import { CurrencyInput } from '../../components/CurrencyInput'
+import GlobalSnackbar from '../../components/GlobalSnackbar'
+import { useCurrencyConversion } from '../../hooks/useCurrencyConversion'
 import { useSnackbar } from '../../hooks/useSnackbar'
 
 /**
@@ -104,6 +105,10 @@ export function ExpenseForm({ onSuccess, onCancel }: ExpenseFormProps): React.Re
 
   const selectedPropertyId = watch('property_id')
   const selectedCurrency = watch('currency')
+  const watchedAmount = watch('amount')
+  const conversions = useCurrencyConversion(watchedAmount, selectedCurrency)
+  const primaryConversion =
+    conversions.find((c) => c.currency === 'USD' && c.currency !== selectedCurrency) ?? null
 
   // Lock currency to the selected property (BR-13); when no property, keep the editable default.
   useEffect(() => {
@@ -284,6 +289,7 @@ export function ExpenseForm({ onSuccess, onCancel }: ExpenseFormProps): React.Re
                 label={t('expense.amount')}
                 currency={selectedCurrency}
                 required
+                conversion={primaryConversion}
                 noRateLabel={t('common.noRateAvailable')}
               />
             ) : (

@@ -1,3 +1,4 @@
+/* eslint-disable no-console -- CLI script needs console output for progress UX */
 /**
  * @file seed-demo-data — inject realistic Arabic demo data into the dev database.
  *
@@ -24,10 +25,10 @@
  *   5. `npm run dev`                    (the app now opens with the seeded data)
  */
 
-import Database from 'better-sqlite3'
 import { resolve } from 'path'
-import { createPayment } from '../src/main/db/paymentRepository'
+import Database from 'better-sqlite3'
 import { createExpense } from '../src/main/db/expenseRepository'
+import { createPayment } from '../src/main/db/paymentRepository'
 import {
   PROPERTY_FIXTURES,
   TENANT_FIXTURES,

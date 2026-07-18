@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import { Close as CloseIcon } from '@mui/icons-material'
 import {
   Dialog,
   DialogTitle,
@@ -8,7 +8,7 @@ import {
   Typography,
   Box
 } from '@mui/material'
-import { Close as CloseIcon } from '@mui/icons-material'
+import React, { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import ConfirmDialog from './ConfirmDialog'
 

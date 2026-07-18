@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import { zodResolver } from '@hookform/resolvers/zod'
 import {
   Box,
   Button,
@@ -13,12 +13,13 @@ import {
   Checkbox,
   Typography
 } from '@mui/material'
+import React, { useEffect, useState } from 'react'
 import { useForm, Controller } from 'react-hook-form'
-import { zodResolver } from '@hookform/resolvers/zod'
-import { z } from 'zod'
 import { useTranslation } from 'react-i18next'
-import GlobalSnackbar from '../../components/GlobalSnackbar'
+import { z } from 'zod'
 import { CurrencyInput } from '../../components/CurrencyInput'
+import GlobalSnackbar from '../../components/GlobalSnackbar'
+import { useCurrencyConversion } from '../../hooks/useCurrencyConversion'
 import { useSnackbar } from '../../hooks/useSnackbar'
 
 /**
@@ -126,6 +127,11 @@ export function PaymentForm({ onSuccess, onCancel }: PaymentFormProps): React.Re
 
   const selectedPropertyId = watch('property_id')
   const selectedContractId = watch('contract_id')
+  const watchedAmount = watch('amount')
+  const watchedCurrency = watch('currency')
+  const conversions = useCurrencyConversion(watchedAmount, watchedCurrency)
+  const primaryConversion =
+    conversions.find((c) => c.currency === 'USD' && c.currency !== watchedCurrency) ?? null
 
   // Lock currency to the selected property (BR-13) and clear it when none selected.
   useEffect(() => {
@@ -280,8 +286,9 @@ export function PaymentForm({ onSuccess, onCancel }: PaymentFormProps): React.Re
               name="amount"
               control={control}
               label={t('payment.amount')}
-              currency={watch('currency')}
+              currency={watchedCurrency}
               required
+              conversion={primaryConversion}
               noRateLabel={t('common.noRateAvailable')}
             />
           </Grid>

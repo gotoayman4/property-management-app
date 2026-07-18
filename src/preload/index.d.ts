@@ -163,16 +163,38 @@ declare global {
         }>
       }
       recurringExpenses: {
-        list: (filters?: { property_id?: number; is_active?: boolean }) => Promise<unknown[]>
+        list: (filters?: {
+          property_id?: number
+          is_active?: boolean
+          frequency?: string
+        }) => Promise<unknown[]>
         get: (id: number) => Promise<unknown>
         create: (data: unknown) => Promise<{ id: number }>
         update: (data: unknown) => Promise<{ success: boolean }>
         deactivate: (id: number) => Promise<{ success: boolean }>
         activate: (id: number) => Promise<{ success: boolean }>
+        pendingDue: () => Promise<unknown[]>
+        confirmInstance: (data: {
+          template_id: number
+          due_date: string
+          amount?: number
+          notes?: string | null
+        }) => Promise<{ expense_id: number }>
+        skipInstance: (data: {
+          template_id: number
+          due_date: string
+          skip_reason: string
+        }) => Promise<{ success: boolean }>
+        log: (id: number) => Promise<unknown[]>
       }
       documents: {
         upload: (data: unknown) => Promise<{ id: number; mime_type: string }>
-        list: (data: { entity_type: string; entity_id: number }) => Promise<
+        replace: (data: unknown) => Promise<{ id: number; mime_type: string }>
+        list: (data: {
+          entity_type: string
+          entity_id: number
+          include_archived?: boolean
+        }) => Promise<
           {
             id: number
             entity_type: string
@@ -181,12 +203,18 @@ declare global {
             mime_type: string
             file_size: number
             description: string | null
+            document_type: string | null
+            issue_date: string | null
+            expiry_date: string | null
+            is_archived: number
+            replaced_by: number | null
             uploaded_at: string
           }[]
         >
         get: (id: number) => Promise<unknown>
         read: (id: number) => Promise<{ data: string; mime_type: string }>
         delete: (id: number) => Promise<{ success: boolean }>
+        purge: (id: number) => Promise<{ success: boolean }>
       }
       notifications: {
         list: (filters?: { unread_only?: boolean }) => Promise<

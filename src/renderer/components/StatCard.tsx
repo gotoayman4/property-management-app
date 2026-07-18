@@ -3,8 +3,8 @@
  *         Dashboard card pattern but extracted for reuse and clean separation.
  * CONSTRAINT (AGENTS.md): logical CSS, theme.palette tokens only, i18n keys.
  */
-import React from 'react'
 import { Card, CardContent, Typography, Box } from '@mui/material'
+import React from 'react'
 
 interface StatCardProps {
   icon: React.ReactNode

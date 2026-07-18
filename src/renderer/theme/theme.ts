@@ -6,13 +6,25 @@ const secondaryColor = '#b45309' // Warm Amber
 const successColor = '#0f766e' // Teal
 const errorColor = '#be123c' // Rose/Crimson
 
-export const getTheme = (direction: 'ltr' | 'rtl'): Theme => {
+// FR-SET-04/05: Font size scale factors (applied to base typography sizes).
+const FONT_SCALE: Record<string, number> = {
+  small: 0.85,
+  medium: 1.0,
+  large: 1.15
+}
+
+export const getTheme = (
+  direction: 'ltr' | 'rtl',
+  mode: 'light' | 'dark' = 'light',
+  fontSize: 'small' | 'medium' | 'large' = 'medium'
+): Theme => {
   const isRtl = direction === 'rtl'
+  const fn = (n: number): number => Math.round(n * (FONT_SCALE[fontSize] || 1))
 
   return createTheme({
     direction,
     palette: {
-      mode: 'light',
+      mode,
       primary: {
         main: primaryColor,
         light: '#3b82f6',
@@ -34,26 +46,26 @@ export const getTheme = (direction: 'ltr' | 'rtl'): Theme => {
         dark: '#881337'
       },
       background: {
-        default: '#f8fafc', // Slate 50
-        paper: '#ffffff'
+        default: mode === 'dark' ? '#0f172a' : '#f8fafc',
+        paper: mode === 'dark' ? '#1e293b' : '#ffffff'
       },
       text: {
-        primary: '#0f172a', // Slate 900
-        secondary: '#475569' // Slate 600
+        primary: mode === 'dark' ? '#f1f5f9' : '#0f172a',
+        secondary: mode === 'dark' ? '#94a3b8' : '#475569'
       }
     },
     typography: {
       fontFamily: isRtl
         ? '"Cairo", "Tajawal", "Roboto", "Helvetica", "Arial", sans-serif'
         : '"Outfit", "Inter", "Roboto", "Helvetica", "Arial", sans-serif',
-      h1: { fontSize: '2.25rem', fontWeight: 700 },
-      h2: { fontSize: '1.875rem', fontWeight: 700 },
-      h3: { fontSize: '1.5rem', fontWeight: 600 },
-      h4: { fontSize: '1.25rem', fontWeight: 600 },
-      h5: { fontSize: '1rem', fontWeight: 600 },
-      h6: { fontSize: '0.875rem', fontWeight: 600 },
-      body1: { fontSize: '1rem', lineHeight: isRtl ? 1.75 : 1.5 },
-      body2: { fontSize: '0.875rem', lineHeight: isRtl ? 1.7 : 1.43 },
+      h1: { fontSize: fn(2.25 * 16), fontWeight: 700 },
+      h2: { fontSize: fn(1.875 * 16), fontWeight: 700 },
+      h3: { fontSize: fn(1.5 * 16), fontWeight: 600 },
+      h4: { fontSize: fn(1.25 * 16), fontWeight: 600 },
+      h5: { fontSize: fn(1 * 16), fontWeight: 600 },
+      h6: { fontSize: fn(0.875 * 16), fontWeight: 600 },
+      body1: { fontSize: fn(16), lineHeight: isRtl ? 1.75 : 1.5 },
+      body2: { fontSize: fn(14), lineHeight: isRtl ? 1.7 : 1.43 },
       button: { fontWeight: 600, textTransform: 'none' }
     },
     shape: {

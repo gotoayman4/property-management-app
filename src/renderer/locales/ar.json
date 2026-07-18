@@ -3,6 +3,11 @@
     "brand": "أثـيـر العقاري",
     "title": "أثـيـر العقاري"
   },
+  "countries": {
+    "JO": "الأردن",
+    "TR": "تركيا",
+    "QA": "قطر"
+  },
   "sidebar": {
     "dashboard": "لوحة التحكم",
     "properties": "العقارات والوحدات",
@@ -13,7 +18,9 @@
     "ledger": "الدفتر المالي",
     "currency": "سعر الصرف",
     "reports": "التقارير",
-    "settings": "الإعدادات"
+    "settings": "الإعدادات",
+    "recurringExpenses": "المصروفات الدورية",
+    "notifications": "الإشعارات"
   },
   "common": {
     "save": "حفظ",
@@ -63,7 +70,8 @@
     "fromDate": "من تاريخ",
     "toDate": "إلى تاريخ",
     "filter": "تصفية",
-    "clearFilters": "مسح التصفية"
+    "clearFilters": "مسح التصفية",
+    "details": "التفاصيل"
   },
   "property": {
     "title": "إدارة العقارات والوحدات",
@@ -238,7 +246,21 @@
     "year": "السنة",
     "effectiveDate": "تاريخ السريان",
     "increasePercent": "نسبة الزيادة %",
-    "escalationInvalid": "جدول التصاعد غير صالح (تحقق من التواريخ والمبالغ والنسب)."
+    "escalationInvalid": "جدول التصاعد غير صالح (تحقق من التواريخ والمبالغ والنسب).",
+    "detailTabData": "البيانات",
+    "detailTabSchedule": "جدول التصاعد",
+    "detailTabHistory": "التاريخ",
+    "detailTabDocuments": "المستندات",
+    "detailNoSchedule": "لا يوجد جدول تصاعد. هذا العقد يستخدم زيادة ثابتة بسيطة.",
+    "detailNoHistory": "لم يتم تسجيل أي تغييرات بعد.",
+    "detailNoDocuments": "لا توجد مستندات مرفقة بهذا العقد.",
+    "paymentMethod": "طريقة الدفع",
+    "cancellationReason": "سبب الإلغاء",
+    "historyAction": "الإجراء",
+    "historyDate": "التاريخ",
+    "historyNote": "ملاحظة",
+    "historyPrevious": "القيم السابقة",
+    "yearNumber": "السنة رقم"
   },
   "payment": {
     "title": "المدفوعات والإيرادات",
@@ -376,10 +398,46 @@
     "noPayments": "لا توجد مدفوعات لهذا المستأجر.",
     "noDocuments": "لم يتم رفع أي مستندات."
   },
+  "contractDetail": {
+    "documents": "المستندات",
+    "noDocuments": "لم يتم رفع أي مستندات."
+  },
   "documents": {
     "fileName": "اسم الملف",
     "mimeType": "النوع",
-    "uploadedAt": "تاريخ الرفع"
+    "documentType": "نوع المستند",
+    "uploadedAt": "تاريخ الرفع",
+    "issueDate": "تاريخ الإصدار",
+    "expiryDate": "تاريخ الانتهاء",
+    "selectFile": "اختر ملف",
+    "upload": "رفع",
+    "uploading": "جاري الرفع...",
+    "uploadSuccess": "تم رفع المستند بنجاح",
+    "uploadFailed": "فشل في رفع المستند",
+    "invalidFileType": "يُسمح فقط بملفات PDF و JPG و PNG و DOCX و XLSX",
+    "invalidFileContent": "محتوى الملف لا يتطابق مع الأنواع المسموح بها",
+    "fileTooLarge": "حجم الملف يتجاوز الحد الأقصى البالغ ١٠ ميجابايت",
+    "optional": "اختياري",
+    "expiringSoon": "ينتهي قريباً",
+    "expired": "منتهي",
+    "replace": "استبدال",
+    "replaceSuccess": "تم استبدال المستند؛ تمت أرشفة النسخة القديمة",
+    "archive": "أرشفة",
+    "viewHistory": "عرض سجل النسخ",
+    "types": {
+      "deed": "صك ملكية",
+      "insurance_policy": "وثيقة تأمين",
+      "utility_contract": "عقد خدمة",
+      "maintenance_record": "سجل صيانة",
+      "municipal_permit": "تصريح بلدي",
+      "id_copy": "نسخة هوية",
+      "signed_contract": "عقد موقّع",
+      "addendum": "ملحق",
+      "image": "صورة",
+      "receipt": "إيصال",
+      "invoice": "فاتورة",
+      "other": "أخرى"
+    }
   },
   "currency": {
     "title": "أسعار الصرف",
@@ -409,6 +467,57 @@
   "search": {
     "placeholder": "بحث في العقارات، المستأجرين..."
   },
+  "recurringExpense": {
+    "title": "المصروفات الدورية",
+    "subtitle": "أتمتة التكاليف الدورية باستخدام القوالب",
+    "add": "إضافة مصروف دوري",
+    "editTitle": "تعديل المصروف الدوري",
+    "name": "الاسم",
+    "nameRequired": "يجب أن لا يقل الاسم عن حرفين",
+    "description": "الوصف",
+    "propertyOptional": "العقار المرتبط (اختياري)",
+    "frequency": "الدورية",
+    "frequencyDaily": "يومي",
+    "frequencyWeekly": "أسبوعي",
+    "startDate": "تاريخ البدء",
+    "endDateOptional": "تاريخ الانتهاء (اختياري)",
+    "nextDue": "الاستحقاق التالي",
+    "lastGenerated": "آخر إنشاء",
+    "dayOfMonth": "يوم الشهر",
+    "dayOfMonthInvalid": "يجب أن يكون بين 1 و 28",
+    "statusActive": "نشط",
+    "statusPaused": "متوقف",
+    "statusEnded": "منتهي",
+    "tabAll": "كل القوالب",
+    "tabActive": "النشطة فقط",
+    "tabPending": "مستحقة",
+    "pause": "إيقاف",
+    "resume": "استئناف",
+    "end": "إنهاء",
+    "confirmPause": "إيقاف هذا المصروف الدوري مؤقتاً؟",
+    "confirmResume": "استئناف هذا المصروف الدوري؟",
+    "confirmEnd": "إنهاء هذا المصروف الدوري نهائياً؟",
+    "pauseHelp": "أثناء الإيقاف، لن يتم إنشاء مصروفات جديدة من هذا القالب.",
+    "resumeHelp": "سيبدأ هذا القالب في إنشاء المصروفات مرة أخرى.",
+    "endHelp": "بعد الإنهاء، لا يمكن إعادة تفعيل هذا القالب. يمكنك إنشاء قالب جديد بدلاً منه.",
+    "noTemplates": "لم يتم تعريف مصروفات دورية بعد. أضف واحداً لأتمتة التكاليف الدورية.",
+    "descRequired": "يجب أن لا يقل الوصف عن 3 أحرف",
+    "categoryRequired": "الفئة مطلوبة",
+    "amountRequired": "يجب أن يكون المبلغ أكبر من صفر",
+    "startDateRequired": "تاريخ البدء مطلوب",
+    "frequencyRequired": "الدورية مطلوبة",
+    "helpText": "سيقوم النظام بإنشاء المصروفات تلقائياً في اليوم المحدد من كل فترة.",
+    "templateEnded": "انتهت صلاحية هذا القالب ولا يمكن إعادة تفعيله.",
+    "recordExpense": "تسجيل المصروف",
+    "skip": "تخطي",
+    "skipTitle": "تخطي تاريخ الاستحقاق هذا؟",
+    "skipReason": "سبب التخطي",
+    "noPendingInstances": "لا توجد استحقاقات معلقة — كل شيء مسجل.",
+    "instanceConfirmed": "تم تسجيل المصروف وتقديم تاريخ الاستحقاق التالي.",
+    "instanceSkipped": "تم تخطي الاستحقاق وتقديم التاريخ التالي.",
+    "instanceAlreadyActioned": "تمت معالجة تاريخ الاستحقاق هذا مسبقاً.",
+    "daysOverdue": "متأخر"
+  },
   "notifications": {
     "title": "الإشعارات",
     "label": "الإشعارات",
@@ -416,9 +525,25 @@
     "markAllRead": "تعليم الكل كمقروء",
     "type": {
       "rent_due": "استحقاق الإيجار",
+      "overdue": "متأخر",
       "contract_expiry": "انتهاء العقد",
-      "document_expiry": "انتهاء المستند",
-      "recurring_expense_due": "مصروف دوري"
+      "escalation_upcoming": "زيادة الإيجار",
+      "document_expiry": "انتهاء مستند",
+      "recurring_expense_due": "مصروف دوري",
+      "backup_failed": "فشل النسخ الاحتياطي"
+    }
+  },
+  "notification": {
+    "unread": "غير مقروء",
+    "markAsRead": "تعليم كمقروء",
+    "body": {
+      "rentDue": "إشعار استحقاق الإيجار",
+      "overdue": "إشعار تأخر السداد",
+      "contractExpiring": "إشعار انتهاء العقد",
+      "escalationUpcoming": "إشعار زيادة الإيجار القادمة",
+      "documentExpiring": "إشعار انتهاء المستند",
+      "recurringExpenseDue": "إشعار استحقاق مصروف دوري",
+      "backupFailed": "إشعار فشل النسخ الاحتياطي"
     }
   },
   "auth": {

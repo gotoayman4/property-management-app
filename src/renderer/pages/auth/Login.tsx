@@ -4,11 +4,10 @@
  * CONSTRAINT (NFR-SEC-01): authentication required before data access.
  * CONSTRAINT (AGENTS.md): i18n keys only, React Hook Form, Zod validation, logical CSS.
  */
-import React, { useState, useEffect } from 'react'
-import { useTranslation } from 'react-i18next'
-import { useForm } from 'react-hook-form'
-import { z } from 'zod'
 import { zodResolver } from '@hookform/resolvers/zod'
+import LockOutlinedIcon from '@mui/icons-material/LockOutlined'
+import Visibility from '@mui/icons-material/Visibility'
+import VisibilityOff from '@mui/icons-material/VisibilityOff'
 import {
   Box,
   Card,
@@ -23,9 +22,10 @@ import {
   Checkbox,
   FormControlLabel
 } from '@mui/material'
-import LockOutlinedIcon from '@mui/icons-material/LockOutlined'
-import Visibility from '@mui/icons-material/Visibility'
-import VisibilityOff from '@mui/icons-material/VisibilityOff'
+import React, { useState, useEffect } from 'react'
+import { useForm } from 'react-hook-form'
+import { useTranslation } from 'react-i18next'
+import { z } from 'zod'
 import { useAuth } from '../../contexts/AuthContext'
 
 const loginSchema = z.object({

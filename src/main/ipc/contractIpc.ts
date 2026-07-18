@@ -1,5 +1,4 @@
 import { ipcMain } from 'electron'
-import { db } from '../db/database'
 import { z } from 'zod'
 import {
   validateEscalationSchedule,
@@ -7,6 +6,7 @@ import {
   type EscalationYearInput,
   EscalationValidationError
 } from '../db/contractEscalation'
+import { db } from '../db/database'
 
 /**
  * INTENT: IPC handlers for the contracts domain (renamed from leases) + multi-year escalation.

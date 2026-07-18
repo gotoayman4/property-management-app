@@ -1,6 +1,5 @@
-import { describe, it, expect, beforeEach } from 'vitest'
 import Database from 'better-sqlite3'
-import { runMigrations } from '../migrations'
+import { describe, it, expect, beforeEach } from 'vitest'
 import {
   createExpense,
   voidExpense,
@@ -11,6 +10,7 @@ import {
   type CreateExpenseInput
 } from '../expenseRepository'
 import { computeRunningBalances, reconstructBalanceAsOf } from '../ledgerService'
+import { runMigrations } from '../migrations'
 
 /**
  * INTENT: Regression tests for the expense domain invariants: BR-11 (general-expense isolation),

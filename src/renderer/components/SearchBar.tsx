@@ -3,9 +3,11 @@
  *         Results appear in a dropdown with entity type grouping and navigation.
  * CONSTRAINT (AGENTS.md): i18n keys only, logical CSS, portal dir prop for Popper.
  */
-import React, { useState, useCallback, useRef } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { useTranslation } from 'react-i18next'
+import BusinessIcon from '@mui/icons-material/Business'
+import DescriptionIcon from '@mui/icons-material/Description'
+import PaymentsIcon from '@mui/icons-material/Payments'
+import PeopleIcon from '@mui/icons-material/People'
+import SearchIcon from '@mui/icons-material/Search'
 import {
   Box,
   TextField,
@@ -18,11 +20,9 @@ import {
   Typography,
   ClickAwayListener
 } from '@mui/material'
-import SearchIcon from '@mui/icons-material/Search'
-import BusinessIcon from '@mui/icons-material/Business'
-import PeopleIcon from '@mui/icons-material/People'
-import DescriptionIcon from '@mui/icons-material/Description'
-import PaymentsIcon from '@mui/icons-material/Payments'
+import React, { useState, useCallback, useRef } from 'react'
+import { useTranslation } from 'react-i18next'
+import { useNavigate } from 'react-router-dom'
 
 interface SearchResult {
   entity_type: string

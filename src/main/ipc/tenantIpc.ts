@@ -1,6 +1,6 @@
 import { ipcMain } from 'electron'
-import { db } from '../db/database'
 import { z } from 'zod'
+import { db } from '../db/database'
 
 // Define Zod validation schemas for Tenant (SRS §8 + FR-TEN-01)
 const tenantCreateSchema = z.object({

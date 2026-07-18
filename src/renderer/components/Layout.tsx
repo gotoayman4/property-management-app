@@ -1,6 +1,16 @@
-import React from 'react'
-import { Link, useLocation } from 'react-router-dom'
-import { useTranslation } from 'react-i18next'
+import AccountBalanceWalletIcon from '@mui/icons-material/AccountBalanceWallet'
+import AssessmentIcon from '@mui/icons-material/Assessment'
+import AttachMoneyIcon from '@mui/icons-material/AttachMoney'
+import AutorenewIcon from '@mui/icons-material/Autorenew'
+import BusinessIcon from '@mui/icons-material/Business'
+import DashboardIcon from '@mui/icons-material/Dashboard'
+import DescriptionIcon from '@mui/icons-material/Description'
+import NotificationsIcon from '@mui/icons-material/Notifications'
+import PaymentsIcon from '@mui/icons-material/Payments'
+import PeopleIcon from '@mui/icons-material/People'
+import ReceiptLongIcon from '@mui/icons-material/ReceiptLong'
+import SettingsIcon from '@mui/icons-material/Settings'
+import TranslateIcon from '@mui/icons-material/Translate'
 import {
   Box,
   Drawer,
@@ -14,19 +24,12 @@ import {
   ListItemIcon,
   ListItemText,
   IconButton,
-  Button
+  Button,
+  Badge
 } from '@mui/material'
-import DashboardIcon from '@mui/icons-material/Dashboard'
-import BusinessIcon from '@mui/icons-material/Business'
-import SettingsIcon from '@mui/icons-material/Settings'
-import TranslateIcon from '@mui/icons-material/Translate'
-import PeopleIcon from '@mui/icons-material/People'
-import DescriptionIcon from '@mui/icons-material/Description'
-import PaymentsIcon from '@mui/icons-material/Payments'
-import ReceiptLongIcon from '@mui/icons-material/ReceiptLong'
-import AccountBalanceWalletIcon from '@mui/icons-material/AccountBalanceWallet'
-import AttachMoneyIcon from '@mui/icons-material/AttachMoney'
-import AssessmentIcon from '@mui/icons-material/Assessment'
+import React, { useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
+import { Link, useLocation } from 'react-router-dom'
 import NotificationBell from './NotificationBell'
 import SearchBar from './SearchBar'
 
@@ -41,6 +44,27 @@ export default function Layout({ children }: LayoutProps): React.JSX.Element {
   const location = useLocation()
 
   const currentLanguage = i18n.language
+  const direction = currentLanguage === 'ar' ? 'rtl' : 'ltr'
+  const [unreadCount, setUnreadCount] = useState<number>(0)
+
+  useEffect(() => {
+    let cancelled = false
+    async function loadUnreadCount(): Promise<void> {
+      try {
+        const result = await window.api.notifications.unreadCount()
+        if (!cancelled) setUnreadCount(result.count)
+      } catch {
+        /* ignore */
+      }
+    }
+    loadUnreadCount()
+    // Poll every 30 seconds for new notifications
+    const interval = setInterval(loadUnreadCount, 30000)
+    return () => {
+      cancelled = true
+      clearInterval(interval)
+    }
+  }, [])
 
   const toggleLanguage = async (): Promise<void> => {
     const nextLang = currentLanguage === 'ar' ? 'en' : 'ar'
@@ -60,9 +84,19 @@ export default function Layout({ children }: LayoutProps): React.JSX.Element {
     { text: t('sidebar.contracts'), icon: <DescriptionIcon />, path: '/contracts' },
     { text: t('sidebar.payments'), icon: <PaymentsIcon />, path: '/payments' },
     { text: t('sidebar.expenses'), icon: <ReceiptLongIcon />, path: '/expenses' },
+    { text: t('sidebar.recurringExpenses'), icon: <AutorenewIcon />, path: '/recurring-expenses' },
     { text: t('sidebar.ledger'), icon: <AccountBalanceWalletIcon />, path: '/ledger' },
     { text: t('sidebar.reports'), icon: <AssessmentIcon />, path: '/reports' },
     { text: t('sidebar.currency'), icon: <AttachMoneyIcon />, path: '/currency' },
+    {
+      text: t('sidebar.notifications'),
+      icon: (
+        <Badge badgeContent={unreadCount} color="error" invisible={unreadCount === 0}>
+          <NotificationsIcon />
+        </Badge>
+      ),
+      path: '/notifications'
+    },
     { text: t('sidebar.settings'), icon: <SettingsIcon />, path: '/settings' }
   ]
 
@@ -147,6 +181,7 @@ export default function Layout({ children }: LayoutProps): React.JSX.Element {
             {location.pathname === '/contracts' && t('sidebar.contracts')}
             {location.pathname === '/payments' && t('sidebar.payments')}
             {location.pathname === '/expenses' && t('sidebar.expenses')}
+            {location.pathname === '/recurring-expenses' && t('sidebar.recurringExpenses')}
             {location.pathname === '/ledger' && t('sidebar.ledger')}
             {location.pathname === '/reports' && t('sidebar.reports')}
             {location.pathname === '/currency' && t('sidebar.currency')}
@@ -170,6 +205,7 @@ export default function Layout({ children }: LayoutProps): React.JSX.Element {
         <Drawer
           variant="permanent"
           anchor="left"
+          dir={direction}
           sx={{
             display: { xs: 'none', sm: 'block' },
             '& .MuiDrawer-paper': {

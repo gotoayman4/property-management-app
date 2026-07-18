@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react'
+import { AccountBalanceWallet as LedgerIcon, Add as AddIcon } from '@mui/icons-material'
 import {
   Box,
   Button,
@@ -13,14 +13,14 @@ import {
   Typography,
   Stack
 } from '@mui/material'
-import { AccountBalanceWallet as LedgerIcon, Add as AddIcon } from '@mui/icons-material'
-import { useTranslation } from 'react-i18next'
 import { GridColDef } from '@mui/x-data-grid'
-import StandardTable from '../../components/StandardTable'
-import { ManualAdjustmentDialog } from './ManualAdjustmentDialog'
+import React, { useCallback, useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import GlobalSnackbar from '../../components/GlobalSnackbar'
 import PageHeader from '../../components/PageHeader'
+import StandardTable from '../../components/StandardTable'
 import { useSnackbar } from '../../hooks/useSnackbar'
+import { ManualAdjustmentDialog } from './ManualAdjustmentDialog'
 
 /**
  * INTENT: The Financial Ledger screen (SRS §9.8). Shows the chronological journal for a selected
@@ -208,7 +208,9 @@ export default function Ledger(): React.ReactElement {
       flex: 1,
       renderCell: (params) => {
         const row = params.row as LedgerRow
-        return row.debit ? `${row.debit.toLocaleString()}` : '—'
+        return row.debit
+          ? `${row.debit.toLocaleString(i18n.language === 'ar' ? 'ar-u-nu-latn' : 'en')}`
+          : '—'
       }
     },
     {
@@ -217,7 +219,9 @@ export default function Ledger(): React.ReactElement {
       flex: 1,
       renderCell: (params) => {
         const row = params.row as LedgerRow
-        return row.credit ? `${row.credit.toLocaleString()}` : '—'
+        return row.credit
+          ? `${row.credit.toLocaleString(i18n.language === 'ar' ? 'ar-u-nu-latn' : 'en')}`
+          : '—'
       }
     },
     {
@@ -229,7 +233,8 @@ export default function Ledger(): React.ReactElement {
         const color = row.running_balance >= 0 ? 'success.main' : 'error.main'
         return (
           <Typography component="span" sx={{ color, fontWeight: 600 }}>
-            {row.running_balance.toLocaleString()} {row.currency}
+            {row.running_balance.toLocaleString(i18n.language === 'ar' ? 'ar-u-nu-latn' : 'en')}{' '}
+            {row.currency}
           </Typography>
         )
       }

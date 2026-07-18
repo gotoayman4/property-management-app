@@ -1,4 +1,8 @@
-import React, { useCallback, useEffect, useState } from 'react'
+import {
+  CancelOutlined as CancelOutlinedIcon,
+  Payments as PaymentsIcon,
+  Add as AddIcon
+} from '@mui/icons-material'
 import {
   Box,
   Button,
@@ -7,15 +11,17 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
-  TextField
+  IconButton,
+  TextField,
+  Tooltip
 } from '@mui/material'
-import { Payments as PaymentsIcon, Add as AddIcon } from '@mui/icons-material'
-import { useTranslation } from 'react-i18next'
 import { GridColDef } from '@mui/x-data-grid'
-import StandardTable from '../../components/StandardTable'
-import StandardDialog from '../../components/StandardDialog'
+import React, { useCallback, useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import GlobalSnackbar from '../../components/GlobalSnackbar'
 import PageHeader from '../../components/PageHeader'
+import StandardDialog from '../../components/StandardDialog'
+import StandardTable from '../../components/StandardTable'
 import { useSnackbar } from '../../hooks/useSnackbar'
 import { PaymentForm } from './PaymentForm'
 
@@ -157,19 +163,21 @@ export function PaymentList(): React.ReactElement {
     {
       field: 'actions',
       headerName: t('common.actions'),
-      flex: 1.3,
+      flex: 1,
       sortable: false,
       renderCell: (params) => {
         const row = params.row as Payment
         return row.is_voided ? null : (
-          <Button
-            size="small"
-            variant="outlined"
-            color="error"
-            onClick={() => handleVoidClick(row)}
-          >
-            {t('payment.void')}
-          </Button>
+          <Tooltip title={t('payment.void')}>
+            <IconButton
+              size="small"
+              color="error"
+              onClick={() => handleVoidClick(row)}
+              aria-label={t('payment.void')}
+            >
+              <CancelOutlinedIcon fontSize="small" />
+            </IconButton>
+          </Tooltip>
         )
       }
     }

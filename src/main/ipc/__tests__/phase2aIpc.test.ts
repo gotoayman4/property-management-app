@@ -5,10 +5,10 @@
  * CONSTRAINT: Electron + db mocked. Currency handling via ExpenseError/BR-13 exercised
  *             indirectly through recurring evaluation.
  */
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { ipcMain } from 'electron'
-import { makeRegistry, invoke, resetDb, type IpcRegistry } from './ipcTestUtils'
-
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
+// eslint-disable-next-line import-x/order -- vitest vi.mock pattern forces structural separation
+import { runMigrations } from '../../db/migrations'
 const { testDb } = vi.hoisted(() => {
   // eslint-disable-next-line @typescript-eslint/no-require-imports -- required inside hoisted scope (ESM imports not yet initialized)
   const Database = require('better-sqlite3')
@@ -25,14 +25,14 @@ vi.mock('electron', () => ({
 
 vi.mock('../../db/database', () => ({ db: testDb, initDatabase: () => undefined }))
 
+import { registerExchangeRateIpcHandlers } from '../exchangeRateIpc'
+import { registerNotificationIpcHandlers } from '../notificationIpc'
 import {
   registerRecurringExpenseIpcHandlers,
   evaluateRecurringExpenses
 } from '../recurringExpenseIpc'
-import { registerNotificationIpcHandlers } from '../notificationIpc'
-import { registerExchangeRateIpcHandlers } from '../exchangeRateIpc'
 import { registerSearchIpcHandlers } from '../searchIpc'
-import { runMigrations } from '../../db/migrations'
+import { makeRegistry, invoke, resetDb, type IpcRegistry } from './ipcTestUtils'
 
 // Reset domain data after every test so cases within the same describe don't leak rows.
 afterEach((): void => resetDb(testDb))
@@ -89,7 +89,7 @@ describe('recurringExpenseIpc', () => {
     return testDb
       .prepare(
         `INSERT INTO recurring_expense_templates
-         (property_id, category_id, description, amount, currency, frequency, day_of_month, start_date, is_active)
+         (property_id, category_id, name, amount, currency, frequency, day_of_month, start_date, is_active)
          VALUES (?, 1, 'Cleaning', 100, 'JOD', 'monthly', 1, ?, ?)`
       )
       .run(propertyId, startDate, active).lastInsertRowid as number
@@ -145,7 +145,7 @@ describe('recurringExpenseIpc', () => {
     const res = (await invoke(registry, 'recurringExpenses:create', {
       property_id: propertyId,
       category_id: 1,
-      description: 'Monthly cleaning',
+      name: 'Monthly cleaning',
       amount: 50,
       currency: 'JOD',
       frequency: 'monthly',
@@ -153,6 +153,76 @@ describe('recurringExpenseIpc', () => {
       start_date: '2026-01-01'
     })) as { id: number }
     expect(res.id).toBeGreaterThan(0)
+    // next_due_date is seeded so the UI can show it (FR-REC-08).
+    const row = testDb
+      .prepare('SELECT next_due_date FROM recurring_expense_templates WHERE id = ?')
+      .get(res.id) as { next_due_date: string | null }
+    expect(row.next_due_date).not.toBeNull()
+  })
+
+  it('BR-23: re-running the evaluator never generates a duplicate expense for the same due date', async () => {
+    // Regression for the original duplicate-generation bug where a failed generation did not
+    // advance last_generated_date and the next run re-created the same expense.
+    const start = new Date()
+    start.setMonth(start.getMonth() - 1, 1)
+    seedTemplate(toLocalISODate(start))
+
+    evaluateRecurringExpenses()
+    const countAfterFirstRun = (
+      testDb.prepare('SELECT COUNT(*) AS c FROM expenses').get() as { c: number }
+    ).c
+
+    // Re-run the evaluator a second time. No new expenses should be created.
+    evaluateRecurringExpenses()
+    const countAfterSecondRun = (
+      testDb.prepare('SELECT COUNT(*) AS c FROM expenses').get() as { c: number }
+    ).c
+    expect(countAfterSecondRun).toBe(countAfterFirstRun)
+  })
+
+  it('BR-23: confirming the same due instance twice is rejected', async () => {
+    const templateId = seedTemplate('2020-01-01')
+    await invoke(registry, 'recurringExpenses:confirmInstance', {
+      template_id: templateId,
+      due_date: '2020-02-01'
+    })
+    await expect(
+      invoke(registry, 'recurringExpenses:confirmInstance', {
+        template_id: templateId,
+        due_date: '2020-02-01'
+      })
+    ).rejects.toThrow('INSTANCE_ALREADY_ACTIONED')
+  })
+
+  it('FR-REC-06: skipping a due instance logs a skip with the reason and creates no expense', async () => {
+    const templateId = seedTemplate('2020-01-01')
+    await invoke(registry, 'recurringExpenses:skipInstance', {
+      template_id: templateId,
+      due_date: '2020-02-01',
+      skip_reason: 'Cleaning not done this month'
+    })
+    const expCount = (testDb.prepare('SELECT COUNT(*) AS c FROM expenses').get() as { c: number }).c
+    expect(expCount).toBe(0)
+    const log = testDb
+      .prepare(
+        "SELECT action, skip_reason FROM recurring_expense_log WHERE template_id = ? AND due_date = '2020-02-01'"
+      )
+      .get(templateId) as { action: string; skip_reason: string }
+    expect(log.action).toBe('skipped')
+    expect(log.skip_reason).toBe('Cleaning not done this month')
+  })
+
+  it('BR-25: a template whose end_date has passed is auto-marked inactive on evaluation', async () => {
+    const templateId = seedTemplate('2020-01-01')
+    testDb
+      .prepare('UPDATE recurring_expense_templates SET end_date = ? WHERE id = ?')
+      .run('2020-06-01', templateId)
+
+    evaluateRecurringExpenses()
+    const row = testDb
+      .prepare('SELECT is_active FROM recurring_expense_templates WHERE id = ?')
+      .get(templateId) as { is_active: number }
+    expect(row.is_active).toBe(0)
   })
 })
 

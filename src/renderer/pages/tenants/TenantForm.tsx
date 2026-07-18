@@ -1,4 +1,4 @@
-import React from 'react'
+import { zodResolver } from '@hookform/resolvers/zod'
 import {
   Box,
   Button,
@@ -11,12 +11,15 @@ import {
   Grid,
   Select,
   MenuItem,
-  InputLabel
+  InputLabel,
+  Tabs,
+  Tab
 } from '@mui/material'
+import React, { useState } from 'react'
 import { useForm, Controller } from 'react-hook-form'
-import { zodResolver } from '@hookform/resolvers/zod'
-import { z } from 'zod'
 import { useTranslation } from 'react-i18next'
+import { z } from 'zod'
+import EntityDocumentsTab from '../../components/EntityDocumentsTab'
 import GlobalSnackbar from '../../components/GlobalSnackbar'
 import { useSnackbar } from '../../hooks/useSnackbar'
 
@@ -74,6 +77,7 @@ export function TenantForm({ tenant, onSuccess, onCancel }: TenantFormProps): Re
   const isRtl = i18n.language === 'ar'
   const { snack, showError, showSuccess, hideSnackbar } = useSnackbar()
   const isEdit = !!tenant
+  const [activeTab, setActiveTab] = useState(0)
 
   const defaultValues: Partial<TenantFormValues> = tenant
     ? {
@@ -144,7 +148,18 @@ export function TenantForm({ tenant, onSuccess, onCancel }: TenantFormProps): Re
 
   return (
     <>
-      <Box component="form" onSubmit={handleSubmit(onSubmit)} sx={{ mt: 1 }}>
+      {isEdit && (
+        <Tabs value={activeTab} onChange={(_, v) => setActiveTab(v)} sx={{ mb: 1 }}>
+          <Tab label={t('common.details')} />
+          <Tab label={t('tenantDetail.documents')} />
+        </Tabs>
+      )}
+      <Box
+        component="form"
+        onSubmit={handleSubmit(onSubmit)}
+        sx={{ mt: 1 }}
+        hidden={activeTab !== 0}
+      >
         <Grid container spacing={3}>
           {/* Tenant Type (Radio) */}
           <Grid size={12}>
@@ -393,6 +408,9 @@ export function TenantForm({ tenant, onSuccess, onCancel }: TenantFormProps): Re
           </Button>
         </Box>
       </Box>
+      {isEdit && activeTab === 1 && tenant && (
+        <EntityDocumentsTab entityType="tenant" entityId={tenant.id} />
+      )}
       <GlobalSnackbar state={snack} onClose={hideSnackbar} />
     </>
   )

@@ -12,6 +12,7 @@
  *             is exercised in isolation from the report builders.
  */
 import { describe, it, expect } from 'vitest'
+import { buildExcelWorkbook } from '../exportService/excelExporter'
 import {
   type ReportData,
   groupByCurrency,
@@ -20,7 +21,6 @@ import {
   resolveLocaleKey
 } from '../exportService/exportUtils'
 import { buildHtmlDocument } from '../exportService/htmlExporter'
-import { buildExcelWorkbook } from '../exportService/excelExporter'
 
 const COLUMNS = [
   { key: 'date', headerKey: 'reports.col.date', type: 'date' as const },

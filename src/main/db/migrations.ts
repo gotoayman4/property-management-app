@@ -30,20 +30,30 @@ export function runMigrations(db: Database): void {
     const isApplied = db.prepare('SELECT 1 FROM migrations WHERE name = ?').get(filename)
 
     if (!isApplied) {
-      if (isVerbose) console.log(`Applying migration: ${filename}`)
+      if (isVerbose) console.warn(`Applying migration: ${filename}`)
       const sqlContent = migrationFiles[path]
 
       if (!sqlContent || typeof sqlContent !== 'string') {
         throw new Error(`Failed to load migration content for: ${filename}`)
       }
 
-      // Execute SQL scripts inside an atomic transaction
-      db.transaction(() => {
-        db.exec(sqlContent)
-        db.prepare('INSERT INTO migrations (name) VALUES (?)').run(filename)
-      })()
+      // Execute SQL scripts inside an atomic transaction.
+      // DECISION: foreign_keys are toggled OFF for the duration of each migration so the
+      //   SQLite 12-step table-rebuild pattern (used when changing CHECK / UNIQUE
+      //   constraints, e.g. migration 014) works correctly. The pragma is restored AFTER
+      //   the transaction commits — turning FK ON inside the transaction triggers
+      //   constraint checks on the in-progress rebuilt tables and causes spurious failures.
+      db.pragma('foreign_keys = OFF')
+      try {
+        db.transaction(() => {
+          db.exec(sqlContent)
+          db.prepare('INSERT INTO migrations (name) VALUES (?)').run(filename)
+        })()
+      } finally {
+        db.pragma('foreign_keys = ON')
+      }
 
-      if (isVerbose) console.log(`Successfully applied migration: ${filename}`)
+      if (isVerbose) console.warn(`Successfully applied migration: ${filename}`)
     }
   }
 }

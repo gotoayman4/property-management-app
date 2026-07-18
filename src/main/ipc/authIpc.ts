@@ -7,12 +7,12 @@
  * CONSTRAINT (NFR-SEC-01): app requires authentication before any data access.
  * CONSTRAINT (AGENTS.md): all DB queries use parameterized statements, no console.log in prod.
  */
-import { ipcMain, safeStorage, app } from 'electron'
-import { db } from '../db/database'
-import { z } from 'zod'
-import bcrypt from 'bcrypt'
 import fs from 'fs'
 import path from 'path'
+import bcrypt from 'bcrypt'
+import { ipcMain, safeStorage, app } from 'electron'
+import { z } from 'zod'
+import { db } from '../db/database'
 
 const BCRYPT_ROUNDS = 10
 

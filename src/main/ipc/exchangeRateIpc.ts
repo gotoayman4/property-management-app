@@ -6,8 +6,8 @@
  * CONSTRAINT (BR-13): conversion is display-only; ledger always records in base currency.
  */
 import { ipcMain, net } from 'electron'
-import { db } from '../db/database'
 import { z } from 'zod'
+import { db } from '../db/database'
 
 const rateAddSchema = z.object({
   currency_from: z.string().min(3).max(3),

@@ -8,8 +8,8 @@
  * CONSTRAINT: the ledger is append-only; this dialog is the ONLY user-facing way to add a row
  *             that is not derived from a payment or an expense.
  */
-import React, { useState } from 'react'
 import { Box, Button, TextField } from '@mui/material'
+import React, { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import StandardDialog from '../../components/StandardDialog'
 

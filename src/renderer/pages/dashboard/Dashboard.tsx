@@ -3,19 +3,19 @@
  *         transaction tables (payments, expenses). No charts (deferred to Phase 2B).
  * CONSTRAINT (AGENTS.md): i18n keys only, StandardTable for lists, logical CSS.
  */
-import React, { useState, useEffect } from 'react'
-import { useTranslation } from 'react-i18next'
-import { Box, Grid, Typography } from '@mui/material'
+import AccountBalanceWalletIcon from '@mui/icons-material/AccountBalanceWallet'
 import BusinessIcon from '@mui/icons-material/Business'
-import PeopleIcon from '@mui/icons-material/People'
 import DescriptionIcon from '@mui/icons-material/Description'
 import PaymentsIcon from '@mui/icons-material/Payments'
+import PeopleIcon from '@mui/icons-material/People'
 import ReceiptLongIcon from '@mui/icons-material/ReceiptLong'
-import AccountBalanceWalletIcon from '@mui/icons-material/AccountBalanceWallet'
-import PageHeader from '../../components/PageHeader'
-import StatCard from '../../components/StatCard'
-import StandardTable from '../../components/StandardTable'
+import { Box, Grid, Typography } from '@mui/material'
 import type { GridColDef } from '@mui/x-data-grid'
+import React, { useState, useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
+import PageHeader from '../../components/PageHeader'
+import StandardTable from '../../components/StandardTable'
+import StatCard from '../../components/StatCard'
 
 interface DashboardSummary {
   totalProperties: number
@@ -42,7 +42,7 @@ interface RecentRow {
 }
 
 export default function Dashboard(): React.JSX.Element {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
   const [summary, setSummary] = useState<DashboardSummary | null>(null)
   const [recentPayments, setRecentPayments] = useState<RecentRow[]>([])
   const [recentExpenses, setRecentExpenses] = useState<RecentRow[]>([])
@@ -79,7 +79,7 @@ export default function Dashboard(): React.JSX.Element {
       minWidth: 100,
       type: 'number',
       valueFormatter: (value: number, row: RecentRow) =>
-        `${Number(value).toLocaleString()} ${row.currency}`
+        `${Number(value).toLocaleString(i18n.language === 'ar' ? 'ar-u-nu-latn' : 'en')} ${row.currency}`
     },
     {
       field: 'payment_type',
@@ -114,7 +114,7 @@ export default function Dashboard(): React.JSX.Element {
       minWidth: 100,
       type: 'number',
       valueFormatter: (value: number, row: RecentRow) =>
-        `${Number(value).toLocaleString()} ${row.currency}`
+        `${Number(value).toLocaleString(i18n.language === 'ar' ? 'ar-u-nu-latn' : 'en')} ${row.currency}`
     }
   ]
 
@@ -155,7 +155,13 @@ export default function Dashboard(): React.JSX.Element {
           <StatCard
             icon={<PaymentsIcon />}
             label={t('dashboard.totalPayments')}
-            value={loading ? '...' : (summary?.totalPayments ?? 0).toLocaleString()}
+            value={
+              loading
+                ? '...'
+                : (summary?.totalPayments ?? 0).toLocaleString(
+                    i18n.language === 'ar' ? 'ar-u-nu-latn' : 'en'
+                  )
+            }
             color="success"
           />
         </Grid>
@@ -163,15 +169,27 @@ export default function Dashboard(): React.JSX.Element {
           <StatCard
             icon={<ReceiptLongIcon />}
             label={t('dashboard.totalExpenses')}
-            value={loading ? '...' : (summary?.totalExpenses ?? 0).toLocaleString()}
-            color="warning"
+            value={
+              loading
+                ? '...'
+                : (summary?.totalExpenses ?? 0).toLocaleString(
+                    i18n.language === 'ar' ? 'ar-u-nu-latn' : 'en'
+                  )
+            }
+            color="error"
           />
         </Grid>
         <Grid size={{ xs: 12, sm: 6, md: 4 }}>
           <StatCard
             icon={<AccountBalanceWalletIcon />}
             label={t('dashboard.netBalance')}
-            value={loading ? '...' : (summary?.netBalance ?? 0).toLocaleString()}
+            value={
+              loading
+                ? '...'
+                : (summary?.netBalance ?? 0).toLocaleString(
+                    i18n.language === 'ar' ? 'ar-u-nu-latn' : 'en'
+                  )
+            }
             color={summary && summary.netBalance >= 0 ? 'success' : 'error'}
           />
         </Grid>

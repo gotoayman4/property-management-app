@@ -1,25 +1,25 @@
-import { app, shell, BrowserWindow, session } from 'electron'
 import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
+import { app, shell, BrowserWindow, session } from 'electron'
 import icon from '../../resources/icon.png?asset'
 import { initDatabase } from './db/database'
-import { registerPropertyIpcHandlers } from './ipc/propertyIpc'
-import { registerTenantIpcHandlers } from './ipc/tenantIpc'
+import { registerAuthIpcHandlers } from './ipc/authIpc'
 import { registerContractIpcHandlers } from './ipc/contractIpc'
-import { registerPaymentIpcHandlers } from './ipc/paymentIpc'
+import { registerDashboardIpcHandlers } from './ipc/dashboardIpc'
+import { registerDocumentIpcHandlers } from './ipc/documentIpc'
+import { registerExchangeRateIpcHandlers } from './ipc/exchangeRateIpc'
 import { registerExpenseIpcHandlers } from './ipc/expenseIpc'
 import { registerLedgerIpcHandlers } from './ipc/ledgerIpc'
-import { registerAuthIpcHandlers } from './ipc/authIpc'
-import { registerDashboardIpcHandlers } from './ipc/dashboardIpc'
-import { registerExchangeRateIpcHandlers } from './ipc/exchangeRateIpc'
+import { registerNotificationIpcHandlers, evaluateNotifications } from './ipc/notificationIpc'
+import { registerPaymentIpcHandlers } from './ipc/paymentIpc'
+import { registerPropertyIpcHandlers } from './ipc/propertyIpc'
 import {
   registerRecurringExpenseIpcHandlers,
   evaluateRecurringExpenses
 } from './ipc/recurringExpenseIpc'
-import { registerDocumentIpcHandlers } from './ipc/documentIpc'
-import { registerNotificationIpcHandlers, evaluateNotifications } from './ipc/notificationIpc'
-import { registerSearchIpcHandlers } from './ipc/searchIpc'
 import { registerReportsIpcHandlers } from './ipc/reportsIpc'
+import { registerSearchIpcHandlers } from './ipc/searchIpc'
+import { registerTenantIpcHandlers } from './ipc/tenantIpc'
 
 function createWindow(): void {
   // Create the browser window.

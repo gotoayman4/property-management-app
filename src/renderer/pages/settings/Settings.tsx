@@ -4,8 +4,7 @@
  *         the settings singleton table (001_initial_schema.sql §settings).
  * CONSTRAINT (AGENTS.md): i18n keys only, logical CSS, theme.palette tokens.
  */
-import React, { useState, useEffect } from 'react'
-import { useTranslation } from 'react-i18next'
+import SettingsIcon from '@mui/icons-material/Settings'
 import {
   Box,
   Card,
@@ -24,10 +23,12 @@ import {
   InputLabel,
   Alert
 } from '@mui/material'
-import SettingsIcon from '@mui/icons-material/Settings'
-import PageHeader from '../../components/PageHeader'
+import React, { useState, useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
 import GlobalSnackbar from '../../components/GlobalSnackbar'
+import PageHeader from '../../components/PageHeader'
 import { useSnackbar } from '../../hooks/useSnackbar'
+import { useUiPreferences } from '../../stores/uiPreferencesStore'
 
 interface SettingsData {
   app_language: string
@@ -60,6 +61,7 @@ export default function Settings(): React.JSX.Element {
   const isRtl = i18n.language === 'ar'
   const { snack, showSuccess, showError, hideSnackbar } = useSnackbar()
   const [settings, setSettings] = useState<SettingsData | null>(null)
+  const refreshPrefs = useUiPreferences((s) => s.refresh)
 
   useEffect(() => {
     async function loadSettings(): Promise<void> {
@@ -80,6 +82,12 @@ export default function Settings(): React.JSX.Element {
 
       if (field === 'app_language') {
         await i18n.changeLanguage(value as string)
+      }
+
+      // FR-SET-04/05: notify the Zustand store so App.tsx re-renders with the new
+      // theme / font_size immediately (no restart needed).
+      if (field === 'theme' || field === 'font_size' || field === 'app_language') {
+        refreshPrefs()
       }
 
       showSuccess('common.saveSuccess')

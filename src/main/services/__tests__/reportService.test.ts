@@ -6,11 +6,11 @@
  * INTENT: Each test seeds a small in-memory DB with cross-currency fixtures and asserts the
  *         report shape + per-currency totals. Builders are pure functions of (db, filters).
  */
-import { describe, it, expect, beforeEach } from 'vitest'
 import Database from 'better-sqlite3'
+import { describe, it, expect, beforeEach } from 'vitest'
+import { computeRunningBalances } from '../../db/ledgerService'
 import { runMigrations } from '../../db/migrations'
 import { buildReport, ReportError } from '../reportService'
-import { computeRunningBalances } from '../../db/ledgerService'
 
 describe('reportService', () => {
   let db: Database.Database

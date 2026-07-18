@@ -3,8 +3,7 @@
  *         listing recent notifications. Mark-as-read on click.
  * CONSTRAINT (AGENTS.md): i18n keys only, logical CSS, portal dir prop.
  */
-import React, { useState, useEffect } from 'react'
-import { useTranslation } from 'react-i18next'
+import NotificationsIcon from '@mui/icons-material/Notifications'
 import {
   IconButton,
   Badge,
@@ -17,7 +16,8 @@ import {
   Box,
   Chip
 } from '@mui/material'
-import NotificationsIcon from '@mui/icons-material/Notifications'
+import React, { useState, useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
 
 interface Notification {
   id: number

@@ -1,15 +1,22 @@
+import {
+  Add as AddIcon,
+  Block as BlockIcon,
+  Delete as DeleteIcon,
+  Description as DescriptionIcon,
+  Edit as EditIcon
+} from '@mui/icons-material'
+import { Box, Button, Chip, IconButton, Link, Tooltip } from '@mui/material'
+import { GridColDef } from '@mui/x-data-grid'
 import React, { useCallback, useEffect, useState } from 'react'
-import { Box, Button, Chip } from '@mui/material'
-import { Add as AddIcon, Description as DescriptionIcon } from '@mui/icons-material'
 import { useTranslation } from 'react-i18next'
-import StandardTable from '../../components/StandardTable'
-import StandardDialog from '../../components/StandardDialog'
+import { useNavigate } from 'react-router-dom'
 import ConfirmDialog from '../../components/ConfirmDialog'
 import GlobalSnackbar from '../../components/GlobalSnackbar'
 import PageHeader from '../../components/PageHeader'
+import StandardDialog from '../../components/StandardDialog'
+import StandardTable from '../../components/StandardTable'
 import { useSnackbar } from '../../hooks/useSnackbar'
 import { ContractForm } from './ContractForm'
-import { GridColDef } from '@mui/x-data-grid'
 
 interface Contract {
   id: number
@@ -38,6 +45,7 @@ type PendingAction = { id: number; kind: 'terminate' | 'delete' } | null
 export function ContractList(): React.ReactElement {
   const { t, i18n } = useTranslation()
   const isRtl = i18n.language === 'ar'
+  const navigate = useNavigate()
   const { snack, showError, showSuccess, hideSnackbar } = useSnackbar()
   const [contracts, setContracts] = useState<Contract[]>([])
   const [loading, setLoading] = useState<boolean>(true)
@@ -117,7 +125,24 @@ export function ContractList(): React.ReactElement {
   }
 
   const columns: GridColDef[] = [
-    { field: 'contract_number', headerName: t('contract.contractNumber'), flex: 1.2 },
+    {
+      field: 'contract_number',
+      headerName: t('contract.contractNumber'),
+      flex: 1.2,
+      renderCell: (params) => {
+        const row = params.row as Contract
+        return (
+          <Link
+            component="button"
+            variant="body2"
+            onClick={() => navigate(`/contracts/${row.id}`)}
+            sx={{ cursor: 'pointer', textAlign: 'start' }}
+          >
+            {row.contract_number}
+          </Link>
+        )
+      }
+    },
     {
       field: 'property_name',
       headerName: t('sidebar.properties'),
@@ -167,33 +192,44 @@ export function ContractList(): React.ReactElement {
     {
       field: 'actions',
       headerName: t('common.actions'),
-      flex: 2.2,
+      flex: 1.5,
       sortable: false,
       renderCell: (params) => {
         const row = params.row as Contract
         return (
-          <Box sx={{ display: 'flex', gap: 1 }}>
-            <Button size="small" variant="outlined" onClick={() => handleEditClick(row)}>
-              {t('common.edit')}
-            </Button>
-            {row.status === 'active' && (
-              <Button
+          <Box sx={{ display: 'flex', gap: 0.5 }}>
+            <Tooltip title={t('common.edit')}>
+              <IconButton
                 size="small"
-                variant="outlined"
-                color="warning"
-                onClick={() => handleTerminateClick(row.id)}
+                color="primary"
+                onClick={() => handleEditClick(row)}
+                aria-label={t('common.edit')}
               >
-                {t('contract.terminate')}
-              </Button>
+                <EditIcon fontSize="small" />
+              </IconButton>
+            </Tooltip>
+            {row.status === 'active' && (
+              <Tooltip title={t('contract.terminate')}>
+                <IconButton
+                  size="small"
+                  color="warning"
+                  onClick={() => handleTerminateClick(row.id)}
+                  aria-label={t('contract.terminate')}
+                >
+                  <BlockIcon fontSize="small" />
+                </IconButton>
+              </Tooltip>
             )}
-            <Button
-              size="small"
-              variant="outlined"
-              color="error"
-              onClick={() => handleDeleteClick(row.id)}
-            >
-              {t('common.delete')}
-            </Button>
+            <Tooltip title={t('common.delete')}>
+              <IconButton
+                size="small"
+                color="error"
+                onClick={() => handleDeleteClick(row.id)}
+                aria-label={t('common.delete')}
+              >
+                <DeleteIcon fontSize="small" />
+              </IconButton>
+            </Tooltip>
           </Box>
         )
       }

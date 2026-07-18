@@ -13,8 +13,8 @@
  *           override the directory in the dialog (the "Both (default + override)" UX).
  */
 
-import { app, dialog, BrowserWindow } from 'electron'
 import { join } from 'path'
+import { app, dialog, BrowserWindow } from 'electron'
 import { db } from '../db/database'
 
 /** The user-facing app brand, mirrored from the i18n `app.brand` key. Kept as a constant so the

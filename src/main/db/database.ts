@@ -1,7 +1,7 @@
+import { existsSync, mkdirSync } from 'fs'
+import { join } from 'path'
 import Database from 'better-sqlite3'
 import { app } from 'electron'
-import { join } from 'path'
-import { existsSync, mkdirSync } from 'fs'
 import { runMigrations } from './migrations'
 
 const isDev = !app.isPackaged
@@ -19,7 +19,7 @@ if (isDev) {
 
 // Open SQLite database connection
 export const db = new Database(dbPath, {
-  verbose: isDev ? console.log : undefined
+  verbose: isDev ? console.warn : undefined
 })
 
 // Enable WAL journal mode for performance and Foreign Key constraints for integrity
@@ -27,6 +27,6 @@ db.pragma('journal_mode = WAL')
 db.pragma('foreign_keys = ON')
 
 export function initDatabase(): void {
-  if (isDev) console.log(`Database connected at: ${dbPath}`)
+  if (isDev) console.warn(`Database connected at: ${dbPath}`)
   runMigrations(db)
 }

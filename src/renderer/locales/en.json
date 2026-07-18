@@ -3,6 +3,11 @@
     "brand": "Atheer Property",
     "title": "Atheer Property"
   },
+  "countries": {
+    "JO": "Jordan",
+    "TR": "Turkey",
+    "QA": "Qatar"
+  },
   "sidebar": {
     "dashboard": "Dashboard",
     "properties": "Properties & Units",
@@ -13,7 +18,9 @@
     "ledger": "Financial Ledger",
     "currency": "Exchange Rates",
     "reports": "Reports",
-    "settings": "Settings"
+    "settings": "Settings",
+    "recurringExpenses": "Recurring Expenses",
+    "notifications": "Notifications"
   },
   "common": {
     "save": "Save",
@@ -63,7 +70,8 @@
     "fromDate": "From Date",
     "toDate": "To Date",
     "filter": "Filter",
-    "clearFilters": "Clear Filters"
+    "clearFilters": "Clear Filters",
+    "details": "Details"
   },
   "property": {
     "title": "Property Management",
@@ -238,7 +246,21 @@
     "year": "Year",
     "effectiveDate": "Effective Date",
     "increasePercent": "Increase %",
-    "escalationInvalid": "The escalation schedule is invalid (check dates, amounts, and percentages)."
+    "escalationInvalid": "The escalation schedule is invalid (check dates, amounts, and percentages).",
+    "detailTabData": "Data",
+    "detailTabSchedule": "Escalation Schedule",
+    "detailTabHistory": "History",
+    "detailTabDocuments": "Documents",
+    "detailNoSchedule": "No escalation schedule. This contract uses a simple flat increase.",
+    "detailNoHistory": "No history changes recorded yet.",
+    "detailNoDocuments": "No documents attached to this contract.",
+    "paymentMethod": "Payment Method",
+    "cancellationReason": "Cancellation Reason",
+    "historyAction": "Action",
+    "historyDate": "Date",
+    "historyNote": "Note",
+    "historyPrevious": "Previous Values",
+    "yearNumber": "Year #"
   },
   "payment": {
     "title": "Payments & Income",
@@ -376,10 +398,46 @@
     "noPayments": "No payments for this tenant.",
     "noDocuments": "No documents uploaded."
   },
+  "contractDetail": {
+    "documents": "Documents",
+    "noDocuments": "No documents uploaded."
+  },
   "documents": {
     "fileName": "File Name",
     "mimeType": "Type",
-    "uploadedAt": "Uploaded"
+    "documentType": "Document Type",
+    "uploadedAt": "Uploaded",
+    "issueDate": "Issue Date",
+    "expiryDate": "Expiry Date",
+    "selectFile": "Select File",
+    "upload": "Upload",
+    "uploading": "Uploading...",
+    "uploadSuccess": "Document uploaded successfully",
+    "uploadFailed": "Failed to upload document",
+    "invalidFileType": "Only PDF, JPG, PNG, DOCX, and XLSX files are allowed",
+    "invalidFileContent": "File content does not match the allowed types",
+    "fileTooLarge": "File exceeds the 10 MB maximum size",
+    "optional": "optional",
+    "expiringSoon": "Expiring soon",
+    "expired": "Expired",
+    "replace": "Replace",
+    "replaceSuccess": "Document replaced; old version archived",
+    "archive": "Archive",
+    "viewHistory": "View version history",
+    "types": {
+      "deed": "Deed",
+      "insurance_policy": "Insurance Policy",
+      "utility_contract": "Utility Contract",
+      "maintenance_record": "Maintenance Record",
+      "municipal_permit": "Municipal Permit",
+      "id_copy": "ID Copy",
+      "signed_contract": "Signed Contract",
+      "addendum": "Addendum",
+      "image": "Image",
+      "receipt": "Receipt",
+      "invoice": "Invoice",
+      "other": "Other"
+    }
   },
   "currency": {
     "title": "Exchange Rates",
@@ -409,6 +467,57 @@
   "search": {
     "placeholder": "Search properties, tenants..."
   },
+  "recurringExpense": {
+    "title": "Recurring Expenses",
+    "subtitle": "Automate regular costs with templates",
+    "add": "Add Recurring Expense",
+    "editTitle": "Edit Recurring Expense",
+    "name": "Name",
+    "nameRequired": "Name must be at least 2 characters",
+    "description": "Description",
+    "propertyOptional": "Linked Property (optional)",
+    "frequency": "Frequency",
+    "frequencyDaily": "Daily",
+    "frequencyWeekly": "Weekly",
+    "startDate": "Start Date",
+    "endDateOptional": "End Date (optional)",
+    "nextDue": "Next Due",
+    "lastGenerated": "Last Generated",
+    "dayOfMonth": "Day of Month",
+    "dayOfMonthInvalid": "Must be between 1 and 28",
+    "statusActive": "Active",
+    "statusPaused": "Paused",
+    "statusEnded": "Ended",
+    "tabAll": "All Templates",
+    "tabActive": "Active Only",
+    "tabPending": "Pending Due",
+    "pause": "Pause",
+    "resume": "Resume",
+    "end": "End",
+    "confirmPause": "Pause this recurring expense?",
+    "confirmResume": "Resume this recurring expense?",
+    "confirmEnd": "End this recurring expense permanently?",
+    "pauseHelp": "While paused, no new expenses will be generated from this template.",
+    "resumeHelp": "This template will start generating expenses again.",
+    "endHelp": "After ending, this template cannot be reactivated. You can create a new one instead.",
+    "noTemplates": "No recurring expenses defined yet. Add one to automate regular costs.",
+    "descRequired": "Description must be at least 3 characters",
+    "categoryRequired": "A category is required",
+    "amountRequired": "Amount must be greater than zero",
+    "startDateRequired": "Start date is required",
+    "frequencyRequired": "Frequency is required",
+    "helpText": "The system will automatically generate expenses on the scheduled day of each period.",
+    "templateEnded": "This template has ended and cannot be reactivated.",
+    "recordExpense": "Record Expense",
+    "skip": "Skip",
+    "skipTitle": "Skip this due date?",
+    "skipReason": "Reason for skipping",
+    "noPendingInstances": "No pending due instances — all caught up.",
+    "instanceConfirmed": "Expense recorded and next due date advanced.",
+    "instanceSkipped": "Due date skipped and advanced.",
+    "instanceAlreadyActioned": "This due date has already been handled.",
+    "daysOverdue": "Overdue"
+  },
   "notifications": {
     "title": "Notifications",
     "label": "Notifications",
@@ -416,9 +525,25 @@
     "markAllRead": "Mark all read",
     "type": {
       "rent_due": "Rent Due",
+      "overdue": "Overdue",
       "contract_expiry": "Contract Expiry",
+      "escalation_upcoming": "Escalation Upcoming",
       "document_expiry": "Document Expiry",
-      "recurring_expense_due": "Recurring Expense"
+      "recurring_expense_due": "Recurring Expense",
+      "backup_failed": "Backup Failed"
+    }
+  },
+  "notification": {
+    "unread": "Unread",
+    "markAsRead": "Mark as read",
+    "body": {
+      "rentDue": "Rent due notification",
+      "overdue": "Overdue payment notification",
+      "contractExpiring": "Contract expiring notification",
+      "escalationUpcoming": "Rent escalation upcoming notification",
+      "documentExpiring": "Document expiring notification",
+      "recurringExpenseDue": "Recurring expense due notification",
+      "backupFailed": "Backup failed notification"
     }
   },
   "auth": {

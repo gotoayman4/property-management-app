@@ -5,8 +5,8 @@
  *         If auth is enabled, shows the Login page until the user authenticates.
  * CONSTRAINT (NFR-SEC-01): auth bypass only when setting is explicitly off.
  */
-import React, { useState, useEffect } from 'react'
 import { Box, CircularProgress } from '@mui/material'
+import React, { useState, useEffect } from 'react'
 import { useAuth } from '../contexts/AuthContext'
 import Login from '../pages/auth/Login'
 

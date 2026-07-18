@@ -1,15 +1,21 @@
+import {
+  Add as AddIcon,
+  ArchiveOutlined as ArchiveOutlinedIcon,
+  Edit as EditIcon,
+  People as PeopleIcon,
+  Search as SearchIcon
+} from '@mui/icons-material'
+import { Box, Typography, Button, IconButton, TextField, Chip, Tooltip } from '@mui/material'
+import { GridColDef } from '@mui/x-data-grid'
 import React, { useCallback, useEffect, useState } from 'react'
-import { Box, Typography, Button, TextField, Chip } from '@mui/material'
-import { Add as AddIcon, Search as SearchIcon, People as PeopleIcon } from '@mui/icons-material'
 import { useTranslation } from 'react-i18next'
-import StandardTable from '../../components/StandardTable'
-import StandardDialog from '../../components/StandardDialog'
 import ConfirmDialog from '../../components/ConfirmDialog'
 import GlobalSnackbar from '../../components/GlobalSnackbar'
 import PageHeader from '../../components/PageHeader'
+import StandardDialog from '../../components/StandardDialog'
+import StandardTable from '../../components/StandardTable'
 import { useSnackbar } from '../../hooks/useSnackbar'
 import { TenantForm } from './TenantForm'
-import { GridColDef } from '@mui/x-data-grid'
 
 interface Tenant {
   id: number
@@ -154,19 +160,28 @@ export function TenantList(): React.ReactElement {
       renderCell: (params) => {
         const row = params.row as Tenant
         return (
-          <Box sx={{ display: 'flex', gap: 1 }}>
-            <Button size="small" variant="outlined" onClick={() => handleEditClick(row)}>
-              {t('common.edit')}
-            </Button>
-            {row.is_active === 1 && (
-              <Button
+          <Box sx={{ display: 'flex', gap: 0.5 }}>
+            <Tooltip title={t('common.edit')}>
+              <IconButton
                 size="small"
-                variant="outlined"
-                color="error"
-                onClick={() => handleDeleteClick(row.id)}
+                color="primary"
+                onClick={() => handleEditClick(row)}
+                aria-label={t('common.edit')}
               >
-                {t('common.archive')}
-              </Button>
+                <EditIcon fontSize="small" />
+              </IconButton>
+            </Tooltip>
+            {row.is_active === 1 && (
+              <Tooltip title={t('common.archive')}>
+                <IconButton
+                  size="small"
+                  color="error"
+                  onClick={() => handleDeleteClick(row.id)}
+                  aria-label={t('common.archive')}
+                >
+                  <ArchiveOutlinedIcon fontSize="small" />
+                </IconButton>
+              </Tooltip>
             )}
           </Box>
         )

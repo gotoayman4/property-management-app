@@ -1,5 +1,5 @@
-import { contextBridge, ipcRenderer } from 'electron'
 import { electronAPI } from '@electron-toolkit/preload'
+import { contextBridge, ipcRenderer } from 'electron'
 
 // Custom APIs for renderer
 const api = {
@@ -87,20 +87,28 @@ const api = {
     create: (data: unknown) => ipcRenderer.invoke('recurringExpenses:create', data),
     update: (data: unknown) => ipcRenderer.invoke('recurringExpenses:update', data),
     deactivate: (id: number) => ipcRenderer.invoke('recurringExpenses:deactivate', id),
-    activate: (id: number) => ipcRenderer.invoke('recurringExpenses:activate', id)
+    activate: (id: number) => ipcRenderer.invoke('recurringExpenses:activate', id),
+    pendingDue: () => ipcRenderer.invoke('recurringExpenses:pendingDue'),
+    confirmInstance: (data: unknown) =>
+      ipcRenderer.invoke('recurringExpenses:confirmInstance', data),
+    skipInstance: (data: unknown) => ipcRenderer.invoke('recurringExpenses:skipInstance', data),
+    log: (id: number) => ipcRenderer.invoke('recurringExpenses:log', id)
   },
   documents: {
     upload: (data: unknown) => ipcRenderer.invoke('documents:upload', data),
+    replace: (data: unknown) => ipcRenderer.invoke('documents:replace', data),
     list: (data: unknown) => ipcRenderer.invoke('documents:list', data),
     get: (id: number) => ipcRenderer.invoke('documents:get', id),
     read: (id: number) => ipcRenderer.invoke('documents:read', id),
-    delete: (id: number) => ipcRenderer.invoke('documents:delete', id)
+    delete: (id: number) => ipcRenderer.invoke('documents:delete', id),
+    purge: (id: number) => ipcRenderer.invoke('documents:purge', id)
   },
   notifications: {
     list: (filters?: unknown) => ipcRenderer.invoke('notifications:list', filters),
     unreadCount: () => ipcRenderer.invoke('notifications:unreadCount'),
     markRead: (id: number) => ipcRenderer.invoke('notifications:markRead', id),
-    markAllRead: () => ipcRenderer.invoke('notifications:markAllRead')
+    markAllRead: () => ipcRenderer.invoke('notifications:markAllRead'),
+    dismiss: (id: number) => ipcRenderer.invoke('notifications:dismiss', id)
   },
   search: {
     global: (query: string) => ipcRenderer.invoke('search:global', query)

@@ -4,10 +4,9 @@
  *         bcrypt verification, single-user enforcement, and invalid-credential rejection.
  * CONSTRAINT: Electron is mocked; the db is an in-memory migrated instance.
  */
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { ipcMain } from 'electron'
-import { makeRegistry, invoke, resetDb, type IpcRegistry } from './ipcTestUtils'
-
+// eslint-disable-next-line import-x/order -- vitest vi.mock pattern forces structural separation
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 const { testDb } = vi.hoisted(() => {
   // eslint-disable-next-line @typescript-eslint/no-require-imports -- required inside hoisted scope (ESM imports not yet initialized)
   const Database = require('better-sqlite3')
@@ -28,8 +27,9 @@ vi.mock('../../db/database', () => ({
   initDatabase: () => undefined
 }))
 
-import { registerAuthIpcHandlers } from '../authIpc'
 import { runMigrations } from '../../db/migrations'
+import { registerAuthIpcHandlers } from '../authIpc'
+import { makeRegistry, invoke, resetDb, type IpcRegistry } from './ipcTestUtils'
 
 // Reset domain data after every test so cases don't leak rows.
 afterEach((): void => resetDb(testDb))

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import { zodResolver } from '@hookform/resolvers/zod'
 import {
   Box,
   Button,
@@ -9,21 +9,20 @@ import {
   MenuItem,
   FormHelperText,
   Grid,
-  FormControlLabel,
-  Radio,
-  RadioGroup,
-  FormLabel,
-  Divider
+  Tabs,
+  Tab
 } from '@mui/material'
+import React, { useEffect, useState } from 'react'
 import { useForm, Controller } from 'react-hook-form'
-import { zodResolver } from '@hookform/resolvers/zod'
-import { z } from 'zod'
 import { useTranslation } from 'react-i18next'
-import GlobalSnackbar from '../../components/GlobalSnackbar'
+import { z } from 'zod'
 import { AmountField } from '../../components/AmountField'
 import { CurrencyInput } from '../../components/CurrencyInput'
+import EntityDocumentsTab from '../../components/EntityDocumentsTab'
+import GlobalSnackbar from '../../components/GlobalSnackbar'
 import { useSnackbar } from '../../hooks/useSnackbar'
-import { EscalationScheduleEditor, type EscalationRow } from './EscalationScheduleEditor'
+import { ContractIncreaseMode } from './ContractIncreaseMode'
+import type { EscalationRow } from './EscalationScheduleEditor'
 
 /**
  * INTENT: Create/edit a contract with optional multi-year variable rent escalation (FR-CON-09..13).
@@ -54,8 +53,8 @@ const contractSchema = z
   })
 
 // Form values hold raw user input (schema INPUT shape); `onSubmit` receives the OUTPUT shape.
-type ContractFormValues = z.input<typeof contractSchema>
-type ContractFormOutput = z.output<typeof contractSchema>
+export type ContractFormValues = z.input<typeof contractSchema>
+export type ContractFormOutput = z.output<typeof contractSchema>
 
 interface Property {
   id: number
@@ -92,7 +91,7 @@ interface ContractFormProps {
   onCancel: () => void
 }
 
-type IncreaseMode = 'flat' | 'variable'
+export type IncreaseMode = 'flat' | 'variable'
 
 export function ContractForm({
   contract,
@@ -103,6 +102,7 @@ export function ContractForm({
   const isRtl = i18n.language === 'ar'
   const { snack, showError, showSuccess, hideSnackbar } = useSnackbar()
   const isEdit = !!contract
+  const [activeTab, setActiveTab] = useState(0)
 
   const [properties, setProperties] = useState<Property[]>([])
   const [tenants, setTenants] = useState<Tenant[]>([])
@@ -259,7 +259,18 @@ export function ContractForm({
 
   return (
     <>
-      <Box component="form" onSubmit={handleSubmit(onSubmit)} sx={{ mt: 1 }}>
+      {isEdit && (
+        <Tabs value={activeTab} onChange={(_, v) => setActiveTab(v)} sx={{ mb: 1 }}>
+          <Tab label={t('common.details')} />
+          <Tab label={t('contractDetail.documents')} />
+        </Tabs>
+      )}
+      <Box
+        component="form"
+        onSubmit={handleSubmit(onSubmit)}
+        sx={{ mt: 1 }}
+        hidden={activeTab !== 0}
+      >
         <Grid container spacing={3}>
           <Grid size={{ xs: 12, sm: 6 }}>
             <Controller
@@ -424,56 +435,16 @@ export function ContractForm({
             </FormControl>
           </Grid>
 
-          {/* Increase mode toggle (FR-CON-09 / FR-CON-13) */}
-          <Grid size={{ xs: 12 }}>
-            <Divider sx={{ my: 1 }} />
-            <FormControl component="fieldset">
-              <FormLabel component="legend">{t('contract.increaseMode')}</FormLabel>
-              <RadioGroup
-                row
-                value={increaseMode}
-                onChange={(e) => setIncreaseMode(e.target.value as IncreaseMode)}
-                sx={{ flexDirection: isRtl ? 'row-reverse' : 'row' }}
-              >
-                <FormControlLabel value="flat" control={<Radio />} label={t('contract.flatMode')} />
-                <FormControlLabel
-                  value="variable"
-                  control={<Radio />}
-                  label={t('contract.variableMode')}
-                />
-              </RadioGroup>
-            </FormControl>
-          </Grid>
-
-          {increaseMode === 'flat' ? (
-            <Grid size={{ xs: 12, sm: 6 }}>
-              <Controller
-                name="annual_increase_percent"
-                control={control}
-                render={({ field }) => (
-                  <TextField
-                    {...field}
-                    value={field.value ?? ''}
-                    onChange={(e) =>
-                      field.onChange(e.target.value === '' ? null : Number(e.target.value))
-                    }
-                    label={t('contract.annualIncreasePercent')}
-                    fullWidth
-                  />
-                )}
-              />
-            </Grid>
-          ) : (
-            <Grid size={{ xs: 12 }}>
-              <EscalationScheduleEditor
-                rows={schedule}
-                onChange={setSchedule}
-                contractStartDate={startDate}
-                baseRent={rentAmount}
-                currency={currency}
-              />
-            </Grid>
-          )}
+          <ContractIncreaseMode
+            increaseMode={increaseMode}
+            onIncreaseModeChange={setIncreaseMode}
+            schedule={schedule}
+            onScheduleChange={setSchedule}
+            startDate={startDate}
+            rentAmount={rentAmount}
+            currency={currency}
+            control={control}
+          />
 
           <Grid size={{ xs: 12 }}>
             <Controller
@@ -510,6 +481,9 @@ export function ContractForm({
           </Button>
         </Box>
       </Box>
+      {isEdit && activeTab === 1 && contract && (
+        <EntityDocumentsTab entityType="contract" entityId={contract.id} />
+      )}
       <GlobalSnackbar state={snack} onClose={hideSnackbar} />
     </>
   )

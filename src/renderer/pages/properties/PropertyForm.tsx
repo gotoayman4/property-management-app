@@ -1,8 +1,4 @@
-import React, { useEffect } from 'react'
-import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { z } from 'zod'
-import { useTranslation } from 'react-i18next'
 import {
   Grid,
   TextField,
@@ -11,11 +7,18 @@ import {
   FormControl,
   InputLabel,
   Select,
-  FormHelperText
+  FormHelperText,
+  Tabs,
+  Tab
 } from '@mui/material'
-import StandardDialog from '../../components/StandardDialog'
-import GlobalSnackbar from '../../components/GlobalSnackbar'
+import React, { useEffect, useState } from 'react'
+import { useForm, Controller } from 'react-hook-form'
+import { useTranslation } from 'react-i18next'
+import { z } from 'zod'
 import { AmountField } from '../../components/AmountField'
+import EntityDocumentsTab from '../../components/EntityDocumentsTab'
+import GlobalSnackbar from '../../components/GlobalSnackbar'
+import StandardDialog from '../../components/StandardDialog'
 import { useSnackbar } from '../../hooks/useSnackbar'
 
 interface Property {
@@ -73,9 +76,10 @@ export default function PropertyForm({
   property = null,
   countries
 }: PropertyFormProps): React.JSX.Element {
-  const { t, i18n } = useTranslation()
+  const { t } = useTranslation()
   const { snack, showError, showSuccess, hideSnackbar } = useSnackbar()
   const isEdit = !!property
+  const [activeTab, setActiveTab] = useState(0)
 
   const {
     control,
@@ -159,7 +163,13 @@ export default function PropertyForm({
         isDirty={isDirty}
         maxWidth="md"
       >
-        <form onSubmit={handleSubmit(onSubmit)}>
+        {isEdit && (
+          <Tabs value={activeTab} onChange={(_, v) => setActiveTab(v)} sx={{ mb: 1 }}>
+            <Tab label={t('common.details')} />
+            <Tab label={t('propertyDetail.documents')} />
+          </Tabs>
+        )}
+        <form onSubmit={handleSubmit(onSubmit)} hidden={activeTab !== 0}>
           <Grid container spacing={2}>
             <Grid size={{ xs: 12, sm: 6 }}>
               <Controller
@@ -220,9 +230,7 @@ export default function PropertyForm({
                     <Select {...field} label={t('property.country')}>
                       {countries.map((c) => (
                         <MenuItem key={c.code} value={c.code}>
-                          {c.code === 'JO' && (i18n.language === 'ar' ? 'الأردن' : 'Jordan')}
-                          {c.code === 'TR' && (i18n.language === 'ar' ? 'تركيا' : 'Turkey')}
-                          {c.code === 'QA' && (i18n.language === 'ar' ? 'قطر' : 'Qatar')}
+                          {t(`countries.${c.code}`, c.code)}
                         </MenuItem>
                       ))}
                     </Select>
@@ -311,6 +319,9 @@ export default function PropertyForm({
             </Grid>
           </Grid>
         </form>
+        {isEdit && activeTab === 1 && property && (
+          <EntityDocumentsTab entityType="property" entityId={property.id} />
+        )}
       </StandardDialog>
       <GlobalSnackbar state={snack} onClose={hideSnackbar} />
     </>

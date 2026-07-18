@@ -3,9 +3,8 @@
  *         payments, and documents. Accessed from TenantList via link.
  * CONSTRAINT (AGENTS.md): i18n keys only, StandardTable for lists, logical CSS.
  */
-import React, { useState, useEffect } from 'react'
-import { useParams, useNavigate, Link } from 'react-router-dom'
-import { useTranslation } from 'react-i18next'
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
+import PeopleIcon from '@mui/icons-material/People'
 import {
   Box,
   Typography,
@@ -15,12 +14,17 @@ import {
   CardContent,
   Grid,
   Chip,
-  Breadcrumbs
+  Breadcrumbs,
+  Button,
+  Collapse
 } from '@mui/material'
-import PeopleIcon from '@mui/icons-material/People'
+import type { GridColDef, GridValidRowModel } from '@mui/x-data-grid'
+import React, { useState, useEffect, useCallback } from 'react'
+import { useTranslation } from 'react-i18next'
+import { useParams, useNavigate, Link } from 'react-router-dom'
+import DocumentUploadForm from '../../components/DocumentUploadForm'
 import PageHeader from '../../components/PageHeader'
 import StandardTable from '../../components/StandardTable'
-import type { GridColDef, GridValidRowModel } from '@mui/x-data-grid'
 
 interface TenantData {
   id: number
@@ -47,7 +51,18 @@ export default function TenantDetail(): React.JSX.Element {
   const [contracts, setContracts] = useState<GridValidRowModel[]>([])
   const [payments, setPayments] = useState<GridValidRowModel[]>([])
   const [documents, setDocuments] = useState<GridValidRowModel[]>([])
+  const [showUploadForm, setShowUploadForm] = useState<boolean>(false)
   const [loading, setLoading] = useState(true)
+
+  const fetchDocuments = useCallback(async (): Promise<void> => {
+    if (!id) return
+    try {
+      const data = await window.api.documents.list({ entity_type: 'tenant', entity_id: Number(id) })
+      setDocuments(data as GridValidRowModel[])
+    } catch {
+      /* documents stay empty */
+    }
+  }, [id])
 
   useEffect(() => {
     if (!id) return
@@ -81,8 +96,15 @@ export default function TenantDetail(): React.JSX.Element {
           const data = await window.api.payments.list({ tenant_id: tid })
           if (!cancelled) setPayments(data as GridValidRowModel[])
         } else if (tab === 2) {
-          const data = await window.api.documents.list({ entity_type: 'tenant', entity_id: tid })
-          if (!cancelled) setDocuments(data as GridValidRowModel[])
+          try {
+            const docData = await window.api.documents.list({
+              entity_type: 'tenant',
+              entity_id: tid
+            })
+            if (!cancelled) setDocuments(docData as GridValidRowModel[])
+          } catch {
+            /* documents stay empty */
+          }
         }
       } catch {
         /* tab data stays empty */
@@ -115,6 +137,18 @@ export default function TenantDetail(): React.JSX.Element {
   const docCols: GridColDef[] = [
     { field: 'file_name', headerName: t('documents.fileName'), flex: 2 },
     { field: 'mime_type', headerName: t('documents.mimeType'), flex: 1 },
+    {
+      field: 'issue_date',
+      headerName: t('documents.issueDate'),
+      flex: 1,
+      renderCell: (params) => (params.row as GridValidRowModel).issue_date ?? '—'
+    },
+    {
+      field: 'expiry_date',
+      headerName: t('documents.expiryDate'),
+      flex: 1,
+      renderCell: (params) => (params.row as GridValidRowModel).expiry_date ?? '—'
+    },
     { field: 'uploaded_at', headerName: t('documents.uploadedAt'), flex: 1 }
   ]
 
@@ -220,6 +254,38 @@ export default function TenantDetail(): React.JSX.Element {
           rows={documents}
           emptyMessage={t('tenantDetail.noDocuments')}
         />
+      )}
+      {tab === 2 && (
+        <Box sx={{ mt: 2 }}>
+          <Button
+            size="small"
+            startIcon={
+              <ExpandMoreIcon
+                sx={{
+                  transform: showUploadForm ? 'rotate(180deg)' : 'none',
+                  transition: 'transform 0.2s'
+                }}
+              />
+            }
+            onClick={() => setShowUploadForm(!showUploadForm)}
+          >
+            {showUploadForm ? t('common.close') : t('documents.selectFile')}
+          </Button>
+          <Collapse in={showUploadForm}>
+            <Card sx={{ mt: 1 }}>
+              <CardContent>
+                <DocumentUploadForm
+                  entityType="tenant"
+                  entityId={Number(id)}
+                  onSuccess={() => {
+                    fetchDocuments()
+                    setShowUploadForm(false)
+                  }}
+                />
+              </CardContent>
+            </Card>
+          </Collapse>
+        </Box>
       )}
     </Box>
   )

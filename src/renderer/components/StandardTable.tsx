@@ -1,8 +1,8 @@
-import React from 'react'
-import { DataGrid, GridColDef, GridValidRowModel, GridRowId } from '@mui/x-data-grid'
-import { Box, Typography, Button, CircularProgress, Paper } from '@mui/material'
-import { useTranslation } from 'react-i18next'
 import { ErrorOutlined, InboxOutlined } from '@mui/icons-material'
+import { Box, Typography, Button, CircularProgress, Paper } from '@mui/material'
+import { DataGrid, GridColDef, GridValidRowModel, GridRowId } from '@mui/x-data-grid'
+import React from 'react'
+import { useTranslation } from 'react-i18next'
 
 interface StandardTableProps {
   columns: GridColDef[]
@@ -135,7 +135,7 @@ export default function StandardTable({
         borderColor: 'divider'
       }}
     >
-      <Box sx={{ height: 400, width: '100%', direction: isRtl ? 'rtl' : 'ltr' }}>
+      <Box sx={{ height: 400, width: '100%' }} dir={isRtl ? 'rtl' : 'ltr'}>
         <DataGrid
           rows={rows}
           columns={columns}
