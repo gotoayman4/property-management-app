@@ -11,14 +11,13 @@ import {
   MenuItem,
   Grid,
   Typography,
-  Stack,
-  Tooltip
+  Stack
 } from '@mui/material'
 import { AccountBalanceWallet as LedgerIcon, Add as AddIcon } from '@mui/icons-material'
 import { useTranslation } from 'react-i18next'
 import { GridColDef } from '@mui/x-data-grid'
 import StandardTable from '../../components/StandardTable'
-import StandardDialog from '../../components/StandardDialog'
+import { ManualAdjustmentDialog } from './ManualAdjustmentDialog'
 import GlobalSnackbar from '../../components/GlobalSnackbar'
 import PageHeader from '../../components/PageHeader'
 import { useSnackbar } from '../../hooks/useSnackbar'
@@ -28,8 +27,9 @@ import { useSnackbar } from '../../hooks/useSnackbar'
  *         property with a running balance derived fresh on every read (BR-22), a summary bar, a
  *         "reconstruct balance as of" tool, and a manual-adjustment entry (FR-LED-04).
  * CONSTRAINT: The ledger is append-only — this screen performs NO edits to existing rows; the only
- *             write is adding a manual adjustment. Excel/HTML export is deferred to the Reports
- *             phase; the buttons are shown disabled with an explanatory tooltip (no silent TODO).
+ *             write is adding a manual adjustment. The Excel export button calls the shared Reports
+ *             engine (reports:exportExcel) which shows the native save dialog; the renderer never
+ *             touches the filesystem directly.
  */
 
 interface Property {
@@ -86,6 +86,7 @@ export default function Ledger(): React.ReactElement {
   const [reconstructResult, setReconstructResult] = useState<number | null>(null)
 
   const [adjustOpen, setAdjustOpen] = useState<boolean>(false)
+  const [exporting, setExporting] = useState<boolean>(false)
 
   useEffect(() => {
     const load = async (): Promise<void> => {
@@ -143,6 +144,33 @@ export default function Ledger(): React.ReactElement {
     } catch (err) {
       console.error(err)
       showError('common.error')
+    }
+  }
+
+  /** Export this property's ledger to Excel via the shared Reports engine (BR-22, SRS §14.9). */
+  const handleExportExcel = async (): Promise<void> => {
+    if (!selectedPropertyId) return
+    setExporting(true)
+    try {
+      const result = (await window.api.reports.exportExcel({
+        type: 'ledger',
+        ledger_property_id: selectedPropertyId,
+        from_date: fromDate || undefined,
+        to_date: toDate || undefined,
+        language: i18n.language === 'en' ? 'en' : 'ar'
+      })) as { filePath: string | null }
+      if (result.filePath === null) {
+        showSuccess('reports.exportCanceled')
+      } else {
+        showSuccess('reports.exportSuccess')
+      }
+    } catch (err) {
+      console.error(err)
+      const msg = err instanceof Error ? err.message : ''
+      if (msg === 'REPORT_NO_DATA') showError('reports.noData')
+      else showError('reports.exportFailed')
+    } finally {
+      setExporting(false)
     }
   }
 
@@ -214,13 +242,14 @@ export default function Ledger(): React.ReactElement {
         icon={<LedgerIcon />}
         title={t('ledger.title')}
         action={
-          <Tooltip title={t('ledger.exportComingSoon')} arrow>
-            <span>
-              <Button variant="outlined" disabled sx={{ px: 3, py: 1, borderRadius: 2 }}>
-                {t('ledger.exportExcel')}
-              </Button>
-            </span>
-          </Tooltip>
+          <Button
+            variant="outlined"
+            onClick={handleExportExcel}
+            disabled={!selectedPropertyId || exporting}
+            sx={{ px: 3, py: 1, borderRadius: 2 }}
+          >
+            {exporting ? t('reports.exporting') : t('ledger.exportExcel')}
+          </Button>
         }
       />
 
@@ -420,106 +449,5 @@ function SummaryCard({
   )
 }
 
-/** Manual-adjustment dialog — the only write path on this screen (FR-LED-04). */
-function ManualAdjustmentDialog({
-  open,
-  propertyId,
-  currency,
-  onClose,
-  onSaved,
-  onError,
-  onSuccess
-}: {
-  open: boolean
-  propertyId: number | null
-  currency: string
-  onClose: () => void
-  onSaved: () => void
-  onError: (key: string) => void
-  onSuccess: (key: string) => void
-}): React.ReactElement {
-  const { t } = useTranslation()
-  const [description, setDescription] = useState<string>('')
-  const [amount, setAmount] = useState<string>('')
-  const [entryDate, setEntryDate] = useState<string>(new Date().toISOString().split('T')[0])
-  const [submitting, setSubmitting] = useState<boolean>(false)
-
-  const parsedAmount = Number(amount)
-  const amountValid = amount !== '' && !Number.isNaN(parsedAmount) && parsedAmount !== 0
-  const descriptionValid = description.trim().length >= 5 && description.trim().length <= 500
-
-  const handleSubmit = async (): Promise<void> => {
-    if (!propertyId || !amountValid || !descriptionValid) return
-    setSubmitting(true)
-    try {
-      await window.api.ledger.addManualAdjustment({
-        property_id: propertyId,
-        entry_date: entryDate,
-        description: description.trim(),
-        amount: parsedAmount,
-        currency
-      })
-      onSuccess('common.saveSuccess')
-      onSaved()
-    } catch (err: unknown) {
-      console.error(err)
-      const msg = err instanceof Error ? err.message : ''
-      if (msg === 'DESCRIPTION_TOO_SHORT') onError('ledger.descriptionTooShort')
-      else if (msg === 'DESCRIPTION_TOO_LONG') onError('ledger.descriptionTooLong')
-      else if (msg === 'AMOUNT_REQUIRED') onError('ledger.amountRequired')
-      else onError('common.saveError')
-    } finally {
-      setSubmitting(false)
-    }
-  }
-
-  return (
-    <StandardDialog
-      open={open}
-      onClose={onClose}
-      title={t('ledger.addManualAdjustment')}
-      maxWidth="sm"
-    >
-      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-        <TextField
-          label={t('ledger.adjustmentDescription')}
-          helperText={t('ledger.adjustmentDescriptionHelp')}
-          value={description}
-          onChange={(e) => setDescription(e.target.value)}
-          multiline
-          rows={3}
-          fullWidth
-          error={description.length > 0 && !descriptionValid}
-        />
-        <TextField
-          label={t('ledger.adjustmentAmount')}
-          value={amount}
-          onChange={(e) => setAmount(e.target.value)}
-          fullWidth
-          slotProps={{ htmlInput: { inputMode: 'decimal' } }}
-          helperText={currency}
-        />
-        <TextField
-          label={t('ledger.adjustmentDate')}
-          type="date"
-          value={entryDate}
-          onChange={(e) => setEntryDate(e.target.value)}
-          fullWidth
-          slotProps={{ inputLabel: { shrink: true } }}
-        />
-        <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 2 }}>
-          <Button variant="outlined" onClick={onClose} disabled={submitting}>
-            {t('common.cancel')}
-          </Button>
-          <Button
-            variant="contained"
-            onClick={handleSubmit}
-            disabled={submitting || !amountValid || !descriptionValid}
-          >
-            {t('common.save')}
-          </Button>
-        </Box>
-      </Box>
-    </StandardDialog>
-  )
-}
+/** Manual-adjustment dialog lives in its own module to keep this file under the 500-line cap
+ *  (NFR-MAIN-02). See ManualAdjustmentDialog.tsx — the only write path on this screen (FR-LED-04). */

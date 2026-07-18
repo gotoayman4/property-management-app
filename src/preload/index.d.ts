@@ -209,6 +209,58 @@ declare global {
           }[]
         >
       }
+      reports: {
+        preview: (data: {
+          type: 'income' | 'expense' | 'profit_loss' | 'vacancy' | 'ledger'
+          from_date?: string
+          to_date?: string
+          property_id?: number
+          tenant_id?: number
+          ledger_property_id?: number
+          payment_method?: string
+          category_id?: number
+          language?: 'ar' | 'en'
+        }) => Promise<{
+          titleKey: string
+          subtitleKey?: string
+          columns: Array<{
+            key: string
+            headerKey: string
+            type?: 'text' | 'number' | 'currency' | 'date'
+            currencyField?: string
+            sumInTotals?: boolean
+            isRunningBalance?: boolean
+          }>
+          groups: Array<{
+            currency: string
+            rows: Record<string, unknown>[]
+            totals: Record<string, number>
+          }>
+          consolidatedNote?: string
+        }>
+        exportExcel: (data: {
+          type: 'income' | 'expense' | 'profit_loss' | 'vacancy' | 'ledger'
+          from_date?: string
+          to_date?: string
+          property_id?: number
+          tenant_id?: number
+          ledger_property_id?: number
+          payment_method?: string
+          category_id?: number
+          language?: 'ar' | 'en'
+        }) => Promise<{ filePath: string | null }>
+        exportHtml: (data: {
+          type: 'income' | 'expense' | 'profit_loss' | 'vacancy' | 'ledger'
+          from_date?: string
+          to_date?: string
+          property_id?: number
+          tenant_id?: number
+          ledger_property_id?: number
+          payment_method?: string
+          category_id?: number
+          language?: 'ar' | 'en'
+        }) => Promise<{ filePath: string | null }>
+      }
     }
   }
 }

@@ -19,6 +19,7 @@ import { ExpenseList } from './pages/expenses/ExpenseList'
 import Ledger from './pages/ledger/Ledger'
 import Settings from './pages/settings/Settings'
 import ExchangeRateManager from './pages/currency/ExchangeRateManager'
+import Reports from './pages/reports/Reports'
 import './i18n'
 
 // Layout wrapper for routing
@@ -71,6 +72,10 @@ const router = createHashRouter([
       {
         path: '/ledger',
         element: <Ledger />
+      },
+      {
+        path: '/reports',
+        element: <Reports />
       },
       {
         path: '/settings',

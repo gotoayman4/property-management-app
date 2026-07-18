@@ -48,7 +48,10 @@ const paymentSchema = z.object({
   notes: z.string().optional().nullable()
 })
 
-type PaymentFormValues = z.infer<typeof paymentSchema>
+// Form values hold the raw user input (the schema's INPUT shape) — fields with `.default()`
+// are optional here. `onSubmit` receives the OUTPUT shape after Zod applies defaults.
+type PaymentFormValues = z.input<typeof paymentSchema>
+type PaymentFormOutput = z.output<typeof paymentSchema>
 
 interface Property {
   id: number
@@ -100,7 +103,7 @@ export function PaymentForm({ onSuccess, onCancel }: PaymentFormProps): React.Re
     setValue,
     setError,
     formState: { errors, isSubmitting }
-  } = useForm<PaymentFormValues>({
+  } = useForm<PaymentFormValues, unknown, PaymentFormOutput>({
     resolver: zodResolver(paymentSchema),
     defaultValues
   })
@@ -143,7 +146,7 @@ export function PaymentForm({ onSuccess, onCancel }: PaymentFormProps): React.Re
   // Contracts available for the selected property.
   const availableContracts = contracts.filter((c) => c.property_id === selectedPropertyId)
 
-  const onSubmit = async (data: PaymentFormValues): Promise<void> => {
+  const onSubmit = async (data: PaymentFormOutput): Promise<void> => {
     try {
       const result = await window.api.payments.create({
         property_id: data.property_id,
@@ -185,20 +188,23 @@ export function PaymentForm({ onSuccess, onCancel }: PaymentFormProps): React.Re
               <Controller
                 name="property_id"
                 control={control}
-                render={({ field }) => (
-                  <Select
-                    {...field}
-                    label={t('common.property')}
-                    value={field.value || ''}
-                    onChange={(e) => field.onChange(Number(e.target.value))}
-                  >
-                    {properties.map((p) => (
-                      <MenuItem key={p.id} value={p.id}>
-                        {p.name} ({p.code})
-                      </MenuItem>
-                    ))}
-                  </Select>
-                )}
+                render={({ field }) => {
+                  const hasOption = properties.some((p) => p.id === field.value)
+                  return (
+                    <Select
+                      {...field}
+                      label={t('common.property')}
+                      value={hasOption ? field.value : ''}
+                      onChange={(e) => field.onChange(Number(e.target.value))}
+                    >
+                      {properties.map((p) => (
+                        <MenuItem key={p.id} value={p.id}>
+                          {p.name} ({p.code})
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  )
+                }}
               />
               {errors.property_id && (
                 <FormHelperText>{t(`payment.${errors.property_id.message}`)}</FormHelperText>

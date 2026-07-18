@@ -48,7 +48,6 @@ const SPINNER_LESS = {
     WebkitAppearance: 'none',
     margin: 0
   },
-  '&::-webkit-appearance': 'none',
   MozAppearance: 'textfield'
 } as const
 

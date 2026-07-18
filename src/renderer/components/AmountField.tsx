@@ -78,7 +78,6 @@ export function AmountField<T extends FieldValues, N extends FieldPath<T>>({
                     WebkitAppearance: 'none',
                     margin: 0
                   },
-                  '&::-webkit-appearance': 'none',
                   MozAppearance: 'textfield'
                 }
               }

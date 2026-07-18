@@ -26,6 +26,7 @@ import PaymentsIcon from '@mui/icons-material/Payments'
 import ReceiptLongIcon from '@mui/icons-material/ReceiptLong'
 import AccountBalanceWalletIcon from '@mui/icons-material/AccountBalanceWallet'
 import AttachMoneyIcon from '@mui/icons-material/AttachMoney'
+import AssessmentIcon from '@mui/icons-material/Assessment'
 import NotificationBell from './NotificationBell'
 import SearchBar from './SearchBar'
 
@@ -60,6 +61,7 @@ export default function Layout({ children }: LayoutProps): React.JSX.Element {
     { text: t('sidebar.payments'), icon: <PaymentsIcon />, path: '/payments' },
     { text: t('sidebar.expenses'), icon: <ReceiptLongIcon />, path: '/expenses' },
     { text: t('sidebar.ledger'), icon: <AccountBalanceWalletIcon />, path: '/ledger' },
+    { text: t('sidebar.reports'), icon: <AssessmentIcon />, path: '/reports' },
     { text: t('sidebar.currency'), icon: <AttachMoneyIcon />, path: '/currency' },
     { text: t('sidebar.settings'), icon: <SettingsIcon />, path: '/settings' }
   ]
@@ -146,6 +148,7 @@ export default function Layout({ children }: LayoutProps): React.JSX.Element {
             {location.pathname === '/payments' && t('sidebar.payments')}
             {location.pathname === '/expenses' && t('sidebar.expenses')}
             {location.pathname === '/ledger' && t('sidebar.ledger')}
+            {location.pathname === '/reports' && t('sidebar.reports')}
             {location.pathname === '/currency' && t('sidebar.currency')}
             {location.pathname === '/settings' && t('sidebar.settings')}
           </Typography>

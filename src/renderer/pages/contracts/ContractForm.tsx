@@ -53,7 +53,9 @@ const contractSchema = z
     path: ['end_date']
   })
 
-type ContractFormValues = z.infer<typeof contractSchema>
+// Form values hold raw user input (schema INPUT shape); `onSubmit` receives the OUTPUT shape.
+type ContractFormValues = z.input<typeof contractSchema>
+type ContractFormOutput = z.output<typeof contractSchema>
 
 interface Property {
   id: number
@@ -140,7 +142,7 @@ export function ContractForm({
     setValue,
     setError,
     formState: { errors, isSubmitting }
-  } = useForm<ContractFormValues>({
+  } = useForm<ContractFormValues, unknown, ContractFormOutput>({
     resolver: zodResolver(contractSchema),
     defaultValues
   })
@@ -205,7 +207,7 @@ export function ContractForm({
     }
   }, [increaseMode, schedule.length, startDate, rentAmount])
 
-  const onSubmit = async (data: ContractFormValues): Promise<void> => {
+  const onSubmit = async (data: ContractFormOutput): Promise<void> => {
     try {
       const base = {
         ...data,
@@ -299,20 +301,23 @@ export function ContractForm({
               <Controller
                 name="property_id"
                 control={control}
-                render={({ field }) => (
-                  <Select
-                    {...field}
-                    label={t('contract.property')}
-                    value={field.value || ''}
-                    onChange={(e) => field.onChange(Number(e.target.value))}
-                  >
-                    {properties.map((p) => (
-                      <MenuItem key={p.id} value={p.id}>
-                        {p.name} ({p.code})
-                      </MenuItem>
-                    ))}
-                  </Select>
-                )}
+                render={({ field }) => {
+                  const hasOption = properties.some((p) => p.id === field.value)
+                  return (
+                    <Select
+                      {...field}
+                      label={t('contract.property')}
+                      value={hasOption ? field.value : ''}
+                      onChange={(e) => field.onChange(Number(e.target.value))}
+                    >
+                      {properties.map((p) => (
+                        <MenuItem key={p.id} value={p.id}>
+                          {p.name} ({p.code})
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  )
+                }}
               />
               {errors.property_id && (
                 <FormHelperText>{t(`contract.${errors.property_id.message}`)}</FormHelperText>
@@ -325,20 +330,23 @@ export function ContractForm({
               <Controller
                 name="tenant_id"
                 control={control}
-                render={({ field }) => (
-                  <Select
-                    {...field}
-                    label={t('contract.tenant')}
-                    value={field.value || ''}
-                    onChange={(e) => field.onChange(Number(e.target.value))}
-                  >
-                    {tenants.map((tn) => (
-                      <MenuItem key={tn.id} value={tn.id}>
-                        {tn.fullname} ({tn.code})
-                      </MenuItem>
-                    ))}
-                  </Select>
-                )}
+                render={({ field }) => {
+                  const hasOption = tenants.some((tn) => tn.id === field.value)
+                  return (
+                    <Select
+                      {...field}
+                      label={t('contract.tenant')}
+                      value={hasOption ? field.value : ''}
+                      onChange={(e) => field.onChange(Number(e.target.value))}
+                    >
+                      {tenants.map((tn) => (
+                        <MenuItem key={tn.id} value={tn.id}>
+                          {tn.fullname} ({tn.code})
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  )
+                }}
               />
               {errors.tenant_id && (
                 <FormHelperText>{t(`contract.${errors.tenant_id.message}`)}</FormHelperText>

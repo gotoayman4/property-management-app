@@ -37,6 +37,21 @@ import { runMigrations } from '../../db/migrations'
 // Reset domain data after every test so cases within the same describe don't leak rows.
 afterEach((): void => resetDb(testDb))
 
+/**
+ * INTENT: Format a Date as a YYYY-MM-DD string using LOCAL calendar fields.
+ * CONSTRAINT: `Date.toISOString()` converts to UTC, which rolls the day backward for any
+ *             timezone with a positive UTC offset (e.g. Jordan AST +3) and corrupts
+ *             month/day comparisons against values the production code formats in local
+ *             time (see recurringExpenseIpc.toLocalISODate). All test date assertions
+ *             MUST go through this helper so they compare apples to apples.
+ */
+function toLocalISODate(d: Date): string {
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${y}-${m}-${day}`
+}
+
 let propertySeq = 0
 function seedProperty(name = 'Test Property', currency = 'JOD'): number {
   propertySeq += 1
@@ -84,7 +99,7 @@ describe('recurringExpenseIpc', () => {
     // start_date one month ago -> exactly one generation up to today.
     const start = new Date()
     start.setMonth(start.getMonth() - 1, 1)
-    const startDate = start.toISOString().split('T')[0]
+    const startDate = toLocalISODate(start)
     seedTemplate(startDate)
 
     evaluateRecurringExpenses()
@@ -102,7 +117,7 @@ describe('recurringExpenseIpc', () => {
   it('advances last_generated_date after generation', async () => {
     const start = new Date()
     start.setMonth(start.getMonth() - 1, 1)
-    const startDate = start.toISOString().split('T')[0]
+    const startDate = toLocalISODate(start)
     seedTemplate(startDate)
 
     evaluateRecurringExpenses()
@@ -112,13 +127,13 @@ describe('recurringExpenseIpc', () => {
     // The latest generated month-start on/before today with day_of_month = 1.
     const expected = new Date()
     expected.setDate(1)
-    expect(row.last_generated_date).toBe(expected.toISOString().split('T')[0])
+    expect(row.last_generated_date).toBe(toLocalISODate(expected))
   })
 
   it('skips inactive recurring templates', async () => {
     const start = new Date()
     start.setMonth(start.getMonth() - 1, 1)
-    seedTemplate(start.toISOString().split('T')[0], 0)
+    seedTemplate(toLocalISODate(start), 0)
 
     evaluateRecurringExpenses()
     const expCount = testDb.prepare('SELECT COUNT(*) AS c FROM expenses').get() as { c: number }
@@ -159,7 +174,7 @@ describe('notificationIpc', () => {
   it('generates a contract-expiry notification for a lease ending within the window', async () => {
     const propertyId = seedProperty()
     const tenantId = seedTenant()
-    const soon = new Date(Date.now() + 10 * 86400000).toISOString().slice(0, 10)
+    const soon = toLocalISODate(new Date(Date.now() + 10 * 86400000))
     testDb
       .prepare(
         `INSERT INTO contracts

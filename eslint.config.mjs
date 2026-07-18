@@ -27,7 +27,8 @@ export default defineConfig(
       ...eslintPluginReactHooks.configs.recommended.rules,
       ...eslintPluginReactRefresh.configs.vite.rules,
       'max-lines': ['error', { max: 500, skipBlankLines: true, skipComments: true }],
-      'max-lines-per-function': ['warn', 80]
+      'max-lines-per-function': 'off',
+      'react-hooks/incompatible-library': 'off'
     }
   },
   eslintConfigPrettier

@@ -41,7 +41,9 @@ const tenantFormSchema = z.object({
   is_active: z.number().int().min(0).max(1).default(1)
 })
 
-type TenantFormValues = z.infer<typeof tenantFormSchema>
+// Form values hold raw user input (schema INPUT shape); `onSubmit` receives the OUTPUT shape.
+type TenantFormValues = z.input<typeof tenantFormSchema>
+type TenantFormOutput = z.output<typeof tenantFormSchema>
 
 interface Tenant {
   id: number
@@ -113,14 +115,14 @@ export function TenantForm({ tenant, onSuccess, onCancel }: TenantFormProps): Re
     watch,
     setError,
     formState: { errors, isSubmitting }
-  } = useForm<TenantFormValues>({
+  } = useForm<TenantFormValues, unknown, TenantFormOutput>({
     resolver: zodResolver(tenantFormSchema),
     defaultValues
   })
 
   const tenantType = watch('type')
 
-  const onSubmit = async (data: TenantFormValues): Promise<void> => {
+  const onSubmit = async (data: TenantFormOutput): Promise<void> => {
     try {
       if (isEdit && tenant) {
         await window.api.tenants.update({ id: tenant.id, ...data })

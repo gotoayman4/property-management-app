@@ -100,6 +100,11 @@ const api = {
   },
   search: {
     global: (query: string) => ipcRenderer.invoke('search:global', query)
+  },
+  reports: {
+    preview: (data: unknown) => ipcRenderer.invoke('reports:preview', data),
+    exportExcel: (data: unknown) => ipcRenderer.invoke('reports:exportExcel', data),
+    exportHtml: (data: unknown) => ipcRenderer.invoke('reports:exportHtml', data)
   }
 }
 

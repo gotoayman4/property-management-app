@@ -19,6 +19,7 @@ import {
 import { registerDocumentIpcHandlers } from './ipc/documentIpc'
 import { registerNotificationIpcHandlers, evaluateNotifications } from './ipc/notificationIpc'
 import { registerSearchIpcHandlers } from './ipc/searchIpc'
+import { registerReportsIpcHandlers } from './ipc/reportsIpc'
 
 function createWindow(): void {
   // Create the browser window.
@@ -74,6 +75,8 @@ app.whenReady().then(() => {
   registerDocumentIpcHandlers()
   registerNotificationIpcHandlers()
   registerSearchIpcHandlers()
+  // Reports & Export (SRS §5.7/§5.8): 5 core reports → Excel + interactive HTML.
+  registerReportsIpcHandlers()
 
   // Evaluate notifications on startup — check for rent due, contract expiry, etc.
   evaluateNotifications()
@@ -95,12 +98,19 @@ app.whenReady().then(() => {
 
   // NFR-SEC-03: Security headers — CSP for the renderer process.
   // CONSTRAINT: offline-only app; no external scripts, styles, or connections allowed.
+  // DECISION: 'unsafe-inline' on script-src mirrors the <meta> CSP already in index.html and is
+  //           required for two intentional inline scripts: (1) the first-paint dir-flicker guard
+  //           that sets <html dir> before React mounts, and (2) @vitejs/plugin-react's HMR
+  //           preamble in dev mode. All OTHER directives stay locked to 'self' — no remote
+  //           script/style/img/font/connect/frame/object/origin is ever permitted. External
+  //           (remote) scripts remain fully blocked because default-src is 'self' and there is
+  //           no 'unsafe-inline' escape on any directive that loads cross-origin resources.
   session.defaultSession.webRequest.onHeadersReceived((details, callback) => {
     callback({
       responseHeaders: {
         ...details.responseHeaders,
         'Content-Security-Policy': [
-          "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:; connect-src 'self'; frame-src 'none'; object-src 'none'; base-uri 'self'"
+          "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:; connect-src 'self'; frame-src 'none'; object-src 'none'; base-uri 'self'"
         ],
         'X-Frame-Options': ['DENY'],
         'X-Content-Type-Options': ['nosniff'],
