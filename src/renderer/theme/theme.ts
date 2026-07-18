@@ -104,6 +104,13 @@ export const getTheme = (
           }
         }
       },
+      MuiFormLabel: {
+        styleOverrides: {
+          asterisk: {
+            color: errorColor
+          }
+        }
+      },
       MuiTextField: {
         defaultProps: {
           variant: 'outlined',

@@ -2,7 +2,6 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import {
   Box,
   Button,
-  TextField,
   FormControl,
   InputLabel,
   Select,
@@ -19,6 +18,7 @@ import { z } from 'zod'
 import { AmountField } from '../../components/AmountField'
 import { CurrencyInput } from '../../components/CurrencyInput'
 import EntityDocumentsTab from '../../components/EntityDocumentsTab'
+import { FormField } from '../../components/FormField'
 import GlobalSnackbar from '../../components/GlobalSnackbar'
 import { useSnackbar } from '../../hooks/useSnackbar'
 import { ContractIncreaseMode } from './ContractIncreaseMode'
@@ -273,20 +273,13 @@ export function ContractForm({
       >
         <Grid container spacing={3}>
           <Grid size={{ xs: 12, sm: 6 }}>
-            <Controller
+            <FormField
               name="contract_number"
               control={control}
-              render={({ field }) => (
-                <TextField
-                  {...field}
-                  label={t('contract.contractNumber')}
-                  fullWidth
-                  error={!!errors.contract_number}
-                  helperText={
-                    errors.contract_number ? t(`contract.${errors.contract_number.message}`) : ''
-                  }
-                />
-              )}
+              errors={errors}
+              label={t('contract.contractNumber')}
+              required
+              errorNamespace="contract"
             />
           </Grid>
           <Grid size={{ xs: 12, sm: 6 }}>
@@ -365,37 +358,25 @@ export function ContractForm({
             </FormControl>
           </Grid>
           <Grid size={{ xs: 12, sm: 6 }}>
-            <Controller
+            <FormField
               name="start_date"
               control={control}
-              render={({ field }) => (
-                <TextField
-                  {...field}
-                  label={t('contract.startDate')}
-                  type="date"
-                  fullWidth
-                  slotProps={{ inputLabel: { shrink: true } }}
-                  error={!!errors.start_date}
-                  helperText={errors.start_date ? t(`contract.${errors.start_date.message}`) : ''}
-                />
-              )}
+              errors={errors}
+              label={t('contract.startDate')}
+              required
+              errorNamespace="contract"
+              type="date"
             />
           </Grid>
           <Grid size={{ xs: 12, sm: 6 }}>
-            <Controller
+            <FormField
               name="end_date"
               control={control}
-              render={({ field }) => (
-                <TextField
-                  {...field}
-                  label={t('contract.endDate')}
-                  type="date"
-                  fullWidth
-                  slotProps={{ inputLabel: { shrink: true } }}
-                  error={!!errors.end_date}
-                  helperText={errors.end_date ? t(`contract.${errors.end_date.message}`) : ''}
-                />
-              )}
+              errors={errors}
+              label={t('contract.endDate')}
+              required
+              errorNamespace="contract"
+              type="date"
             />
           </Grid>
           <Grid size={{ xs: 12, sm: 6 }}>
@@ -447,19 +428,14 @@ export function ContractForm({
           />
 
           <Grid size={{ xs: 12 }}>
-            <Controller
+            <FormField
               name="notes"
               control={control}
-              render={({ field }) => (
-                <TextField
-                  {...field}
-                  value={field.value || ''}
-                  label={t('contract.notes')}
-                  multiline
-                  rows={2}
-                  fullWidth
-                />
-              )}
+              errors={errors}
+              label={t('contract.notes')}
+              errorNamespace="contract"
+              multiline
+              rows={2}
             />
           </Grid>
         </Grid>

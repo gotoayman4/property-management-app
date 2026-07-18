@@ -20,6 +20,7 @@ import { useForm, Controller } from 'react-hook-form'
 import { useTranslation } from 'react-i18next'
 import { z } from 'zod'
 import EntityDocumentsTab from '../../components/EntityDocumentsTab'
+import { FormField } from '../../components/FormField'
 import GlobalSnackbar from '../../components/GlobalSnackbar'
 import { useSnackbar } from '../../hooks/useSnackbar'
 
@@ -237,69 +238,47 @@ export function TenantForm({ tenant, onSuccess, onCancel }: TenantFormProps): Re
 
           {/* Full Name */}
           <Grid size={{ xs: 12, sm: 6 }}>
-            <Controller
+            <FormField
               name="fullname"
               control={control}
-              render={({ field }) => (
-                <TextField
-                  {...field}
-                  label={t('tenant.fullname')}
-                  fullWidth
-                  error={!!errors.fullname}
-                  helperText={errors.fullname ? t(`tenant.${errors.fullname.message}`) : ''}
-                />
-              )}
+              errors={errors}
+              label={t('tenant.fullname')}
+              required
+              errorNamespace="tenant"
             />
           </Grid>
 
           {/* National ID */}
           <Grid size={{ xs: 12, sm: 6 }}>
-            <Controller
+            <FormField
               name="national_id"
               control={control}
-              render={({ field }) => (
-                <TextField
-                  {...field}
-                  value={field.value || ''}
-                  label={t('tenant.nationalId')}
-                  fullWidth
-                  error={!!errors.national_id}
-                />
-              )}
+              errors={errors}
+              label={t('tenant.nationalId')}
+              errorNamespace="tenant"
             />
           </Grid>
 
           {/* Phone */}
           <Grid size={{ xs: 12, sm: 6 }}>
-            <Controller
+            <FormField
               name="phone"
               control={control}
-              render={({ field }) => (
-                <TextField
-                  {...field}
-                  label={t('tenant.phone')}
-                  fullWidth
-                  error={!!errors.phone}
-                  helperText={errors.phone ? t(`tenant.${errors.phone.message}`) : ''}
-                />
-              )}
+              errors={errors}
+              label={t('tenant.phone')}
+              required
+              errorNamespace="tenant"
             />
           </Grid>
 
           {/* Email */}
           <Grid size={12}>
-            <Controller
+            <FormField
               name="email"
               control={control}
-              render={({ field }) => (
-                <TextField
-                  {...field}
-                  value={field.value || ''}
-                  label={t('tenant.email')}
-                  fullWidth
-                  error={!!errors.email}
-                />
-              )}
+              errors={errors}
+              label={t('tenant.email')}
+              errorNamespace="tenant"
             />
           </Grid>
 
@@ -323,67 +302,47 @@ export function TenantForm({ tenant, onSuccess, onCancel }: TenantFormProps): Re
 
           {/* Address */}
           <Grid size={{ xs: 12, sm: 6 }}>
-            <Controller
+            <FormField
               name="address"
               control={control}
-              render={({ field }) => (
-                <TextField
-                  {...field}
-                  value={field.value || ''}
-                  label={t('tenant.address')}
-                  fullWidth
-                />
-              )}
+              errors={errors}
+              label={t('tenant.address')}
+              errorNamespace="tenant"
             />
           </Grid>
 
           {/* Emergency contact name */}
           <Grid size={{ xs: 12, sm: 6 }}>
-            <Controller
+            <FormField
               name="emergency_contact_name"
               control={control}
-              render={({ field }) => (
-                <TextField
-                  {...field}
-                  value={field.value || ''}
-                  label={t('tenant.emergencyContactName')}
-                  fullWidth
-                />
-              )}
+              errors={errors}
+              label={t('tenant.emergencyContactName')}
+              errorNamespace="tenant"
             />
           </Grid>
 
           {/* Emergency contact phone */}
           <Grid size={{ xs: 12, sm: 6 }}>
-            <Controller
+            <FormField
               name="emergency_contact_phone"
               control={control}
-              render={({ field }) => (
-                <TextField
-                  {...field}
-                  value={field.value || ''}
-                  label={t('tenant.emergencyContactPhone')}
-                  fullWidth
-                />
-              )}
+              errors={errors}
+              label={t('tenant.emergencyContactPhone')}
+              errorNamespace="tenant"
             />
           </Grid>
 
           {/* Notes */}
           <Grid size={12}>
-            <Controller
+            <FormField
               name="notes"
               control={control}
-              render={({ field }) => (
-                <TextField
-                  {...field}
-                  value={field.value || ''}
-                  label={t('tenant.notes')}
-                  fullWidth
-                  multiline
-                  rows={2}
-                />
-              )}
+              errors={errors}
+              label={t('tenant.notes')}
+              errorNamespace="tenant"
+              multiline
+              rows={2}
             />
           </Grid>
 
@@ -391,31 +350,21 @@ export function TenantForm({ tenant, onSuccess, onCancel }: TenantFormProps): Re
           {tenantType === 'company' && (
             <>
               <Grid size={{ xs: 12, sm: 6 }}>
-                <Controller
+                <FormField
                   name="company_reg_no"
                   control={control}
-                  render={({ field }) => (
-                    <TextField
-                      {...field}
-                      value={field.value || ''}
-                      label={t('tenant.companyRegNo')}
-                      fullWidth
-                    />
-                  )}
+                  errors={errors}
+                  label={t('tenant.companyRegNo')}
+                  errorNamespace="tenant"
                 />
               </Grid>
               <Grid size={{ xs: 12, sm: 6 }}>
-                <Controller
+                <FormField
                   name="representative_name"
                   control={control}
-                  render={({ field }) => (
-                    <TextField
-                      {...field}
-                      value={field.value || ''}
-                      label={t('tenant.representativeName')}
-                      fullWidth
-                    />
-                  )}
+                  errors={errors}
+                  label={t('tenant.representativeName')}
+                  errorNamespace="tenant"
                 />
               </Grid>
             </>

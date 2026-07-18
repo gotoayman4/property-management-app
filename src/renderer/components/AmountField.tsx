@@ -1,6 +1,7 @@
 import { TextField, Box, Typography } from '@mui/material'
 import React from 'react'
 import { Controller, type ControllerProps, type FieldPath, type FieldValues } from 'react-hook-form'
+import { useTranslation } from 'react-i18next'
 
 /**
  * INTENT: Spinner-less numeric input bound to React Hook Form.
@@ -39,6 +40,19 @@ export function AmountField<T extends FieldValues, N extends FieldPath<T>>({
   allowEmpty = true,
   endAdornment
 }: AmountFieldProps<T, N>): React.JSX.Element {
+  const { t } = useTranslation()
+
+  const displayLabel = !required ? (
+    <>
+      {label}{' '}
+      <Typography component="span" variant="caption" color="text.secondary">
+        ({t('common.optional')})
+      </Typography>
+    </>
+  ) : (
+    label
+  )
+
   return (
     <Controller
       name={name}
@@ -60,7 +74,7 @@ export function AmountField<T extends FieldValues, N extends FieldPath<T>>({
             }}
             // Block mouse-wheel from accidentally changing the value.
             onWheel={(e: React.WheelEvent<HTMLInputElement>) => e.currentTarget.blur()}
-            label={label}
+            label={displayLabel}
             required={required}
             disabled={disabled}
             error={!!errorText}

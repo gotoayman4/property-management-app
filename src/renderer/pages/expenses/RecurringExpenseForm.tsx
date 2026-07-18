@@ -22,6 +22,7 @@ import { useForm, Controller } from 'react-hook-form'
 import { useTranslation } from 'react-i18next'
 import { z } from 'zod'
 import { CurrencyInput } from '../../components/CurrencyInput'
+import { FormField } from '../../components/FormField'
 import GlobalSnackbar from '../../components/GlobalSnackbar'
 import { useSnackbar } from '../../hooks/useSnackbar'
 
@@ -180,19 +181,13 @@ export function RecurringExpenseForm({
       <Box component="form" onSubmit={handleSubmit(onSubmit)} sx={{ mt: 1 }}>
         <Grid container spacing={3}>
           <Grid size={{ xs: 12, sm: 6 }}>
-            <Controller
+            <FormField
               name="name"
               control={control}
-              render={({ field }) => (
-                <TextField
-                  {...field}
-                  label={t('recurringExpense.name')}
-                  fullWidth
-                  required
-                  error={!!errors.name}
-                  helperText={errors.name ? t(`recurringExpense.${errors.name.message}`) : ''}
-                />
-              )}
+              errors={errors}
+              label={t('recurringExpense.name')}
+              required
+              errorNamespace="recurringExpense"
             />
           </Grid>
 
@@ -255,17 +250,12 @@ export function RecurringExpenseForm({
           </Grid>
 
           <Grid size={{ xs: 12, sm: 6 }}>
-            <Controller
+            <FormField
               name="vendor_name"
               control={control}
-              render={({ field }) => (
-                <TextField
-                  {...field}
-                  value={field.value ?? ''}
-                  label={t('expense.vendor')}
-                  fullWidth
-                />
-              )}
+              errors={errors}
+              label={t('expense.vendor')}
+              errorNamespace="expense"
             />
           </Grid>
 
@@ -342,39 +332,24 @@ export function RecurringExpenseForm({
           </Grid>
 
           <Grid size={{ xs: 12, sm: 6 }}>
-            <Controller
+            <FormField
               name="start_date"
               control={control}
-              render={({ field }) => (
-                <TextField
-                  {...field}
-                  label={t('recurringExpense.startDate')}
-                  type="date"
-                  fullWidth
-                  slotProps={{ inputLabel: { shrink: true } }}
-                  error={!!errors.start_date}
-                  helperText={
-                    errors.start_date ? t(`recurringExpense.${errors.start_date.message}`) : ''
-                  }
-                />
-              )}
+              errors={errors}
+              label={t('recurringExpense.startDate')}
+              required
+              errorNamespace="recurringExpense"
+              type="date"
             />
           </Grid>
 
           <Grid size={{ xs: 12, sm: 6 }}>
-            <Controller
+            <FormField
               name="end_date"
               control={control}
-              render={({ field }) => (
-                <TextField
-                  {...field}
-                  value={field.value ?? ''}
-                  label={t('recurringExpense.endDateOptional')}
-                  type="date"
-                  fullWidth
-                  slotProps={{ inputLabel: { shrink: true } }}
-                />
-              )}
+              errors={errors}
+              label={t('recurringExpense.endDateOptional')}
+              type="date"
             />
           </Grid>
 
@@ -385,19 +360,13 @@ export function RecurringExpenseForm({
           </Grid>
 
           <Grid size={{ xs: 12 }}>
-            <Controller
+            <FormField
               name="notes"
               control={control}
-              render={({ field }) => (
-                <TextField
-                  {...field}
-                  value={field.value ?? ''}
-                  label={t('common.notes')}
-                  multiline
-                  rows={2}
-                  fullWidth
-                />
-              )}
+              errors={errors}
+              label={t('common.notes')}
+              multiline
+              rows={2}
             />
           </Grid>
         </Grid>

@@ -17,6 +17,7 @@ import { useTranslation } from 'react-i18next'
 import { z } from 'zod'
 import { AmountField } from '../../components/AmountField'
 import { CurrencyInput } from '../../components/CurrencyInput'
+import { FormField } from '../../components/FormField'
 import GlobalSnackbar from '../../components/GlobalSnackbar'
 import { useCurrencyConversion } from '../../hooks/useCurrencyConversion'
 import { useSnackbar } from '../../hooks/useSnackbar'
@@ -247,37 +248,24 @@ export function ExpenseForm({ onSuccess, onCancel }: ExpenseFormProps): React.Re
           </Grid>
 
           <Grid size={{ xs: 12, sm: 6 }}>
-            <Controller
+            <FormField
               name="expense_date"
               control={control}
-              render={({ field }) => (
-                <TextField
-                  {...field}
-                  label={t('expense.expenseDate')}
-                  type="date"
-                  fullWidth
-                  slotProps={{ inputLabel: { shrink: true } }}
-                  error={!!errors.expense_date}
-                  helperText={
-                    errors.expense_date ? t(`expense.${errors.expense_date.message}`) : ''
-                  }
-                />
-              )}
+              errors={errors}
+              label={t('expense.expenseDate')}
+              required
+              errorNamespace="expense"
+              type="date"
             />
           </Grid>
 
           <Grid size={{ xs: 12, sm: 6 }}>
-            <Controller
+            <FormField
               name="vendor_name"
               control={control}
-              render={({ field }) => (
-                <TextField
-                  {...field}
-                  value={field.value ?? ''}
-                  label={t('expense.vendor')}
-                  fullWidth
-                />
-              )}
+              errors={errors}
+              label={t('expense.vendor')}
+              errorNamespace="expense"
             />
           </Grid>
 
@@ -320,19 +308,13 @@ export function ExpenseForm({ onSuccess, onCancel }: ExpenseFormProps): React.Re
           </Grid>
 
           <Grid size={{ xs: 12 }}>
-            <Controller
+            <FormField
               name="notes"
               control={control}
-              render={({ field }) => (
-                <TextField
-                  {...field}
-                  value={field.value || ''}
-                  label={t('contract.notes')}
-                  multiline
-                  rows={2}
-                  fullWidth
-                />
-              )}
+              errors={errors}
+              label={t('contract.notes')}
+              multiline
+              rows={2}
             />
           </Grid>
 

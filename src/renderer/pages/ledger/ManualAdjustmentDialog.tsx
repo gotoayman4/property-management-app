@@ -83,6 +83,7 @@ export function ManualAdjustmentDialog({
           multiline
           rows={3}
           fullWidth
+          required
           error={description.length > 0 && !descriptionValid}
         />
         <TextField
@@ -90,6 +91,7 @@ export function ManualAdjustmentDialog({
           value={amount}
           onChange={(e) => setAmount(e.target.value)}
           fullWidth
+          required
           slotProps={{ htmlInput: { inputMode: 'decimal' } }}
           helperText={currency}
         />

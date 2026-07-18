@@ -2,7 +2,6 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import {
   Box,
   Button,
-  TextField,
   FormControl,
   InputLabel,
   Select,
@@ -18,6 +17,7 @@ import { useForm, Controller } from 'react-hook-form'
 import { useTranslation } from 'react-i18next'
 import { z } from 'zod'
 import { CurrencyInput } from '../../components/CurrencyInput'
+import { FormField } from '../../components/FormField'
 import GlobalSnackbar from '../../components/GlobalSnackbar'
 import { useCurrencyConversion } from '../../hooks/useCurrencyConversion'
 import { useSnackbar } from '../../hooks/useSnackbar'
@@ -262,22 +262,14 @@ export function PaymentForm({ onSuccess, onCancel }: PaymentFormProps): React.Re
           </Grid>
 
           <Grid size={{ xs: 12, sm: 6 }}>
-            <Controller
+            <FormField
               name="payment_date"
               control={control}
-              render={({ field }) => (
-                <TextField
-                  {...field}
-                  label={t('payment.paymentDate')}
-                  type="date"
-                  fullWidth
-                  slotProps={{ inputLabel: { shrink: true } }}
-                  error={!!errors.payment_date}
-                  helperText={
-                    errors.payment_date ? t(`payment.${errors.payment_date.message}`) : ''
-                  }
-                />
-              )}
+              errors={errors}
+              label={t('payment.paymentDate')}
+              required
+              errorNamespace="payment"
+              type="date"
             />
           </Grid>
 
@@ -312,19 +304,13 @@ export function PaymentForm({ onSuccess, onCancel }: PaymentFormProps): React.Re
           </Grid>
 
           <Grid size={{ xs: 12, sm: 6 }}>
-            <Controller
+            <FormField
               name="related_period_month"
               control={control}
-              render={({ field }) => (
-                <TextField
-                  {...field}
-                  value={field.value ?? ''}
-                  label={t('payment.relatedPeriod')}
-                  placeholder="2026-07"
-                  fullWidth
-                  slotProps={{ inputLabel: { shrink: true } }}
-                />
-              )}
+              errors={errors}
+              label={t('payment.relatedPeriod')}
+              placeholder="2026-07"
+              errorNamespace="payment"
             />
           </Grid>
 
@@ -344,19 +330,13 @@ export function PaymentForm({ onSuccess, onCancel }: PaymentFormProps): React.Re
           </Grid>
 
           <Grid size={{ xs: 12 }}>
-            <Controller
+            <FormField
               name="notes"
               control={control}
-              render={({ field }) => (
-                <TextField
-                  {...field}
-                  value={field.value || ''}
-                  label={t('contract.notes')}
-                  multiline
-                  rows={2}
-                  fullWidth
-                />
-              )}
+              errors={errors}
+              label={t('contract.notes')}
+              multiline
+              rows={2}
             />
           </Grid>
 

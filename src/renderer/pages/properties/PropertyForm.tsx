@@ -17,6 +17,7 @@ import { useTranslation } from 'react-i18next'
 import { z } from 'zod'
 import { AmountField } from '../../components/AmountField'
 import EntityDocumentsTab from '../../components/EntityDocumentsTab'
+import { FormField } from '../../components/FormField'
 import GlobalSnackbar from '../../components/GlobalSnackbar'
 import StandardDialog from '../../components/StandardDialog'
 import { useSnackbar } from '../../hooks/useSnackbar'
@@ -219,18 +220,13 @@ export default function PropertyForm({
               />
             </Grid>
             <Grid size={{ xs: 12, sm: 6 }}>
-              <Controller
+              <FormField
                 name="name"
                 control={control}
-                render={({ field }) => (
-                  <TextField
-                    {...field}
-                    fullWidth
-                    label={t('property.name')}
-                    error={!!errors.name}
-                    helperText={errors.name ? t(`property.${errors.name.message}`) : ''}
-                  />
-                )}
+                errors={errors}
+                label={t('property.name')}
+                required
+                errorNamespace="property"
               />
             </Grid>
             <Grid size={{ xs: 12, sm: 6 }}>
@@ -273,18 +269,13 @@ export default function PropertyForm({
               </FormControl>
             </Grid>
             <Grid size={{ xs: 12, sm: 6 }}>
-              <Controller
+              <FormField
                 name="currency"
                 control={control}
-                render={({ field }) => (
-                  <TextField
-                    {...field}
-                    fullWidth
-                    label={t('property.currency')}
-                    error={!!errors.currency}
-                    helperText={errors.currency ? t(`property.${errors.currency.message}`) : ''}
-                  />
-                )}
+                errors={errors}
+                label={t('property.currency')}
+                required
+                errorNamespace="property"
               />
             </Grid>
             <Grid size={{ xs: 12, sm: 6 }}>
@@ -325,27 +316,25 @@ export default function PropertyForm({
               </FormControl>
             </Grid>
             <Grid size={{ xs: 12 }}>
-              <Controller
+              <FormField
                 name="address"
                 control={control}
-                render={({ field }) => (
-                  <TextField
-                    {...field}
-                    fullWidth
-                    multiline
-                    rows={2}
-                    label={t('property.address')}
-                  />
-                )}
+                errors={errors}
+                label={t('property.address')}
+                errorNamespace="property"
+                multiline
+                rows={2}
               />
             </Grid>
             <Grid size={{ xs: 12 }}>
-              <Controller
+              <FormField
                 name="notes"
                 control={control}
-                render={({ field }) => (
-                  <TextField {...field} fullWidth multiline rows={2} label={t('property.notes')} />
-                )}
+                errors={errors}
+                label={t('property.notes')}
+                errorNamespace="property"
+                multiline
+                rows={2}
               />
             </Grid>
           </Grid>
