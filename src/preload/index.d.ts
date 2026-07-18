@@ -18,6 +18,7 @@ declare global {
         create: (data: unknown) => Promise<unknown>
         update: (data: unknown) => Promise<unknown>
         delete: (id: number) => Promise<{ success: boolean }>
+        generateCode: (params: { country: string; type: string }) => Promise<string>
       }
       tenants: {
         list: (filters?: {
@@ -29,6 +30,7 @@ declare global {
         create: (data: unknown) => Promise<unknown>
         update: (data: unknown) => Promise<unknown>
         delete: (id: number) => Promise<{ success: boolean }>
+        generateCode: (params: { type: string }) => Promise<string>
       }
       contracts: {
         list: (filters?: {

@@ -11,14 +11,17 @@ const api = {
     get: (id: number) => ipcRenderer.invoke('properties:get', id),
     create: (data: unknown) => ipcRenderer.invoke('properties:create', data),
     update: (data: unknown) => ipcRenderer.invoke('properties:update', data),
-    delete: (id: number) => ipcRenderer.invoke('properties:delete', id)
+    delete: (id: number) => ipcRenderer.invoke('properties:delete', id),
+    generateCode: (params: { country: string; type: string }) =>
+      ipcRenderer.invoke('properties:generateCode', params)
   },
   tenants: {
     list: (filters?: unknown) => ipcRenderer.invoke('tenants:list', filters),
     get: (id: number) => ipcRenderer.invoke('tenants:get', id),
     create: (data: unknown) => ipcRenderer.invoke('tenants:create', data),
     update: (data: unknown) => ipcRenderer.invoke('tenants:update', data),
-    delete: (id: number) => ipcRenderer.invoke('tenants:delete', id)
+    delete: (id: number) => ipcRenderer.invoke('tenants:delete', id),
+    generateCode: (params: { type: string }) => ipcRenderer.invoke('tenants:generateCode', params)
   },
   contracts: {
     list: (filters?: unknown) => ipcRenderer.invoke('contracts:list', filters),

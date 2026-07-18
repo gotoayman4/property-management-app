@@ -1,5 +1,6 @@
 import { ipcMain } from 'electron'
 import { z } from 'zod'
+import { getNextPropertyCode } from '../db/codeGenerator'
 import { db } from '../db/database'
 
 // Define validation schemas for property creation/update
@@ -40,6 +41,19 @@ const settingsUpdateSchema = z.object({
 })
 
 export function registerPropertyIpcHandlers(): void {
+  // Generate next sequential property code for a given country + type
+  ipcMain.handle(
+    'properties:generateCode',
+    async (_, params: { country: string; type: string }) => {
+      try {
+        return getNextPropertyCode(db, params.country, params.type as 'apartment' | 'shop')
+      } catch (error) {
+        console.error('Error generating property code:', error)
+        throw new Error('FAILED_TO_GENERATE_CODE')
+      }
+    }
+  )
+
   // List active countries
   ipcMain.handle('countries:list', async () => {
     try {

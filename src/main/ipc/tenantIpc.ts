@@ -1,5 +1,6 @@
 import { ipcMain } from 'electron'
 import { z } from 'zod'
+import { getNextTenantCode } from '../db/codeGenerator'
 import { db } from '../db/database'
 
 // Define Zod validation schemas for Tenant (SRS §8 + FR-TEN-01)
@@ -29,6 +30,16 @@ const tenantUpdateSchema = tenantCreateSchema.extend({
 })
 
 export function registerTenantIpcHandlers(): void {
+  // Generate next sequential tenant code for a given type
+  ipcMain.handle('tenants:generateCode', async (_, params: { type: string }) => {
+    try {
+      return getNextTenantCode(db, params.type as 'individual' | 'company')
+    } catch (error) {
+      console.error('Error generating tenant code:', error)
+      throw new Error('FAILED_TO_GENERATE_CODE')
+    }
+  })
+
   // List tenants with search filters
   ipcMain.handle(
     'tenants:list',
