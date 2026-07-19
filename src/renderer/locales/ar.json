@@ -168,7 +168,16 @@
     "defaultCountry": "البلد الافتراضي",
     "manageCountries": "إدارة الدول",
     "langAr": "العربية",
-    "langEn": "الإنجليزية"
+    "langEn": "الإنجليزية",
+    "notificationTemplates": "قوالب الإشعارات",
+    "manageTemplates": "إدارة القوالب",
+    "resetTemplate": "إعادة التعيين",
+    "resetTemplateConfirm": "هل أنت متأكد من إعادة تعيين هذا القالب إلى النص الافتراضي؟ سيتم حذف تعديلاتك المخصصة.",
+    "templateBody": "قالب الرسالة",
+    "templateHelp": "خصّص رسائل الإشعارات المُرسلة للمستأجرين. استخدم {متغيرات} للقيم الديناميكية — يتم استبدالها بقيم فعلية عند إنشاء الإشعار.",
+    "templateVariables": "المتغيرات المتاحة (انقر للإدراج)",
+    "templatePreview": "معاينة مباشرة ببيانات تجريبية",
+    "langTr": "التركية"
   },
   "tenant": {
     "title": "إدارة المستأجرين",
@@ -593,8 +602,10 @@
       "rent_due": "استحقاق الإيجار",
       "overdue": "متأخر",
       "contract_expiry": "انتهاء العقد",
+      "contract_expiring": "انتهاء العقد",
       "escalation_upcoming": "زيادة الإيجار",
       "document_expiry": "انتهاء مستند",
+      "document_expiring": "انتهاء مستند",
       "recurring_expense_due": "مصروف دوري",
       "backup_failed": "فشل النسخ الاحتياطي"
     }

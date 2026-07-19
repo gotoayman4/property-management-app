@@ -168,7 +168,16 @@
     "maxBackupCountHelp": "Oldest backups are automatically deleted when this limit is exceeded",
     "countryManagement": "Country Management",
     "defaultCountry": "Default Country",
-    "manageCountries": "Manage Countries"
+    "manageCountries": "Manage Countries",
+    "notificationTemplates": "Notification Templates",
+    "manageTemplates": "Manage Templates",
+    "resetTemplate": "Reset to default",
+    "resetTemplateConfirm": "Are you sure you want to reset this template to its default text? Your custom edits will be lost.",
+    "templateBody": "Message template",
+    "templateHelp": "Customize the notification messages sent to tenants. Use {variables} for dynamic values — they are replaced with real data when the notification is generated.",
+    "templateVariables": "Available variables (click to insert)",
+    "templatePreview": "Live preview with sample data",
+    "langTr": "Turkish"
   },
   "tenant": {
     "title": "Tenant Management",
@@ -593,8 +602,10 @@
       "rent_due": "Rent Due",
       "overdue": "Overdue",
       "contract_expiry": "Contract Expiry",
+      "contract_expiring": "Contract Expiring",
       "escalation_upcoming": "Escalation Upcoming",
       "document_expiry": "Document Expiry",
+      "document_expiring": "Document Expiring",
       "recurring_expense_due": "Recurring Expense",
       "backup_failed": "Backup Failed"
     }

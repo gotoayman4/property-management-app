@@ -349,6 +349,22 @@ declare global {
         markAllRead: () => Promise<{ success: boolean }>
         dismiss: (id: number) => Promise<{ success: boolean }>
       }
+      templates: {
+        list: () => Promise<
+          {
+            id: number
+            name: string
+            trigger_type: string
+            language: string
+            message_body: string
+          }[]
+        >
+        update: (data: { id: number; message_body: string }) => Promise<{ success: boolean }>
+        resetDefaults: (data: {
+          trigger_type: string
+          language: string
+        }) => Promise<{ success: boolean }>
+      }
       search: {
         global: (query: string) => Promise<
           {

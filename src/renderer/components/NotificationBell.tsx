@@ -32,7 +32,9 @@ interface Notification {
 const TYPE_COLORS: Record<string, 'warning' | 'error' | 'info' | 'success'> = {
   rent_due: 'warning',
   contract_expiry: 'error',
+  contract_expiring: 'error',
   document_expiry: 'info',
+  document_expiring: 'info',
   recurring_expense_due: 'success'
 }
 

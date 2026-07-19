@@ -1,18 +1,79 @@
 /**
  * INTENT: Notification evaluation (startup) + IPC CRUD. Generates in-app alerts for rent
  *         due, overdue payments, contract expiry, escalation steps, document expiry,
- *         recurring expense due, and backup failures.
+ *         recurring expense due, and backup failures. Also manages notification templates
+ *         (FR-SET-08) — per-language message bodies that users can customize.
  *
  * CONSTRAINT (NFR-I18N-02, BR-29): message bodies are resolved from the notification_templates
  *             table using the tenant's preferred_language (or app_language), NEVER hardcoded
- *             as raw English/English string literals. The rendered message with replaced
+ *             as raw English string literals. The rendered message with replaced
  *             {tenant_name} {amount} {due_date} {property_name} {document_type} placeholders
  *             is stored so the renderer can display it without runtime template processing.
  * CONSTRAINT: reminder thresholds come from settings (FR-SET-07).
+ * CONSTRAINT (FR-SET-08): DEFAULT_TEMPLATES constant below is the single source of truth for
+ *             reset-to-defaults — kept in sync with migration 015 seed data.
  * CONSTRAINT (AGENTS.md): all DB queries parameterized, no console.log in prod.
  */
 import { ipcMain } from 'electron'
 import { db } from '../db/database'
+
+type TriggerType =
+  | 'rent_due'
+  | 'overdue'
+  | 'contract_expiring'
+  | 'escalation_upcoming'
+  | 'recurring_expense_due'
+  | 'document_expiring'
+  | 'backup_failed'
+
+type TemplateLanguage = 'ar' | 'tr' | 'en'
+
+interface TemplateRow {
+  id: number
+  name: string
+  trigger_type: TriggerType
+  language: TemplateLanguage
+  message_body: string
+}
+
+/** Default template content — matches migration 015 seed data (FR-SET-08 reset source). */
+const DEFAULT_TEMPLATES: Record<TriggerType, Record<TemplateLanguage, string>> = {
+  rent_due: {
+    ar: 'مرحباً {tenant_name}، نذكّرك بأن إيجار العقار "{property_name}" بقيمة {amount} مستحق في {due_date}. شكراً لك.',
+    en: 'Hello {tenant_name}, this is a reminder that rent of {amount} for "{property_name}" is due on {due_date}. Thank you.',
+    tr: 'Merhaba {tenant_name}, "{property_name}" adresindeki kiranızın {amount} tutarındaki ödemesi {due_date} tarihinde vadesi dolacaktır. Teşekkür ederiz.'
+  },
+  overdue: {
+    ar: 'مرحباً {tenant_name}، إيجار العقار "{property_name}" بقيمة {amount} كان مستحقاً في {due_date}. يرجى السداد في أقرب وقت.',
+    en: 'Hello {tenant_name}, the rent of {amount} for "{property_name}" was due on {due_date}. Please pay as soon as possible.',
+    tr: 'Merhaba {tenant_name}, "{property_name}" adresindeki kiranızın {amount} tutarındaki ödemesi {due_date} tarihinde vadesini doldurmuştur. Lütfen en kısa sürede ödeme yapınız.'
+  },
+  contract_expiring: {
+    ar: 'عقد إيجار العقار "{property_name}" للعميل {tenant_name} سينتهي في {due_date}.',
+    en: 'The lease contract for "{property_name}" ({tenant_name}) expires on {due_date}.',
+    tr: '"{property_name}" ({tenant_name}) adresindeki kira sözleşmesi {due_date} tarihinde sona erecektir.'
+  },
+  escalation_upcoming: {
+    ar: 'سيتم تطبيق زيادة الإيجار الجديدة للعقد على العقار "{property_name}" ({tenant_name}) اعتباراً من {due_date}.',
+    en: 'The next scheduled rent change for the contract on "{property_name}" ({tenant_name}) takes effect on {due_date}.',
+    tr: '"{property_name}" ({tenant_name}) adresindeki sözleşme için planlanan bir sonraki kira değişikliği {due_date} tarihinde yürürlüğe girecektir.'
+  },
+  recurring_expense_due: {
+    ar: 'المصروف المتكرر "{property_name}" المستحق في {due_date}.',
+    en: 'The recurring expense "{property_name}" is due on {due_date}.',
+    tr: '"{property_name}" adlı tekrarlayan giderin ödeme tarihi {due_date} dir.'
+  },
+  document_expiring: {
+    ar: 'المستند "{document_type}" للعقار "{property_name}" سينتهي في {due_date}.',
+    en: 'The document "{document_type}" for "{property_name}" expires on {due_date}.',
+    tr: '"{property_name}" adresindeki "{document_type}" belgesinin geçerlilik süresi {due_date} tarihinde dolacaktır.'
+  },
+  backup_failed: {
+    ar: 'فشل النسخ الاحتياطي في {due_date}. يرجى مراجعة إعدادات النسخ الاحتياطي.',
+    en: 'Backup failed on {due_date}. Please review your backup settings.',
+    tr: '{due_date} tarihinde yedekleme başarısız oldu. Lütfen yedekleme ayarlarını kontrol edin.'
+  }
+}
 
 /** Look up a rendered template message for a trigger type + language. Returns null if none defined. */
 function resolveTemplateMessage(
@@ -405,4 +466,56 @@ export function registerNotificationIpcHandlers(): void {
       throw new Error('FAILED_TO_DISMISS_NOTIFICATION')
     }
   })
+
+  // --- FR-SET-08: Notification Template Management ---
+
+  ipcMain.handle('templates:list', async () => {
+    try {
+      return db
+        .prepare('SELECT * FROM notification_templates ORDER BY trigger_type, language')
+        .all() as TemplateRow[]
+    } catch {
+      throw new Error('FAILED_TO_LIST_TEMPLATES')
+    }
+  })
+
+  ipcMain.handle('templates:update', async (_, payload: { id: number; message_body: string }) => {
+    try {
+      if (!payload.message_body || !payload.message_body.trim()) {
+        throw new Error('EMPTY_TEMPLATE_BODY')
+      }
+      const body = payload.message_body.trim().slice(0, 1000)
+      db.prepare('UPDATE notification_templates SET message_body = ? WHERE id = ?').run(
+        body,
+        payload.id
+      )
+      return { success: true }
+    } catch (err) {
+      if (err instanceof Error && err.message === 'EMPTY_TEMPLATE_BODY') {
+        throw err
+      }
+      throw new Error('FAILED_TO_UPDATE_TEMPLATE')
+    }
+  })
+
+  ipcMain.handle(
+    'templates:resetDefaults',
+    async (_, payload: { trigger_type: TriggerType; language: TemplateLanguage }) => {
+      try {
+        const defaults = DEFAULT_TEMPLATES[payload.trigger_type]?.[payload.language]
+        if (!defaults) {
+          throw new Error('INVALID_TRIGGER_OR_LANGUAGE')
+        }
+        db.prepare(
+          'UPDATE notification_templates SET message_body = ? WHERE trigger_type = ? AND language = ?'
+        ).run(defaults, payload.trigger_type, payload.language)
+        return { success: true }
+      } catch (err) {
+        if (err instanceof Error && err.message === 'INVALID_TRIGGER_OR_LANGUAGE') {
+          throw err
+        }
+        throw new Error('FAILED_TO_RESET_TEMPLATE')
+      }
+    }
+  )
 }

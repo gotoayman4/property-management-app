@@ -89,8 +89,8 @@ describe('recurringExpenseIpc', () => {
     return testDb
       .prepare(
         `INSERT INTO recurring_expense_templates
-         (property_id, category_id, name, amount, currency, frequency, day_of_month, start_date, is_active)
-         VALUES (?, 1, 'Cleaning', 100, 'JOD', 'monthly', 1, ?, ?)`
+         (property_id, category_id, name, description, amount, currency, frequency, day_of_month, start_date, is_active)
+         VALUES (?, 1, 'Cleaning', 'Monthly cleaning', 100, 'JOD', 'monthly', 1, ?, ?)`
       )
       .run(propertyId, startDate, active).lastInsertRowid as number
   }

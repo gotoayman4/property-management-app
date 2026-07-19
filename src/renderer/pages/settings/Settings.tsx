@@ -31,6 +31,7 @@ import React, { useCallback, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import CountryManagerDialog from '../../components/CountryManagerDialog'
 import GlobalSnackbar from '../../components/GlobalSnackbar'
+import NotificationTemplateManager from '../../components/NotificationTemplateManager'
 import PageHeader from '../../components/PageHeader'
 import { useSnackbar } from '../../hooks/useSnackbar'
 import { useUiPreferences } from '../../stores/uiPreferencesStore'
@@ -69,6 +70,7 @@ export default function Settings(): React.JSX.Element {
   const { snack, showSuccess, showError, hideSnackbar } = useSnackbar()
   const [settings, setSettings] = useState<SettingsData | null>(null)
   const [countryDialogOpen, setCountryDialogOpen] = useState(false)
+  const [templateDialogOpen, setTemplateDialogOpen] = useState(false)
   const [allCountries, setAllCountries] = useState<
     { code: string; name: string; is_active: number }[]
   >([])
@@ -408,6 +410,25 @@ export default function Settings(): React.JSX.Element {
           </Card>
         </Grid>
 
+        {/* Notification Templates (FR-SET-08) */}
+        <Grid size={{ xs: 12, md: 6 }}>
+          <Card>
+            <CardContent sx={{ p: 3 }}>
+              <Typography variant="h5" sx={{ mb: 2.5 }}>
+                {t('settings.notificationTemplates')}
+              </Typography>
+
+              <Alert severity="info" sx={{ mb: 2 }}>
+                {t('settings.templateHelp')}
+              </Alert>
+
+              <Button variant="outlined" onClick={() => setTemplateDialogOpen(true)}>
+                {t('settings.manageTemplates')}
+              </Button>
+            </CardContent>
+          </Card>
+        </Grid>
+
         {/* Backup & Data */}
         <Grid size={{ xs: 12, md: 6 }}>
           <Card>
@@ -477,6 +498,11 @@ export default function Settings(): React.JSX.Element {
           fetchAllCountries()
           window.api.settings.get().then((data) => setSettings(data as SettingsData))
         }}
+      />
+
+      <NotificationTemplateManager
+        open={templateDialogOpen}
+        onClose={() => setTemplateDialogOpen(false)}
       />
 
       <GlobalSnackbar state={snack} onClose={hideSnackbar} />

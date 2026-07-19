@@ -125,6 +125,13 @@ const api = {
     markAllRead: () => ipcRenderer.invoke('notifications:markAllRead'),
     dismiss: (id: number) => ipcRenderer.invoke('notifications:dismiss', id)
   },
+  templates: {
+    list: () => ipcRenderer.invoke('templates:list'),
+    update: (data: { id: number; message_body: string }) =>
+      ipcRenderer.invoke('templates:update', data),
+    resetDefaults: (data: { trigger_type: string; language: string }) =>
+      ipcRenderer.invoke('templates:resetDefaults', data)
+  },
   search: {
     global: (query: string) => ipcRenderer.invoke('search:global', query)
   },

@@ -196,14 +196,14 @@ export function ExpenseForm({ onSuccess, onCancel }: ExpenseFormProps): React.Re
 
           <Grid size={{ xs: 12, sm: 6 }}>
             <FormControl fullWidth error={!!errors.category_id}>
-              <InputLabel>{t('expense.category')}</InputLabel>
+              <InputLabel>{t('common.category')}</InputLabel>
               <Controller
                 name="category_id"
                 control={control}
                 render={({ field }) => (
                   <Select
                     {...field}
-                    label={t('expense.category')}
+                    label={t('common.category')}
                     value={field.value || ''}
                     onChange={(e) => field.onChange(Number(e.target.value))}
                   >

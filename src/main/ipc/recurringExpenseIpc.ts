@@ -308,13 +308,14 @@ export function registerRecurringExpenseIpcHandlers(): void {
       const result = db
         .prepare(
           `INSERT INTO recurring_expense_templates
-           (property_id, category_id, name, amount, currency, frequency, day_of_month,
+           (property_id, category_id, name, description, amount, currency, frequency, day_of_month,
             start_date, end_date, vendor_name, notes, next_due_date)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
         )
         .run(
           parsed.property_id,
           parsed.category_id,
+          parsed.name,
           parsed.name,
           parsed.amount,
           parsed.currency,
