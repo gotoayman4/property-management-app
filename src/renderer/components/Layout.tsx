@@ -30,7 +30,7 @@ import {
   Tooltip,
   Badge
 } from '@mui/material'
-import React, { useEffect, useState } from 'react'
+import React, { useCallback, useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, useLocation } from 'react-router-dom'
 import { useUiPreferences } from '../stores/uiPreferencesStore'
@@ -55,6 +55,10 @@ export default function Layout({ children }: LayoutProps): React.JSX.Element {
   const currentLanguage = i18n.language
   const direction = currentLanguage === 'ar' ? 'rtl' : 'ltr'
   const [unreadCount, setUnreadCount] = useState<number>(0)
+  const searchRef = useRef<HTMLInputElement | null>(null)
+  const handleSearchInputMount = useCallback((el: HTMLInputElement | null): void => {
+    searchRef.current = el
+  }, [])
 
   /** Drawer width adapts based on collapsed state. */
   const drawerWidth = sidebarCollapsed ? drawerCollapsedWidth : drawerExpandedWidth
@@ -76,6 +80,18 @@ export default function Layout({ children }: LayoutProps): React.JSX.Element {
       cancelled = true
       clearInterval(interval)
     }
+  }, [])
+
+  // Ctrl+K / Cmd+K global hotkey — focus the search bar (FR-SRCH-01)
+  useEffect(() => {
+    const handler = (e: KeyboardEvent): void => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+        e.preventDefault()
+        searchRef.current?.focus()
+      }
+    }
+    document.addEventListener('keydown', handler)
+    return () => document.removeEventListener('keydown', handler)
   }, [])
 
   const toggleLanguage = async (): Promise<void> => {
@@ -249,7 +265,7 @@ export default function Layout({ children }: LayoutProps): React.JSX.Element {
             </Typography>
           </Box>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <SearchBar />
+            <SearchBar onInputMount={handleSearchInputMount} />
             <NotificationBell />
             <IconButton color="inherit" onClick={toggleLanguage}>
               <TranslateIcon />

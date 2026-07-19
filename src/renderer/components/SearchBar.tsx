@@ -31,6 +31,11 @@ interface SearchResult {
   subtitle: string
 }
 
+interface SearchBarProps {
+  /** Called when the search input mounts — enables external focus control (e.g. Ctrl+K). */
+  onInputMount?: (el: HTMLInputElement | null) => void
+}
+
 const ENTITY_ICONS: Record<string, React.ReactNode> = {
   property: <BusinessIcon fontSize="small" />,
   tenant: <PeopleIcon fontSize="small" />,
@@ -45,7 +50,7 @@ const ENTITY_ROUTES: Record<string, (id: number) => string> = {
   payment: () => '/payments'
 }
 
-export default function SearchBar(): React.JSX.Element {
+export default function SearchBar({ onInputMount }: SearchBarProps): React.JSX.Element {
   const { t, i18n } = useTranslation()
   const isRtl = i18n.language === 'ar'
   const navigate = useNavigate()
@@ -57,6 +62,14 @@ export default function SearchBar(): React.JSX.Element {
   const inputCallbackRef = useCallback((node: HTMLInputElement | null) => {
     setAnchorEl(node)
   }, [])
+  // Combined callback: serves both the Popper anchor and external focus control (Ctrl+K).
+  const combinedRef = useCallback(
+    (node: HTMLInputElement | null) => {
+      inputCallbackRef(node)
+      if (onInputMount) onInputMount(node)
+    },
+    [inputCallbackRef, onInputMount]
+  )
 
   const doSearch = useCallback(async (q: string): Promise<void> => {
     if (q.trim().length < 2) {
@@ -105,7 +118,7 @@ export default function SearchBar(): React.JSX.Element {
           placeholder={t('search.placeholder')}
           value={query}
           onChange={handleChange}
-          inputRef={inputCallbackRef}
+          inputRef={combinedRef}
           slotProps={{
             input: {
               startAdornment: (

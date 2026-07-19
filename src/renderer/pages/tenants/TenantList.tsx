@@ -3,7 +3,8 @@ import {
   ArchiveOutlined as ArchiveOutlinedIcon,
   Edit as EditIcon,
   People as PeopleIcon,
-  Search as SearchIcon
+  Search as SearchIcon,
+  Send as SendWhatsAppIcon
 } from '@mui/icons-material'
 import { Box, Typography, Button, IconButton, TextField, Chip, Tooltip } from '@mui/material'
 import { GridColDef } from '@mui/x-data-grid'
@@ -190,6 +191,23 @@ export function TenantList(): React.ReactElement {
                   aria-label={t('common.archive')}
                 >
                   <ArchiveOutlinedIcon fontSize="small" />
+                </IconButton>
+              </Tooltip>
+            )}
+            {row.phone && (
+              <Tooltip title={t('common.sendWhatsApp')}>
+                <IconButton
+                  size="small"
+                  color="success"
+                  onClick={() =>
+                    window.open(
+                      `https://wa.me/${(row.country_code ?? '').replace(/^\+/, '')}${row.phone}`,
+                      '_blank'
+                    )
+                  }
+                  aria-label={t('common.sendWhatsApp')}
+                >
+                  <SendWhatsAppIcon fontSize="small" />
                 </IconButton>
               </Tooltip>
             )}

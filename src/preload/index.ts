@@ -79,14 +79,16 @@ const api = {
     clearSavedCredentials: () => ipcRenderer.invoke('auth:clearSavedCredentials')
   },
   dashboard: {
-    summary: () => ipcRenderer.invoke('dashboard:summary'),
-    recentPayments: () => ipcRenderer.invoke('dashboard:recentPayments'),
-    recentExpenses: () => ipcRenderer.invoke('dashboard:recentExpenses'),
-    upcomingDue: () => ipcRenderer.invoke('dashboard:upcomingDue'),
-    overdue: () => ipcRenderer.invoke('dashboard:overdue'),
-    upcomingRecurring: () => ipcRenderer.invoke('dashboard:upcomingRecurring'),
-    expiringDocuments: () => ipcRenderer.invoke('dashboard:expiringDocuments'),
-    trends: () => ipcRenderer.invoke('dashboard:trends')
+    summary: (country?: string) => ipcRenderer.invoke('dashboard:summary', country),
+    recentPayments: (country?: string) => ipcRenderer.invoke('dashboard:recentPayments', country),
+    recentExpenses: (country?: string) => ipcRenderer.invoke('dashboard:recentExpenses', country),
+    upcomingDue: (country?: string) => ipcRenderer.invoke('dashboard:upcomingDue', country),
+    overdue: (country?: string) => ipcRenderer.invoke('dashboard:overdue', country),
+    upcomingRecurring: (country?: string) =>
+      ipcRenderer.invoke('dashboard:upcomingRecurring', country),
+    expiringDocuments: (country?: string) =>
+      ipcRenderer.invoke('dashboard:expiringDocuments', country),
+    trends: (country?: string) => ipcRenderer.invoke('dashboard:trends', country)
   },
   exchangeRates: {
     list: (filters?: unknown) => ipcRenderer.invoke('exchangeRates:list', filters),

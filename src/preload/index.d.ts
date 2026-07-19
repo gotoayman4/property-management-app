@@ -193,7 +193,7 @@ declare global {
         clearSavedCredentials: () => Promise<{ success: boolean }>
       }
       dashboard: {
-        summary: () => Promise<{
+        summary: (country?: string) => Promise<{
           totalProperties: number
           rentedProperties: number
           totalTenants: number
@@ -202,9 +202,9 @@ declare global {
           totalExpenses: number
           netBalance: number
         }>
-        recentPayments: () => Promise<unknown[]>
-        recentExpenses: () => Promise<unknown[]>
-        upcomingDue: () => Promise<
+        recentPayments: (country?: string) => Promise<unknown[]>
+        recentExpenses: (country?: string) => Promise<unknown[]>
+        upcomingDue: (country?: string) => Promise<
           {
             id: number
             rent_amount: number
@@ -214,7 +214,7 @@ declare global {
             end_date: string
           }[]
         >
-        overdue: () => Promise<
+        overdue: (country?: string) => Promise<
           {
             id: number
             payment_date: string
@@ -226,7 +226,7 @@ declare global {
             total_paid: number
           }[]
         >
-        upcomingRecurring: () => Promise<
+        upcomingRecurring: (country?: string) => Promise<
           {
             id: number
             name: string
@@ -238,7 +238,7 @@ declare global {
             category_key: string | null
           }[]
         >
-        expiringDocuments: () => Promise<
+        expiringDocuments: (country?: string) => Promise<
           {
             id: number
             file_name: string
@@ -248,7 +248,7 @@ declare global {
             property_name: string
           }[]
         >
-        trends: () => Promise<{
+        trends: (country?: string) => Promise<{
           income: { month: string; total: number; currency: string }[]
           expense: { month: string; total: number; currency: string }[]
           startDate: string

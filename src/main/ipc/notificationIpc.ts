@@ -344,7 +344,12 @@ export function evaluateNotifications(): void {
 export function registerNotificationIpcHandlers(): void {
   ipcMain.handle('notifications:list', async (_, filters?: { unread_only?: boolean }) => {
     try {
-      let query = 'SELECT * FROM notifications WHERE 1=1'
+      let query = `
+        SELECT n.*, t.phone as tenant_phone, t.country_code as tenant_country_code
+        FROM notifications n
+        LEFT JOIN contracts c ON n.entity_type = 'contract' AND n.entity_id = c.id
+        LEFT JOIN tenants t ON c.tenant_id = t.id
+        WHERE 1=1`
       const params: (string | number)[] = []
       if (filters?.unread_only) {
         query += ' AND is_read = 0'

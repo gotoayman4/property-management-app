@@ -2,7 +2,9 @@
  * INTENT: Dashboard summary IPC — returns aggregate counts and totals for the
  *         landing page StatCards and dashboard lists: upcoming due, overdue,
  *         recurring expenses, expiring documents, and 12-month trends.
- * CONSTRAINT: property_id can be NULL in payments/expenses (general items); handle NULLs in joins.
+ *         All handlers accept an optional country filter (FR-DASH-00).
+ * CONSTRAINT: property_id can be NULL in payments/expenses (general items);
+ *             handle NULLs in joins and country filtering.
  */
 import { ipcMain } from 'electron'
 import { db } from '../db/database'
@@ -32,22 +34,51 @@ function addDays(d: Date, n: number): string {
   return toLocalISODate(r)
 }
 
-export function registerDashboardIpcHandlers(): void {
-  ipcMain.handle('dashboard:summary', async () => {
-    try {
-      const totalProperties = (
-        db.prepare('SELECT COUNT(*) as cnt FROM properties WHERE is_archived = 0').get() as {
-          cnt: number
-        }
-      ).cnt
+/**
+ * Build a parameterized country filter clause for queries that join `properties pr`.
+ * When country is null/undefined, the clause is empty (no filtering).
+ * When country is set, it filters by pr.country while preserving NULL property_id (general items).
+ */
+function whereCountry(country: string | undefined): {
+  clause: string
+  params: (string | number)[]
+} {
+  if (!country) return { clause: '', params: [] }
+  return { clause: ' AND (pr.country = ? OR pr.country IS NULL)', params: [country] }
+}
 
-      const rentedProperties = (
-        db
-          .prepare(
-            "SELECT COUNT(*) as cnt FROM properties WHERE is_archived = 0 AND status = 'rented'"
-          )
-          .get() as { cnt: number }
-      ).cnt
+export function registerDashboardIpcHandlers(): void {
+  ipcMain.handle('dashboard:summary', async (_, country?: string) => {
+    try {
+      const totalProperties = country
+        ? (
+            db
+              .prepare(
+                'SELECT COUNT(*) as cnt FROM properties WHERE is_archived = 0 AND country = ?'
+              )
+              .get(country) as { cnt: number }
+          ).cnt
+        : (
+            db.prepare('SELECT COUNT(*) as cnt FROM properties WHERE is_archived = 0').get() as {
+              cnt: number
+            }
+          ).cnt
+
+      const rentedProperties = country
+        ? (
+            db
+              .prepare(
+                "SELECT COUNT(*) as cnt FROM properties WHERE is_archived = 0 AND status = 'rented' AND country = ?"
+              )
+              .get(country) as { cnt: number }
+          ).cnt
+        : (
+            db
+              .prepare(
+                "SELECT COUNT(*) as cnt FROM properties WHERE is_archived = 0 AND status = 'rented'"
+              )
+              .get() as { cnt: number }
+          ).cnt
 
       const totalTenants = (
         db.prepare('SELECT COUNT(*) as cnt FROM tenants WHERE is_active = 1').get() as {
@@ -55,22 +86,41 @@ export function registerDashboardIpcHandlers(): void {
         }
       ).cnt
 
-      const activeContracts = (
-        db.prepare("SELECT COUNT(*) as cnt FROM contracts WHERE status = 'active'").get() as {
-          cnt: number
-        }
-      ).cnt
+      const activeContracts = country
+        ? (
+            db
+              .prepare(
+                `SELECT COUNT(*) as cnt FROM contracts c
+                 JOIN properties p ON c.property_id = p.id
+                 WHERE c.status = 'active' AND p.country = ?`
+              )
+              .get(country) as { cnt: number }
+          ).cnt
+        : (
+            db.prepare("SELECT COUNT(*) as cnt FROM contracts WHERE status = 'active'").get() as {
+              cnt: number
+            }
+          ).cnt
 
+      const wc = whereCountry(country)
       const totalPayments = (
         db
-          .prepare('SELECT COALESCE(SUM(amount), 0) as total FROM payments WHERE is_voided = 0')
-          .get() as { total: number }
+          .prepare(
+            `SELECT COALESCE(SUM(p.amount), 0) as total FROM payments p
+             LEFT JOIN properties pr ON p.property_id = pr.id
+             WHERE p.is_voided = 0${wc.clause}`
+          )
+          .get(...wc.params) as { total: number }
       ).total
 
       const totalExpenses = (
         db
-          .prepare('SELECT COALESCE(SUM(amount), 0) as total FROM expenses WHERE is_voided = 0')
-          .get() as { total: number }
+          .prepare(
+            `SELECT COALESCE(SUM(e.amount), 0) as total FROM expenses e
+             LEFT JOIN properties pr ON e.property_id = pr.id
+             WHERE e.is_voided = 0${wc.clause}`
+          )
+          .get(...wc.params) as { total: number }
       ).total
 
       const netBalance = totalPayments - totalExpenses
@@ -89,8 +139,9 @@ export function registerDashboardIpcHandlers(): void {
     }
   })
 
-  ipcMain.handle('dashboard:recentPayments', async () => {
+  ipcMain.handle('dashboard:recentPayments', async (_, country?: string) => {
     try {
+      const wc = whereCountry(country)
       return db
         .prepare(
           `SELECT p.id, p.payment_date, p.amount, p.currency, p.payment_type, p.receipt_number,
@@ -98,18 +149,19 @@ export function registerDashboardIpcHandlers(): void {
            FROM payments p
            LEFT JOIN properties pr ON p.property_id = pr.id
            LEFT JOIN tenants t ON p.tenant_id = t.id
-           WHERE p.is_voided = 0
+           WHERE p.is_voided = 0${wc.clause}
            ORDER BY p.payment_date DESC, p.id DESC
            LIMIT 5`
         )
-        .all()
+        .all(...wc.params)
     } catch {
       throw new Error('FAILED_TO_LOAD_RECENT_PAYMENTS')
     }
   })
 
-  ipcMain.handle('dashboard:recentExpenses', async () => {
+  ipcMain.handle('dashboard:recentExpenses', async (_, country?: string) => {
     try {
+      const wc = whereCountry(country)
       return db
         .prepare(
           `SELECT e.id, e.expense_date, e.amount, e.currency, e.vendor_name,
@@ -117,11 +169,11 @@ export function registerDashboardIpcHandlers(): void {
            FROM expenses e
            LEFT JOIN expense_categories ec ON e.category_id = ec.id
            LEFT JOIN properties pr ON e.property_id = pr.id
-           WHERE e.is_voided = 0
+           WHERE e.is_voided = 0${wc.clause}
            ORDER BY e.expense_date DESC, e.id DESC
            LIMIT 5`
         )
-        .all()
+        .all(...wc.params)
     } catch {
       throw new Error('FAILED_TO_LOAD_RECENT_EXPENSES')
     }
@@ -129,10 +181,12 @@ export function registerDashboardIpcHandlers(): void {
 
   /* ------------------------------------------------------------------ */
   /* FR-DASH-04: Upcoming rent due in the next 7 days                    */
-  /* Shows active contracts with their monthly rent as "due" marker.     */
   /* ------------------------------------------------------------------ */
-  ipcMain.handle('dashboard:upcomingDue', async () => {
+  ipcMain.handle('dashboard:upcomingDue', async (_, country?: string) => {
     try {
+      // upcomingDue joins properties as `p` (not `pr`), so inline the clause.
+      const clause = country ? ' AND p.country = ?' : ''
+      const params: unknown[] = country ? [country] : []
       return db
         .prepare(
           `SELECT c.id, c.rent_amount, c.currency, p.name as property_name,
@@ -140,11 +194,11 @@ export function registerDashboardIpcHandlers(): void {
            FROM contracts c
            JOIN properties p ON c.property_id = p.id
            JOIN tenants t ON c.tenant_id = t.id
-           WHERE c.status = 'active'
+           WHERE c.status = 'active'${clause}
            ORDER BY c.end_date ASC
            LIMIT 10`
         )
-        .all()
+        .all(...params)
     } catch {
       throw new Error('FAILED_TO_LOAD_UPCOMING_DUE')
     }
@@ -152,10 +206,10 @@ export function registerDashboardIpcHandlers(): void {
 
   /* ------------------------------------------------------------------ */
   /* FR-DASH-05: Overdue payments sorted oldest first                    */
-  /* Queries payments where is_voided = 0, grouped by tenant/property.   */
   /* ------------------------------------------------------------------ */
-  ipcMain.handle('dashboard:overdue', async () => {
+  ipcMain.handle('dashboard:overdue', async (_, country?: string) => {
     try {
+      const wc = whereCountry(country)
       return db
         .prepare(
           `SELECT p.id, p.payment_date, p.amount, p.currency, p.is_partial,
@@ -166,11 +220,11 @@ export function registerDashboardIpcHandlers(): void {
            FROM payments p
            LEFT JOIN properties pr ON p.property_id = pr.id
            LEFT JOIN tenants t ON p.tenant_id = t.id
-           WHERE p.is_voided = 0
+           WHERE p.is_voided = 0${wc.clause}
            ORDER BY p.payment_date ASC
            LIMIT 10`
         )
-        .all()
+        .all(...wc.params)
     } catch {
       throw new Error('FAILED_TO_LOAD_OVERDUE')
     }
@@ -179,10 +233,11 @@ export function registerDashboardIpcHandlers(): void {
   /* ------------------------------------------------------------------ */
   /* FR-DASH-12: Upcoming recurring expenses due in the next 7 days      */
   /* ------------------------------------------------------------------ */
-  ipcMain.handle('dashboard:upcomingRecurring', async () => {
+  ipcMain.handle('dashboard:upcomingRecurring', async (_, country?: string) => {
     try {
       const today = toLocalISODate(new Date())
       const in7Days = addDays(new Date(), 7)
+      const wc = whereCountry(country)
       return db
         .prepare(
           `SELECT rt.id, rt.name, rt.amount, rt.currency, rt.frequency, rt.next_due_date,
@@ -193,11 +248,11 @@ export function registerDashboardIpcHandlers(): void {
            WHERE rt.is_active = 1
              AND rt.next_due_date IS NOT NULL
              AND rt.next_due_date <= ?
-             AND (rt.end_date IS NULL OR rt.end_date >= ?)
+             AND (rt.end_date IS NULL OR rt.end_date >= ?)${wc.clause}
            ORDER BY rt.next_due_date ASC
            LIMIT 10`
         )
-        .all(in7Days, today)
+        .all(in7Days, today, ...wc.params)
     } catch {
       throw new Error('FAILED_TO_LOAD_UPCOMING_RECURRING')
     }
@@ -206,10 +261,12 @@ export function registerDashboardIpcHandlers(): void {
   /* ------------------------------------------------------------------ */
   /* FR-DASH-13: Documents expiring in the next 30 days                  */
   /* ------------------------------------------------------------------ */
-  ipcMain.handle('dashboard:expiringDocuments', async () => {
+  ipcMain.handle('dashboard:expiringDocuments', async (_, country?: string) => {
     try {
       const today = toLocalISODate(new Date())
       const in30Days = addDays(new Date(), 30)
+      const clause = country ? ' AND pr.country = ?' : ''
+      const params: (string | number)[] = country ? [today, in30Days, country] : [today, in30Days]
       return db
         .prepare(
           `SELECT d.id, d.file_name, d.document_type, d.expiry_date, d.issue_date,
@@ -218,11 +275,11 @@ export function registerDashboardIpcHandlers(): void {
            JOIN properties pr ON d.entity_type = 'property' AND d.entity_id = pr.id
            WHERE d.is_archived = 0
              AND d.expiry_date IS NOT NULL
-             AND d.expiry_date BETWEEN ? AND ?
+             AND d.expiry_date BETWEEN ? AND ?${clause}
            ORDER BY d.expiry_date ASC
            LIMIT 10`
         )
-        .all(today, in30Days)
+        .all(...params)
     } catch {
       throw new Error('FAILED_TO_LOAD_EXPIRING_DOCUMENTS')
     }
@@ -230,36 +287,47 @@ export function registerDashboardIpcHandlers(): void {
 
   /* ------------------------------------------------------------------ */
   /* FR-DASH-07/08: Income & expense trends over the last 12 months      */
-  /* Returns month-by-month aggregates for chart rendering.              */
   /* ------------------------------------------------------------------ */
-  ipcMain.handle('dashboard:trends', async () => {
+  ipcMain.handle('dashboard:trends', async (_, country?: string) => {
     try {
       const today = new Date()
       const twelveMonthsAgo = new Date(today.getFullYear(), today.getMonth() - 11, 1)
       const startDate = toLocalISODate(twelveMonthsAgo)
       const endDate = toLocalISODate(today)
 
+      const incomeClause = country ? ' AND p.country = ?' : ''
+      const incomeParams: (string | number)[] = country
+        ? [startDate, endDate, country]
+        : [startDate, endDate]
+
       const income = db
         .prepare(
-          `SELECT strftime('%Y-%m', payment_date) as month,
-                  SUM(amount) as total, currency
-           FROM payments
-           WHERE is_voided = 0 AND payment_date >= ? AND payment_date <= ?
-           GROUP BY month, currency
+          `SELECT strftime('%Y-%m', pay.payment_date) as month,
+                  SUM(pay.amount) as total, pay.currency
+           FROM payments pay
+           LEFT JOIN properties p ON pay.property_id = p.id
+           WHERE pay.is_voided = 0 AND pay.payment_date >= ? AND pay.payment_date <= ?${incomeClause}
+           GROUP BY month, pay.currency
            ORDER BY month ASC`
         )
-        .all(startDate, endDate) as { month: string; total: number; currency: string }[]
+        .all(...incomeParams) as { month: string; total: number; currency: string }[]
+
+      const expenseClause = country ? ' AND p.country = ?' : ''
+      const expenseParams: (string | number)[] = country
+        ? [startDate, endDate, country]
+        : [startDate, endDate]
 
       const expense = db
         .prepare(
-          `SELECT strftime('%Y-%m', expense_date) as month,
-                  SUM(amount) as total, currency
-           FROM expenses
-           WHERE is_voided = 0 AND expense_date >= ? AND expense_date <= ?
-           GROUP BY month, currency
+          `SELECT strftime('%Y-%m', e.expense_date) as month,
+                  SUM(e.amount) as total, e.currency
+           FROM expenses e
+           LEFT JOIN properties p ON e.property_id = p.id
+           WHERE e.is_voided = 0 AND e.expense_date >= ? AND e.expense_date <= ?${expenseClause}
+           GROUP BY month, e.currency
            ORDER BY month ASC`
         )
-        .all(startDate, endDate) as { month: string; total: number; currency: string }[]
+        .all(...expenseParams) as { month: string; total: number; currency: string }[]
 
       return { income, expense, startDate, endDate }
     } catch {

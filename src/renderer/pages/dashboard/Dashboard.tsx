@@ -57,21 +57,22 @@ export default function Dashboard(): React.JSX.Element {
   const [countries, setCountries] = useState<CountryOption[]>([])
   const [activeCountry, setActiveCountry] = useState<string>('')
   const isNewApp = !loading && summary && summary.totalProperties === 0
-  // Load all data on mount
+  // Load all data, filtered by selected country (FR-DASH-00)
   useEffect(() => {
     let cancelled = false
     async function loadAll(): Promise<void> {
       try {
+        const country = activeCountry || undefined
         const [s, due, ov, rec, docs, tr, cnt, pay, exp] = await Promise.all([
-          window.api.dashboard.summary(),
-          window.api.dashboard.upcomingDue().catch(() => []),
-          window.api.dashboard.overdue().catch(() => []),
-          window.api.dashboard.upcomingRecurring().catch(() => []),
-          window.api.dashboard.expiringDocuments().catch(() => []),
-          window.api.dashboard.trends().catch(() => null),
+          window.api.dashboard.summary(country),
+          window.api.dashboard.upcomingDue(country).catch(() => []),
+          window.api.dashboard.overdue(country).catch(() => []),
+          window.api.dashboard.upcomingRecurring(country).catch(() => []),
+          window.api.dashboard.expiringDocuments(country).catch(() => []),
+          window.api.dashboard.trends(country).catch(() => null),
           window.api.countries.list().catch(() => []),
-          window.api.dashboard.recentPayments().catch(() => []),
-          window.api.dashboard.recentExpenses().catch(() => [])
+          window.api.dashboard.recentPayments(country).catch(() => []),
+          window.api.dashboard.recentExpenses(country).catch(() => [])
         ])
         if (cancelled) return
         setSummary(s as DashboardSummary)
@@ -93,7 +94,7 @@ export default function Dashboard(): React.JSX.Element {
     return () => {
       cancelled = true
     }
-  }, [])
+  }, [activeCountry])
   /* ------------------------------------------------------------------ */
   /* Welcome empty state for new apps                                   */
   /* ------------------------------------------------------------------ */

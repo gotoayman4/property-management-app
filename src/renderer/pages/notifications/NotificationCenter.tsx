@@ -1,12 +1,13 @@
 /**
  * INTENT: Full notification center page — filterable list of all notification types
  *         (rent_due, contract_expiry, document_expiry, recurring_expense_due) with
- *         mark-as-read and mark-all-read actions.
+ *         mark-as-read, mark-all-read, and WhatsApp deep-link actions.
  * CONSTRAINT (AGENTS.md): StandardTable, PageHeader, explicit dir on dialogs, i18n keys only.
  */
 import {
+  MarkEmailRead as MarkAllReadIcon,
   Notifications as NotificationsIcon,
-  MarkEmailRead as MarkAllReadIcon
+  Send as SendWhatsAppIcon
 } from '@mui/icons-material'
 import { Box, Button, Chip, IconButton, Tab, Tabs, Typography, Tooltip } from '@mui/material'
 import { GridColDef } from '@mui/x-data-grid'
@@ -28,6 +29,8 @@ interface NotificationRow {
   is_read: number
   read_at: string | null
   created_at: string
+  tenant_phone?: string
+  tenant_country_code?: string
 }
 
 export default function NotificationCenter(): React.ReactElement {
@@ -98,6 +101,15 @@ export default function NotificationCenter(): React.ReactElement {
       )
     } catch {
       /* silent */
+    }
+  }
+
+  // Open WhatsApp chat pre-filled with the tenant's phone number (FR-NOT-05).
+  // Uses wa.me deep-link which opens WhatsApp Web/Desktop when installed.
+  const handleWhatsApp = (row: NotificationRow): void => {
+    const phone = `${row.tenant_country_code ?? ''}${row.tenant_phone ?? ''}`.replace(/^\+?/, '')
+    if (phone) {
+      window.open(`https://wa.me/${phone}`, '_blank')
     }
   }
 
@@ -173,17 +185,32 @@ export default function NotificationCenter(): React.ReactElement {
     {
       field: 'actions',
       headerName: t('common.actions'),
-      flex: 0.8,
+      flex: 1.2,
       sortable: false,
       renderCell: (params) => {
         const row = params.row as NotificationRow
-        if (row.is_read) return null
+        const canWhatsApp =
+          !!row.tenant_phone &&
+          ['rent_due', 'overdue', 'contract_expiry', 'escalation_upcoming'].includes(
+            row.notification_type
+          )
         return (
-          <Tooltip title={t('notification.markAsRead')}>
-            <IconButton size="small" onClick={() => handleMarkRead(row.id)}>
-              <MarkAllReadIcon fontSize="small" />
-            </IconButton>
-          </Tooltip>
+          <Box sx={{ display: 'flex', gap: 0.5 }}>
+            {!row.is_read && (
+              <Tooltip title={t('notification.markAsRead')}>
+                <IconButton size="small" onClick={() => handleMarkRead(row.id)}>
+                  <MarkAllReadIcon fontSize="small" />
+                </IconButton>
+              </Tooltip>
+            )}
+            {canWhatsApp && (
+              <Tooltip title={t('common.sendWhatsApp')}>
+                <IconButton size="small" color="success" onClick={() => handleWhatsApp(row)}>
+                  <SendWhatsAppIcon fontSize="small" />
+                </IconButton>
+              </Tooltip>
+            )}
+          </Box>
         )
       }
     }
