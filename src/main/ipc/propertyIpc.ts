@@ -37,7 +37,21 @@ const settingsUpdateSchema = z.object({
   reminder_days_before_contract_end: z.number().int().min(0).max(365).optional(),
   reminder_days_before_document_expiry: z.number().int().min(0).max(365).optional(),
   reminder_days_before_recurring_expense: z.number().int().min(0).max(30).optional(),
-  require_auth: z.number().int().min(0).max(1).optional()
+  require_auth: z.number().int().min(0).max(1).optional(),
+  default_country: z.string().length(2).nullable().optional(),
+  max_backup_count: z.number().int().min(1).max(100).optional()
+})
+
+const countryCreateSchema = z.object({
+  code: z.string().length(2).toUpperCase(),
+  name: z.string().min(1).max(100),
+  default_currency: z.string().length(3).toUpperCase()
+})
+
+const countryUpdateSchema = z.object({
+  id: z.number().int().positive(),
+  name: z.string().min(1).max(100).optional(),
+  default_currency: z.string().length(3).toUpperCase().optional()
 })
 
 export function registerPropertyIpcHandlers(): void {
@@ -57,10 +71,75 @@ export function registerPropertyIpcHandlers(): void {
   // List active countries
   ipcMain.handle('countries:list', async () => {
     try {
-      return db.prepare('SELECT * FROM countries WHERE is_active = 1').all()
+      return db.prepare('SELECT * FROM countries WHERE is_active = 1 ORDER BY name').all()
     } catch (error) {
       console.error('Error fetching countries:', error)
       throw new Error('FAILED_TO_FETCH_COUNTRIES')
+    }
+  })
+
+  // List all countries (including inactive) — used by CountryManagerDialog
+  ipcMain.handle('countries:listAll', async () => {
+    try {
+      return db.prepare('SELECT * FROM countries ORDER BY is_active DESC, name').all()
+    } catch (error) {
+      console.error('Error fetching all countries:', error)
+      throw new Error('FAILED_TO_FETCH_COUNTRIES')
+    }
+  })
+
+  // Create a new country
+  ipcMain.handle('countries:create', async (_, data: unknown) => {
+    try {
+      const validated = countryCreateSchema.parse(data)
+      const existing = db.prepare('SELECT 1 FROM countries WHERE code = ?').get(validated.code)
+      if (existing) {
+        throw new Error('COUNTRY_CODE_DUPLICATE')
+      }
+      const stmt = db.prepare(
+        'INSERT INTO countries (code, name, default_currency, is_active) VALUES (@code, @name, @default_currency, 1)'
+      )
+      return stmt.run(validated)
+    } catch (error: unknown) {
+      console.error('Error creating country:', error)
+      if (error instanceof z.ZodError) throw new Error('INVALID_INPUT')
+      throw error
+    }
+  })
+
+  // Update a country (name, default_currency)
+  ipcMain.handle('countries:update', async (_, data: unknown) => {
+    try {
+      const validated = countryUpdateSchema.parse(data)
+      const keys = Object.keys(validated).filter((k) => k !== 'id')
+      if (keys.length === 0) return { success: true }
+      const assignments = keys.map((key) => `${key} = @${key}`).join(', ')
+      const stmt = db.prepare(`UPDATE countries SET ${assignments} WHERE id = @id`)
+      stmt.run(validated)
+      return { success: true }
+    } catch (error: unknown) {
+      console.error('Error updating country:', error)
+      if (error instanceof z.ZodError) throw new Error('INVALID_INPUT')
+      throw error
+    }
+  })
+
+  // Soft-delete a country (set is_active = 0). Blocks if properties reference it.
+  ipcMain.handle('countries:delete', async (_, code: string) => {
+    try {
+      const count = (
+        db.prepare('SELECT COUNT(*) AS cnt FROM properties WHERE country = ?').get(code) as {
+          cnt: number
+        }
+      ).cnt
+      if (count > 0) {
+        throw new Error('COUNTRY_IN_USE')
+      }
+      db.prepare('UPDATE countries SET is_active = 0 WHERE code = ?').run(code)
+      return { success: true }
+    } catch (error) {
+      console.error('Error deactivating country:', error)
+      throw error
     }
   })
 

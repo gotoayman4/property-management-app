@@ -48,23 +48,25 @@ export function registerSearchIpcHandlers(): void {
       // Tenants
       const tenants = db
         .prepare(
-          `SELECT id, code, fullname, phone FROM tenants
-           WHERE is_active = 1 AND (fullname LIKE ? OR code LIKE ? OR phone LIKE ?)
+          `SELECT id, code, fullname, country_code, phone FROM tenants
+           WHERE is_active = 1 AND (fullname LIKE ? OR code LIKE ? OR phone LIKE ? OR country_code LIKE ?)
            ORDER BY fullname LIMIT 5`
         )
-        .all(pattern, pattern, pattern) as Array<{
+        .all(pattern, pattern, pattern, pattern) as Array<{
         id: number
         code: string
         fullname: string
+        country_code: string | null
         phone: string
       }>
 
       for (const t of tenants) {
+        const displayPhone = t.country_code ? `+${t.country_code} ${t.phone}` : t.phone
         results.push({
           entity_type: 'tenant',
           entity_id: t.id,
           title: `${t.fullname} (${t.code})`,
-          subtitle: t.phone
+          subtitle: displayPhone
         })
       }
 

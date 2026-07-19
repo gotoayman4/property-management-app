@@ -25,6 +25,7 @@ import GlobalSnackbar from '../../components/GlobalSnackbar'
 import PageHeader from '../../components/PageHeader'
 import StandardTable from '../../components/StandardTable'
 import { useSnackbar } from '../../hooks/useSnackbar'
+import { getLocalizedCountryName } from '../../utils/countryUtils'
 import PropertyForm from './PropertyForm'
 
 interface Property {
@@ -50,7 +51,7 @@ interface Country {
 }
 
 export default function PropertyList(): React.JSX.Element {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
   const { snack, showError, showSuccess, hideSnackbar } = useSnackbar()
 
   // State
@@ -173,7 +174,12 @@ export default function PropertyList(): React.JSX.Element {
       field: 'country',
       headerName: t('property.country'),
       flex: 0.8,
-      minWidth: 100
+      minWidth: 100,
+      renderCell: (params) => (
+        <Typography variant="body2">
+          {getLocalizedCountryName(params.value as string, i18n.language)}
+        </Typography>
+      )
     },
     {
       field: 'status',
@@ -312,7 +318,7 @@ export default function PropertyList(): React.JSX.Element {
                 <MenuItem value="">{t('common.all')}</MenuItem>
                 {countries.map((c) => (
                   <MenuItem key={c.code} value={c.code}>
-                    {t(`countries.${c.code}`, c.code)}
+                    {getLocalizedCountryName(c.code, i18n.language, c.name)}
                   </MenuItem>
                 ))}
               </Select>
@@ -363,6 +369,7 @@ export default function PropertyList(): React.JSX.Element {
           onSuccess={handleFormSuccess}
           property={editingProperty}
           countries={countries}
+          onCountriesUpdated={fetchCountries}
         />
       )}
 

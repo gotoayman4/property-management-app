@@ -26,6 +26,10 @@ import {
   groupByCurrency,
   REPORT_ROW_LIMIT
 } from './exportService/exportUtils'
+import { extendedBuilders } from './reportServiceExtended'
+
+// Re-export for reportServiceExtended.ts
+export { type ReportData, type ReportColumn, groupByCurrency, REPORT_ROW_LIMIT }
 
 /** Filters accepted by every report builder. Re-declared here so reportService is self-contained. */
 export interface ReportFilters {
@@ -39,8 +43,19 @@ export interface ReportFilters {
   language?: 'ar' | 'en'
 }
 
-/** The set of report types this phase supports (SRS §5.7 — core 5). */
-export type ReportType = 'income' | 'expense' | 'profit_loss' | 'vacancy' | 'ledger'
+/** The set of report types this phase supports (SRS §5.7 — 11 reports). */
+export type ReportType =
+  | 'income'
+  | 'expense'
+  | 'profit_loss'
+  | 'property_profitability'
+  | 'tenant_payment_history'
+  | 'outstanding_balances'
+  | 'vacancy'
+  | 'contract_expiry'
+  | 'recurring_schedule'
+  | 'document_expiry'
+  | 'ledger'
 
 /** Machine-readable error codes thrown by builders; the IPC layer maps these to the renderer. */
 export class ReportError extends Error {
@@ -59,7 +74,7 @@ function langOf(filters: ReportFilters): 'ar' | 'en' {
  * Build a date-range WHERE clause fragment shared by all time-based reports.
  * Returns the clause (without leading WHERE) and mutates the params object with bound values.
  */
-function dateRangeClause(
+export function dateRangeClause(
   dateColumn: string,
   filters: ReportFilters,
   params: Record<string, unknown>
@@ -371,6 +386,7 @@ export function buildReport(db: Database, type: ReportType, filters: ReportFilte
   // language — the exporters consume `filters.language` directly via resolveLocaleKey.
   void langOf(filters)
 
+  // Extended report types (6 through 11) live in reportServiceExtended.ts
   switch (type) {
     case 'income':
       return buildIncomeReport(db, filters)
@@ -383,8 +399,9 @@ export function buildReport(db: Database, type: ReportType, filters: ReportFilte
     case 'ledger':
       return buildLedgerReport(db, filters)
     default: {
-      const exhaustive: never = type
-      throw new ReportError(`UNKNOWN_REPORT_TYPE:${String(exhaustive)}`)
+      const builder = extendedBuilders[type]
+      if (builder) return builder(db, filters)
+      throw new ReportError(`UNKNOWN_REPORT_TYPE:${String(type)}`)
     }
   }
 }

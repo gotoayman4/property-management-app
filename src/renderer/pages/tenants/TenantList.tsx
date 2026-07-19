@@ -22,6 +22,7 @@ interface Tenant {
   code: string
   fullname: string
   national_id?: string
+  country_code?: string
   phone: string
   email?: string
   type: 'individual' | 'company'
@@ -128,7 +129,16 @@ export function TenantList(): React.ReactElement {
     {
       field: 'phone',
       headerName: t('tenant.phone'),
-      flex: 1.2
+      flex: 1.2,
+      renderCell: (params) => {
+        const row = params.row as Tenant
+        const fullPhone = row.country_code ? `+${row.country_code} ${row.phone}` : row.phone
+        return (
+          <Typography variant="body2" sx={{ direction: 'ltr', textAlign: 'start', width: '100%' }}>
+            {fullPhone}
+          </Typography>
+        )
+      }
     },
     {
       field: 'national_id',
@@ -244,6 +254,7 @@ export function TenantList(): React.ReactElement {
         open={openDialog}
         onClose={() => setOpenDialog(false)}
         title={selectedTenant ? t('tenant.editTitle') : t('tenant.add')}
+        maxWidth="md"
       >
         <TenantForm
           tenant={selectedTenant}

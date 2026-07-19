@@ -2,6 +2,7 @@ import AccountBalanceWalletIcon from '@mui/icons-material/AccountBalanceWallet'
 import AssessmentIcon from '@mui/icons-material/Assessment'
 import AttachMoneyIcon from '@mui/icons-material/AttachMoney'
 import AutorenewIcon from '@mui/icons-material/Autorenew'
+import BackupIcon from '@mui/icons-material/Backup'
 import BusinessIcon from '@mui/icons-material/Business'
 import DashboardIcon from '@mui/icons-material/Dashboard'
 import DescriptionIcon from '@mui/icons-material/Description'
@@ -108,6 +109,7 @@ export default function Layout({ children }: LayoutProps): React.JSX.Element {
       ),
       path: '/notifications'
     },
+    { text: t('sidebar.backup'), icon: <BackupIcon />, path: '/backup' },
     { text: t('sidebar.settings'), icon: <SettingsIcon />, path: '/settings' }
   ]
 
@@ -242,6 +244,7 @@ export default function Layout({ children }: LayoutProps): React.JSX.Element {
               {location.pathname === '/ledger' && t('sidebar.ledger')}
               {location.pathname === '/reports' && t('sidebar.reports')}
               {location.pathname === '/currency' && t('sidebar.currency')}
+              {location.pathname === '/backup' && t('sidebar.backup')}
               {location.pathname === '/settings' && t('sidebar.settings')}
             </Typography>
           </Box>

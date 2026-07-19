@@ -25,6 +25,7 @@ import { useParams, useNavigate, Link } from 'react-router-dom'
 import DocumentUploadForm from '../../components/DocumentUploadForm'
 import PageHeader from '../../components/PageHeader'
 import StandardTable from '../../components/StandardTable'
+import { getLocalizedCountryName } from '../../utils/countryUtils'
 
 interface PropertyData {
   id: number
@@ -49,7 +50,7 @@ const STATUS_COLORS: Record<string, 'success' | 'warning' | 'info'> = {
 export default function PropertyDetail(): React.JSX.Element {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
   const [property, setProperty] = useState<PropertyData | null>(null)
   const [tab, setTab] = useState(0)
   const [contracts, setContracts] = useState<GridValidRowModel[]>([])
@@ -201,7 +202,7 @@ export default function PropertyDetail(): React.JSX.Element {
                 {t('property.country')}
               </Typography>
               <Typography variant="body1" sx={{ fontWeight: 500 }}>
-                {property.country}
+                {getLocalizedCountryName(property.country, i18n.language)}
               </Typography>
             </Grid>
             <Grid size={{ xs: 12, sm: 6, md: 3 }}>

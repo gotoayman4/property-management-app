@@ -2,6 +2,7 @@
  * INTENT: Reusable dashboard stat card — icon + label + value. Follows the existing
  *         Dashboard card pattern but extracted for reuse and clean separation.
  * CONSTRAINT (AGENTS.md): logical CSS, theme.palette tokens only, i18n keys.
+ *         FR-DASH-10: cards are clickable (navigate to related detail screen).
  */
 import { Card, CardContent, Typography, Box } from '@mui/material'
 import React from 'react'
@@ -11,11 +12,18 @@ interface StatCardProps {
   label: string
   value: string | number
   color: 'primary' | 'secondary' | 'success' | 'error' | 'warning' | 'info'
+  onClick?: () => void
 }
 
-export default function StatCard({ icon, label, value, color }: StatCardProps): React.JSX.Element {
+export default function StatCard({
+  icon,
+  label,
+  value,
+  color,
+  onClick
+}: StatCardProps): React.JSX.Element {
   return (
-    <Card>
+    <Card sx={{ cursor: onClick ? 'pointer' : undefined }} onClick={onClick}>
       <CardContent sx={{ display: 'flex', alignItems: 'center', p: 2.5 }}>
         <Box
           sx={{

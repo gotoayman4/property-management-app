@@ -29,8 +29,9 @@ import StandardTable from '../../components/StandardTable'
 interface TenantData {
   id: number
   code: string
-  full_name: string
+  fullname: string
   national_id: string
+  country_code: string | null
   phone: string
   email: string | null
   type: string
@@ -158,12 +159,12 @@ export default function TenantDetail(): React.JSX.Element {
         <Link to="/tenants" style={{ textDecoration: 'none', color: 'inherit' }}>
           <Typography color="text.primary">{t('sidebar.tenants')}</Typography>
         </Link>
-        <Typography color="text.secondary">{tenant.full_name}</Typography>
+        <Typography color="text.secondary">{tenant.fullname}</Typography>
       </Breadcrumbs>
 
       <PageHeader
         icon={<PeopleIcon />}
-        title={tenant.full_name}
+        title={tenant.fullname}
         subtitle={tenant.code}
         action={
           <Chip
@@ -188,8 +189,11 @@ export default function TenantDetail(): React.JSX.Element {
               <Typography variant="body2" color="text.secondary">
                 {t('tenant.phone')}
               </Typography>
-              <Typography variant="body1" sx={{ fontWeight: 500 }}>
-                {tenant.phone}
+              <Typography
+                variant="body1"
+                sx={{ fontWeight: 500, direction: 'ltr', textAlign: 'start' }}
+              >
+                {tenant.country_code ? `+${tenant.country_code} ${tenant.phone}` : tenant.phone}
               </Typography>
             </Grid>
             <Grid size={{ xs: 12, sm: 6, md: 3 }}>

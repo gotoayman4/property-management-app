@@ -5,7 +5,35 @@ declare global {
     electron: ElectronAPI
     api: {
       countries: {
-        list: () => Promise<unknown[]>
+        list: () => Promise<
+          {
+            id: number
+            code: string
+            name: string
+            default_currency: string
+            is_active: number
+          }[]
+        >
+        create: (data: {
+          code: string
+          name: string
+          default_currency: string
+        }) => Promise<{ changes: number; lastInsertRowid: number }>
+        update: (data: {
+          id: number
+          name?: string
+          default_currency?: string
+        }) => Promise<{ success: boolean }>
+        delete: (code: string) => Promise<{ success: boolean }>
+        listAll: () => Promise<
+          {
+            id: number
+            code: string
+            name: string
+            default_currency: string
+            is_active: number
+          }[]
+        >
       }
       properties: {
         list: (filters?: {
@@ -106,7 +134,22 @@ declare global {
         addManualAdjustment: (data: unknown) => Promise<{ id: number }>
       }
       settings: {
-        get: () => Promise<unknown>
+        get: () => Promise<{
+          app_language: string
+          theme: string
+          font_size: string
+          reporting_currency: string
+          default_payment_method: string
+          backup_path: string | null
+          date_format: string
+          reminder_days_before_due: number
+          reminder_days_before_contract_end: number
+          reminder_days_before_document_expiry: number
+          reminder_days_before_recurring_expense: number
+          require_auth: number
+          default_country: string | null
+          max_backup_count: number
+        }>
         update: (data: unknown) => Promise<{ success: boolean; settings: unknown }>
       }
       auth: {
@@ -143,6 +186,56 @@ declare global {
         }>
         recentPayments: () => Promise<unknown[]>
         recentExpenses: () => Promise<unknown[]>
+        upcomingDue: () => Promise<
+          {
+            id: number
+            rent_amount: number
+            currency: string
+            property_name: string
+            tenant_name: string
+            end_date: string
+          }[]
+        >
+        overdue: () => Promise<
+          {
+            id: number
+            payment_date: string
+            amount: number
+            currency: string
+            is_partial: number
+            property_name: string
+            tenant_name: string
+            total_paid: number
+          }[]
+        >
+        upcomingRecurring: () => Promise<
+          {
+            id: number
+            name: string
+            amount: number
+            currency: string
+            frequency: string
+            next_due_date: string
+            property_name: string | null
+            category_key: string | null
+          }[]
+        >
+        expiringDocuments: () => Promise<
+          {
+            id: number
+            file_name: string
+            document_type: string | null
+            expiry_date: string
+            issue_date: string | null
+            property_name: string
+          }[]
+        >
+        trends: () => Promise<{
+          income: { month: string; total: number; currency: string }[]
+          expense: { month: string; total: number; currency: string }[]
+          startDate: string
+          endDate: string
+        }>
       }
       exchangeRates: {
         list: (filters?: { currency_from?: string; currency_to?: string }) => Promise<unknown[]>
@@ -236,6 +329,7 @@ declare global {
         unreadCount: () => Promise<{ count: number }>
         markRead: (id: number) => Promise<{ success: boolean }>
         markAllRead: () => Promise<{ success: boolean }>
+        dismiss: (id: number) => Promise<{ success: boolean }>
       }
       search: {
         global: (query: string) => Promise<
@@ -249,7 +343,18 @@ declare global {
       }
       reports: {
         preview: (data: {
-          type: 'income' | 'expense' | 'profit_loss' | 'vacancy' | 'ledger'
+          type:
+            | 'income'
+            | 'expense'
+            | 'profit_loss'
+            | 'property_profitability'
+            | 'tenant_payment_history'
+            | 'outstanding_balances'
+            | 'vacancy'
+            | 'contract_expiry'
+            | 'recurring_schedule'
+            | 'document_expiry'
+            | 'ledger'
           from_date?: string
           to_date?: string
           property_id?: number
@@ -277,7 +382,18 @@ declare global {
           consolidatedNote?: string
         }>
         exportExcel: (data: {
-          type: 'income' | 'expense' | 'profit_loss' | 'vacancy' | 'ledger'
+          type:
+            | 'income'
+            | 'expense'
+            | 'profit_loss'
+            | 'property_profitability'
+            | 'tenant_payment_history'
+            | 'outstanding_balances'
+            | 'vacancy'
+            | 'contract_expiry'
+            | 'recurring_schedule'
+            | 'document_expiry'
+            | 'ledger'
           from_date?: string
           to_date?: string
           property_id?: number
@@ -288,7 +404,18 @@ declare global {
           language?: 'ar' | 'en'
         }) => Promise<{ filePath: string | null }>
         exportHtml: (data: {
-          type: 'income' | 'expense' | 'profit_loss' | 'vacancy' | 'ledger'
+          type:
+            | 'income'
+            | 'expense'
+            | 'profit_loss'
+            | 'property_profitability'
+            | 'tenant_payment_history'
+            | 'outstanding_balances'
+            | 'vacancy'
+            | 'contract_expiry'
+            | 'recurring_schedule'
+            | 'document_expiry'
+            | 'ledger'
           from_date?: string
           to_date?: string
           property_id?: number
@@ -298,6 +425,37 @@ declare global {
           category_id?: number
           language?: 'ar' | 'en'
         }) => Promise<{ filePath: string | null }>
+      }
+      backup: {
+        create: () => Promise<{
+          success: boolean
+          filePath: string | null
+          checksum: string | null
+          error?: string
+        }>
+        list: () => Promise<
+          {
+            id: number
+            backup_file_path: string
+            backup_type: 'manual' | 'automatic' | 'pre_restore'
+            file_size_kb: number | null
+            checksum: string | null
+            is_verified: number
+            status: 'success' | 'failed'
+            error_message: string | null
+            created_at: string
+          }[]
+        >
+        verify: (data: { backupId: number }) => Promise<{ valid: boolean; error?: string }>
+        restore: (data: { backupId: number; confirm?: boolean }) => Promise<{
+          confirmed?: boolean
+          success?: boolean
+          backupInfo?: unknown
+          emergencyBackupPath?: string | null
+          requiresRestart?: boolean
+          error?: string
+        }>
+        prune: () => Promise<{ deleted: number; errors: string[] }>
       }
     }
   }

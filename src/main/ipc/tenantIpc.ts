@@ -12,6 +12,7 @@ const tenantCreateSchema = z.object({
     .regex(/^[a-zA-Z0-9-]+$/),
   fullname: z.string().min(3).max(100),
   national_id: z.string().optional().nullable(),
+  country_code: z.string().optional().nullable(),
   phone: z.string().min(5).max(20),
   email: z.string().email().optional().nullable().or(z.literal('')),
   type: z.enum(['individual', 'company']).default('individual'),
@@ -58,9 +59,11 @@ export function registerTenantIpcHandlers(): void {
             params.push(filters.is_active)
           }
           if (filters.search) {
-            // FR-TEN-05: search by name, national ID, or phone
-            query += ' AND (fullname LIKE ? OR code LIKE ? OR phone LIKE ? OR national_id LIKE ?)'
+            // FR-TEN-05: search by name, national ID, phone, or country code
+            query +=
+              ' AND (fullname LIKE ? OR code LIKE ? OR phone LIKE ? OR national_id LIKE ? OR country_code LIKE ?)'
             params.push(
+              `%${filters.search}%`,
               `%${filters.search}%`,
               `%${filters.search}%`,
               `%${filters.search}%`,
@@ -101,10 +104,10 @@ export function registerTenantIpcHandlers(): void {
 
       const stmt = db.prepare(`
         INSERT INTO tenants (
-          code, fullname, national_id, phone, email, type, company_reg_no, representative_name,
+          code, fullname, national_id, country_code, phone, email, type, company_reg_no, representative_name,
           preferred_language, emergency_contact_name, emergency_contact_phone, address, notes, is_active
         ) VALUES (
-          @code, @fullname, @national_id, @phone, @email, @type, @company_reg_no, @representative_name,
+          @code, @fullname, @national_id, @country_code, @phone, @email, @type, @company_reg_no, @representative_name,
           @preferred_language, @emergency_contact_name, @emergency_contact_phone, @address, @notes, @is_active
         )
       `)
@@ -138,6 +141,7 @@ export function registerTenantIpcHandlers(): void {
           code = @code,
           fullname = @fullname,
           national_id = @national_id,
+          country_code = @country_code,
           phone = @phone,
           email = @email,
           type = @type,

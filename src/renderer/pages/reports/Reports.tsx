@@ -41,7 +41,18 @@ import PageHeader from '../../components/PageHeader'
 import StandardTable from '../../components/StandardTable'
 import { useSnackbar } from '../../hooks/useSnackbar'
 
-type ReportType = 'income' | 'expense' | 'profit_loss' | 'vacancy' | 'ledger'
+type ReportType =
+  | 'income'
+  | 'expense'
+  | 'profit_loss'
+  | 'property_profitability'
+  | 'tenant_payment_history'
+  | 'outstanding_balances'
+  | 'vacancy'
+  | 'contract_expiry'
+  | 'recurring_schedule'
+  | 'document_expiry'
+  | 'ledger'
 
 interface ReportColumn {
   key: string
@@ -75,7 +86,19 @@ interface Tenant {
   fullname: string
 }
 
-const REPORT_TYPES: ReportType[] = ['income', 'expense', 'profit_loss', 'vacancy', 'ledger']
+const REPORT_TYPES: ReportType[] = [
+  'income',
+  'expense',
+  'profit_loss',
+  'property_profitability',
+  'tenant_payment_history',
+  'outstanding_balances',
+  'vacancy',
+  'contract_expiry',
+  'recurring_schedule',
+  'document_expiry',
+  'ledger'
+]
 
 /** Stable row IDs for DataGrid — some report rows have no `id` field (vacancy, P&L). */
 function makeRowId(prefix: string): (row: Record<string, unknown>) => string {
@@ -237,8 +260,9 @@ export default function Reports(): React.ReactElement {
     )
   }, [data])
 
-  const showTenantFilter = reportType === 'income'
-  const showPropertyFilter = reportType !== '' && reportType !== 'vacancy'
+  const showTenantFilter = reportType === 'income' || reportType === 'tenant_payment_history'
+  const showPropertyFilter =
+    reportType !== '' && reportType !== 'vacancy' && reportType !== 'document_expiry'
 
   return (
     <Box sx={{ py: 3, px: 4 }}>

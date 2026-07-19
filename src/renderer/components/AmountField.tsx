@@ -84,6 +84,7 @@ export function AmountField<T extends FieldValues, N extends FieldPath<T>>({
                 ? { endAdornment: <span aria-hidden>{endAdornment}</span> }
                 : undefined,
               htmlInput: {
+                dir: 'ltr',
                 inputMode: 'decimal',
                 min,
                 sx: {

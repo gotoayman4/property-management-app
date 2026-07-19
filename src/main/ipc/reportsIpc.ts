@@ -34,7 +34,19 @@ import {
 
 /** Zod schema for every report request. All filters optional; builder decides which apply. */
 const reportRequestSchema = z.object({
-  type: z.enum(['income', 'expense', 'profit_loss', 'vacancy', 'ledger']),
+  type: z.enum([
+    'income',
+    'expense',
+    'profit_loss',
+    'property_profitability',
+    'tenant_payment_history',
+    'outstanding_balances',
+    'vacancy',
+    'contract_expiry',
+    'recurring_schedule',
+    'document_expiry',
+    'ledger'
+  ]),
   from_date: z
     .string()
     .regex(/^\d{4}-\d{2}-\d{2}$/)

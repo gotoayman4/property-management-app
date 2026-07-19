@@ -1,4 +1,4 @@
-import { CacheProvider } from '@emotion/react'
+import { CacheProvider, Global } from '@emotion/react'
 import { ThemeProvider, CssBaseline } from '@mui/material'
 import React, { useEffect, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -6,6 +6,7 @@ import { createHashRouter, RouterProvider, Outlet } from 'react-router-dom'
 import AuthGate from './components/AuthGate'
 import Layout from './components/Layout'
 import { AuthProvider } from './contexts/AuthContext'
+import BackupPage from './pages/backup/BackupPage'
 import ContractDetail from './pages/contracts/ContractDetail'
 import { ContractList } from './pages/contracts/ContractList'
 import ExchangeRateManager from './pages/currency/ExchangeRateManager'
@@ -100,6 +101,10 @@ const router = createHashRouter([
       {
         path: '/notifications',
         element: <NotificationCenter />
+      },
+      {
+        path: '/backup',
+        element: <BackupPage />
       }
     ]
   }
@@ -153,6 +158,16 @@ export default function App(): React.JSX.Element {
     <CacheProvider value={cache} key={direction}>
       <ThemeProvider theme={theme}>
         <CssBaseline />
+        <Global
+          // @ts-expect-error Emotion CSS type too narrow for `direction: ltr !important` needed to override RTL plugin
+          styles={{
+            'input[type="email"], input[type="password"], input[type="tel"], input[type="number"], input[inputmode="decimal"], input[inputmode="numeric"], input[inputmode="tel"], input[inputmode="email"]':
+              {
+                direction: 'ltr !important',
+                textAlign: 'start'
+              }
+          }}
+        />
         <AuthProvider>
           <AuthGate>
             <RouterProvider router={router} />

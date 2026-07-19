@@ -228,6 +228,7 @@ export default function Login(): React.JSX.Element {
                 helperText={registerForm.formState.errors.password?.message}
                 autoComplete="new-password"
                 slotProps={{
+                  htmlInput: { dir: 'ltr' },
                   input: {
                     endAdornment: (
                       <InputAdornment position="end">
@@ -254,6 +255,9 @@ export default function Login(): React.JSX.Element {
                 error={!!registerForm.formState.errors.confirmPassword}
                 helperText={registerForm.formState.errors.confirmPassword?.message}
                 autoComplete="new-password"
+                slotProps={{
+                  htmlInput: { dir: 'ltr' }
+                }}
               />
               <Button
                 fullWidth
@@ -290,6 +294,7 @@ export default function Login(): React.JSX.Element {
                 helperText={loginForm.formState.errors.password?.message}
                 autoComplete="current-password"
                 slotProps={{
+                  htmlInput: { dir: 'ltr' },
                   input: {
                     endAdornment: (
                       <InputAdornment position="end">

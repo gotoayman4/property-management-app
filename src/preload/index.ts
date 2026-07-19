@@ -4,7 +4,11 @@ import { contextBridge, ipcRenderer } from 'electron'
 // Custom APIs for renderer
 const api = {
   countries: {
-    list: () => ipcRenderer.invoke('countries:list')
+    list: () => ipcRenderer.invoke('countries:list'),
+    create: (data: unknown) => ipcRenderer.invoke('countries:create', data),
+    update: (data: unknown) => ipcRenderer.invoke('countries:update', data),
+    delete: (code: string) => ipcRenderer.invoke('countries:delete', code),
+    listAll: () => ipcRenderer.invoke('countries:listAll')
   },
   properties: {
     list: (filters?: unknown) => ipcRenderer.invoke('properties:list', filters),
@@ -76,7 +80,12 @@ const api = {
   dashboard: {
     summary: () => ipcRenderer.invoke('dashboard:summary'),
     recentPayments: () => ipcRenderer.invoke('dashboard:recentPayments'),
-    recentExpenses: () => ipcRenderer.invoke('dashboard:recentExpenses')
+    recentExpenses: () => ipcRenderer.invoke('dashboard:recentExpenses'),
+    upcomingDue: () => ipcRenderer.invoke('dashboard:upcomingDue'),
+    overdue: () => ipcRenderer.invoke('dashboard:overdue'),
+    upcomingRecurring: () => ipcRenderer.invoke('dashboard:upcomingRecurring'),
+    expiringDocuments: () => ipcRenderer.invoke('dashboard:expiringDocuments'),
+    trends: () => ipcRenderer.invoke('dashboard:trends')
   },
   exchangeRates: {
     list: (filters?: unknown) => ipcRenderer.invoke('exchangeRates:list', filters),
@@ -120,6 +129,14 @@ const api = {
     preview: (data: unknown) => ipcRenderer.invoke('reports:preview', data),
     exportExcel: (data: unknown) => ipcRenderer.invoke('reports:exportExcel', data),
     exportHtml: (data: unknown) => ipcRenderer.invoke('reports:exportHtml', data)
+  },
+  backup: {
+    create: () => ipcRenderer.invoke('backup:create'),
+    list: () => ipcRenderer.invoke('backup:list'),
+    verify: (data: { backupId: number }) => ipcRenderer.invoke('backup:verify', data),
+    restore: (data: { backupId: number; confirm?: boolean }) =>
+      ipcRenderer.invoke('backup:restore', data),
+    prune: () => ipcRenderer.invoke('backup:prune')
   }
 }
 
@@ -134,8 +151,8 @@ if (process.contextIsolated) {
     console.error(error)
   }
 } else {
-  // @ts-ignore (define in dts)
+  // @ts-expect-error (define in dts)
   window.electron = electronAPI
-  // @ts-ignore (define in dts)
+  // @ts-expect-error (define in dts)
   window.api = api
 }

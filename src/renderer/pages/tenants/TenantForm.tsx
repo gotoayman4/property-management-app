@@ -12,6 +12,7 @@ import {
   Select,
   MenuItem,
   InputLabel,
+  InputAdornment,
   Tabs,
   Tab
 } from '@mui/material'
@@ -32,6 +33,7 @@ const tenantFormSchema = z.object({
     .regex(/^[a-zA-Z0-9-]+$/, 'codeInvalid'),
   fullname: z.string().min(3, 'fullnameRequired').max(100),
   national_id: z.string().optional().nullable(),
+  country_code: z.string().optional().nullable(),
   phone: z.string().min(5, 'phoneRequired').max(20),
   email: z.string().email('emailInvalid').optional().nullable().or(z.literal('')),
   type: z.enum(['individual', 'company']).default('individual'),
@@ -54,6 +56,7 @@ interface Tenant {
   code: string
   fullname: string
   national_id?: string
+  country_code?: string
   phone: string
   email?: string
   type: 'individual' | 'company'
@@ -78,6 +81,9 @@ export function TenantForm({ tenant, onSuccess, onCancel }: TenantFormProps): Re
   const isRtl = i18n.language === 'ar'
   const { snack, showError, showSuccess, hideSnackbar } = useSnackbar()
   const isEdit = !!tenant
+  const [createdEntity, setCreatedEntity] = useState<{ id: number } | null>(null)
+  const effectiveIsEdit = isEdit || !!createdEntity
+  const currentEntityId = tenant?.id ?? createdEntity?.id ?? null
   const [activeTab, setActiveTab] = useState(0)
 
   const defaultValues: Partial<TenantFormValues> = tenant
@@ -85,6 +91,7 @@ export function TenantForm({ tenant, onSuccess, onCancel }: TenantFormProps): Re
         code: tenant.code,
         fullname: tenant.fullname,
         national_id: tenant.national_id || '',
+        country_code: tenant.country_code || '',
         phone: tenant.phone,
         email: tenant.email || '',
         type: tenant.type,
@@ -101,6 +108,7 @@ export function TenantForm({ tenant, onSuccess, onCancel }: TenantFormProps): Re
         code: '',
         fullname: '',
         national_id: '',
+        country_code: '',
         phone: '',
         email: '',
         type: 'individual',
@@ -146,11 +154,13 @@ export function TenantForm({ tenant, onSuccess, onCancel }: TenantFormProps): Re
     try {
       if (isEdit && tenant) {
         await window.api.tenants.update({ id: tenant.id, ...data })
+        showSuccess('common.saveSuccess')
+        onSuccess()
       } else {
-        await window.api.tenants.create(data)
+        const result = (await window.api.tenants.create(data)) as { id: number }
+        setCreatedEntity(result)
+        showSuccess('common.saveSuccess')
       }
-      showSuccess('common.saveSuccess')
-      onSuccess()
     } catch (err: unknown) {
       console.error(err)
       const errorMessage = err instanceof Error ? err.message : ''
@@ -164,7 +174,7 @@ export function TenantForm({ tenant, onSuccess, onCancel }: TenantFormProps): Re
 
   return (
     <>
-      {isEdit && (
+      {effectiveIsEdit && (
         <Tabs value={activeTab} onChange={(_, v) => setActiveTab(v)} sx={{ mb: 1 }}>
           <Tab label={t('common.details')} />
           <Tab label={t('tenantDetail.documents')} />
@@ -259,16 +269,43 @@ export function TenantForm({ tenant, onSuccess, onCancel }: TenantFormProps): Re
             />
           </Grid>
 
-          {/* Phone */}
+          {/* Country Code + Phone — split so the country code can be stored separately
+              for WhatsApp-compatible international format (+{country_code}{phone}).
+              Uses HTML dir="ltr" (not CSS direction) so the Emotion RTL plugin cannot
+              flip it — the row always reads left-to-right in both Arabic and English:
+              [country code] [phone number]. */}
           <Grid size={{ xs: 12, sm: 6 }}>
-            <FormField
-              name="phone"
-              control={control}
-              errors={errors}
-              label={t('tenant.phone')}
-              required
-              errorNamespace="tenant"
-            />
+            <Box sx={{ display: 'flex', gap: 1 }} dir="ltr">
+              <Box sx={{ width: '30%', minWidth: 100 }}>
+                <FormField
+                  name="country_code"
+                  control={control}
+                  errors={errors}
+                  label={t('tenant.countryCode')}
+                  placeholder="962"
+                  forceLtr
+                  inputFilter={(v) => v.replace(/\D/g, '')}
+                  slotProps={{
+                    input: {
+                      startAdornment: <InputAdornment position="start">+</InputAdornment>
+                    }
+                  }}
+                />
+              </Box>
+              <Box sx={{ width: '70%' }}>
+                <FormField
+                  name="phone"
+                  control={control}
+                  errors={errors}
+                  label={t('tenant.phone')}
+                  required
+                  errorNamespace="tenant"
+                  placeholder={t('tenant.phonePlaceholder')}
+                  forceLtr
+                  inputFilter={(v) => v.replace(/\D/g, '')}
+                />
+              </Box>
+            </Box>
           </Grid>
 
           {/* Email */}
@@ -279,6 +316,7 @@ export function TenantForm({ tenant, onSuccess, onCancel }: TenantFormProps): Re
               errors={errors}
               label={t('tenant.email')}
               errorNamespace="tenant"
+              type="email"
             />
           </Grid>
 
@@ -330,6 +368,7 @@ export function TenantForm({ tenant, onSuccess, onCancel }: TenantFormProps): Re
               errors={errors}
               label={t('tenant.emergencyContactPhone')}
               errorNamespace="tenant"
+              forceLtr
             />
           </Grid>
 
@@ -380,16 +419,29 @@ export function TenantForm({ tenant, onSuccess, onCancel }: TenantFormProps): Re
             flexDirection: isRtl ? 'row-reverse' : 'row'
           }}
         >
-          <Button variant="outlined" onClick={onCancel} disabled={isSubmitting}>
-            {t('common.cancel')}
-          </Button>
-          <Button type="submit" variant="contained" disabled={isSubmitting}>
-            {t('common.save')}
-          </Button>
+          {createdEntity ? (
+            <>
+              <Button variant="outlined" onClick={onCancel} disabled={isSubmitting}>
+                {t('common.cancel')}
+              </Button>
+              <Button variant="contained" onClick={onSuccess} disabled={isSubmitting}>
+                {t('common.close')}
+              </Button>
+            </>
+          ) : (
+            <>
+              <Button variant="outlined" onClick={onCancel} disabled={isSubmitting}>
+                {t('common.cancel')}
+              </Button>
+              <Button type="submit" variant="contained" disabled={isSubmitting}>
+                {t('common.save')}
+              </Button>
+            </>
+          )}
         </Box>
       </Box>
-      {isEdit && activeTab === 1 && tenant && (
-        <EntityDocumentsTab entityType="tenant" entityId={tenant.id} />
+      {effectiveIsEdit && activeTab === 1 && currentEntityId !== null && (
+        <EntityDocumentsTab entityType="tenant" entityId={currentEntityId} />
       )}
       <GlobalSnackbar state={snack} onClose={hideSnackbar} />
     </>

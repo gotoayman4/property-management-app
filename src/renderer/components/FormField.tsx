@@ -1,4 +1,4 @@
-import { Typography, TextField, type TextFieldProps } from '@mui/material'
+import { Typography, TextField } from '@mui/material'
 import type { SxProps, Theme } from '@mui/material/styles'
 import React from 'react'
 import {
@@ -41,10 +41,23 @@ interface FormFieldProps<T extends FieldValues, N extends FieldPath<T>> {
   errorNamespace?: string
   multiline?: boolean
   rows?: number
-  /** Input type (e.g. 'date' for date pickers). Default is 'text'. */
+  /** Input type (e.g. 'date' for date pickers, 'email' for email fields). Default is 'text'. */
   type?: string
   placeholder?: string
-  slotProps?: TextFieldProps['slotProps']
+  /**
+   * Optional input filter function that transforms user input before updating form state.
+   * E.g. strip non-digits: `(v) => v.replace(/\D/g, '')`.
+   * Useful for phone number fields where only digits should be accepted.
+   */
+  inputFilter?: (value: string) => string
+  /**
+   * Force LTR direction on the input element. Required for phone, national ID, and other
+   * text-type fields that contain LTR content (numbers, codes). Email and password types
+   * auto-detect and force LTR — you only need this for `type="text"` fields that should
+   * remain LTR in RTL UI.
+   */
+  forceLtr?: boolean
+  slotProps?: Record<string, unknown>
   sx?: SxProps<Theme>
 }
 
@@ -60,6 +73,8 @@ export function FormField<T extends FieldValues, N extends FieldPath<T>>({
   rows,
   type = 'text',
   placeholder,
+  inputFilter,
+  forceLtr = false,
   slotProps,
   sx
 }: FormFieldProps<T, N>): React.JSX.Element {
@@ -100,11 +115,13 @@ export function FormField<T extends FieldValues, N extends FieldPath<T>>({
             {...field}
             value={value}
             onChange={(e) => {
+              // Apply optional input filter (e.g. strip non-digits for phone fields)
+              const raw = inputFilter ? inputFilter(e.target.value) : e.target.value
               // For optional fields, preserve null if cleared
-              if (!required && e.target.value === '') {
+              if (!required && raw === '') {
                 field.onChange(null)
               } else {
-                field.onChange(e.target.value)
+                field.onChange(raw)
               }
             }}
             label={displayLabel}
@@ -118,7 +135,20 @@ export function FormField<T extends FieldValues, N extends FieldPath<T>>({
             placeholder={placeholder}
             slotProps={{
               ...slotProps,
-              ...(type === 'date' ? { inputLabel: { shrink: true, ...slotProps?.inputLabel } } : {})
+              input: {
+                // Force LTR direction for fields that always need it (email, or any
+                // explicitly marked field like phone numbers).
+                ...(forceLtr || type === 'email' ? { dir: 'ltr' } : {}),
+                ...(slotProps?.input ?? {})
+              },
+              ...(type === 'date'
+                ? {
+                    inputLabel: {
+                      shrink: true,
+                      ...(slotProps?.inputLabel as Record<string, unknown>)
+                    }
+                  }
+                : {})
             }}
             sx={sx}
             fullWidth

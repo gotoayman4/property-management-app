@@ -7,6 +7,7 @@
 import SettingsIcon from '@mui/icons-material/Settings'
 import {
   Box,
+  Button,
   Card,
   CardContent,
   Typography,
@@ -23,8 +24,9 @@ import {
   InputLabel,
   Alert
 } from '@mui/material'
-import React, { useState, useEffect } from 'react'
+import React, { useCallback, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import CountryManagerDialog from '../../components/CountryManagerDialog'
 import GlobalSnackbar from '../../components/GlobalSnackbar'
 import PageHeader from '../../components/PageHeader'
 import { useSnackbar } from '../../hooks/useSnackbar'
@@ -43,6 +45,8 @@ interface SettingsData {
   reminder_days_before_document_expiry: number
   reminder_days_before_recurring_expense: number
   require_auth: number
+  default_country: string | null
+  max_backup_count: number
 }
 
 const CURRENCIES = ['JOD', 'TRY', 'QAR', 'USD', 'EUR', 'SAR']
@@ -61,19 +65,33 @@ export default function Settings(): React.JSX.Element {
   const isRtl = i18n.language === 'ar'
   const { snack, showSuccess, showError, hideSnackbar } = useSnackbar()
   const [settings, setSettings] = useState<SettingsData | null>(null)
+  const [countryDialogOpen, setCountryDialogOpen] = useState(false)
+  const [allCountries, setAllCountries] = useState<
+    { code: string; name: string; is_active: number }[]
+  >([])
   const refreshPrefs = useUiPreferences((s) => s.refresh)
+
+  const fetchAllCountries = useCallback(async (): Promise<void> => {
+    try {
+      const data = await window.api.countries.listAll()
+      setAllCountries(data)
+    } catch {
+      // Silent
+    }
+  }, [])
 
   useEffect(() => {
     async function loadSettings(): Promise<void> {
       try {
         const data = (await window.api.settings.get()) as SettingsData
         setSettings(data)
+        fetchAllCountries()
       } catch {
         showError('common.error')
       }
     }
     loadSettings()
-  }, [t, showError])
+  }, [t, showError, fetchAllCountries])
 
   const updateField = async (field: string, value: string | number): Promise<void> => {
     try {
@@ -279,6 +297,7 @@ export default function Settings(): React.JSX.Element {
                 onChange={(e) => updateField('reminder_days_before_due', Number(e.target.value))}
                 slotProps={{
                   htmlInput: {
+                    dir: 'ltr',
                     min: 0,
                     max: 90,
                     sx: SPINNER_LESS
@@ -297,6 +316,7 @@ export default function Settings(): React.JSX.Element {
                 }
                 slotProps={{
                   htmlInput: {
+                    dir: 'ltr',
                     min: 0,
                     max: 365,
                     sx: SPINNER_LESS
@@ -315,6 +335,7 @@ export default function Settings(): React.JSX.Element {
                 }
                 slotProps={{
                   htmlInput: {
+                    dir: 'ltr',
                     min: 0,
                     max: 365,
                     sx: SPINNER_LESS
@@ -333,12 +354,38 @@ export default function Settings(): React.JSX.Element {
                 }
                 slotProps={{
                   htmlInput: {
+                    dir: 'ltr',
                     min: 0,
                     max: 30,
                     sx: SPINNER_LESS
                   }
                 }}
               />
+            </CardContent>
+          </Card>
+        </Grid>
+
+        {/* Country Management */}
+        <Grid size={{ xs: 12, md: 6 }}>
+          <Card>
+            <CardContent sx={{ p: 3 }}>
+              <Typography variant="h5" sx={{ mb: 2.5 }}>
+                {t('settings.countryManagement')}
+              </Typography>
+
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                {t('settings.defaultCountry')}
+              </Typography>
+              <Typography variant="body1" sx={{ mb: 2, fontWeight: 600 }}>
+                {settings.default_country
+                  ? (allCountries.find((c) => c.code === settings.default_country)?.name ??
+                    settings.default_country)
+                  : t('common.none')}
+              </Typography>
+
+              <Button variant="outlined" onClick={() => setCountryDialogOpen(true)}>
+                {t('settings.manageCountries')}
+              </Button>
             </CardContent>
           </Card>
         </Grid>
@@ -358,11 +405,45 @@ export default function Settings(): React.JSX.Element {
                 onChange={(e) => updateField('backup_path', e.target.value)}
                 placeholder={t('settings.backupPathPlaceholder')}
                 helperText={t('settings.backupPathHelp')}
+                sx={{ mb: 2.5 }}
+              />
+
+              <TextField
+                fullWidth
+                type="text"
+                inputMode="decimal"
+                label={t('settings.maxBackupCount')}
+                value={settings.max_backup_count ?? 10}
+                onChange={(e) => updateField('max_backup_count', Number(e.target.value))}
+                helperText={t('settings.maxBackupCountHelp')}
+                slotProps={{
+                  htmlInput: {
+                    dir: 'ltr',
+                    min: 1,
+                    max: 100,
+                    sx: {
+                      '&::-webkit-outer-spin-button, &::-webkit-inner-spin-button': {
+                        WebkitAppearance: 'none',
+                        margin: 0
+                      },
+                      MozAppearance: 'textfield'
+                    }
+                  }
+                }}
               />
             </CardContent>
           </Card>
         </Grid>
       </Grid>
+
+      <CountryManagerDialog
+        open={countryDialogOpen}
+        onClose={() => setCountryDialogOpen(false)}
+        onChange={() => {
+          fetchAllCountries()
+          window.api.settings.get().then((data) => setSettings(data as SettingsData))
+        }}
+      />
 
       <GlobalSnackbar state={snack} onClose={hideSnackbar} />
     </Box>

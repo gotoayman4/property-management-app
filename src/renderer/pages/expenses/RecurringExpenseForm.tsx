@@ -323,7 +323,7 @@ export function RecurringExpenseForm({
                   label={t('recurringExpense.dayOfMonth')}
                   type="number"
                   fullWidth
-                  slotProps={{ htmlInput: { min: 1, max: 28 } }}
+                  slotProps={{ htmlInput: { dir: 'ltr', min: 1, max: 28 } }}
                   error={!!errors.day_of_month}
                   helperText={errors.day_of_month ? t('recurringExpense.dayOfMonthInvalid') : ''}
                 />

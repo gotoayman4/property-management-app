@@ -102,6 +102,9 @@ export function ContractForm({
   const isRtl = i18n.language === 'ar'
   const { snack, showError, showSuccess, hideSnackbar } = useSnackbar()
   const isEdit = !!contract
+  const [createdEntity, setCreatedEntity] = useState<{ id: number } | null>(null)
+  const effectiveIsEdit = isEdit || !!createdEntity
+  const currentEntityId = contract?.id ?? createdEntity?.id ?? null
   const [activeTab, setActiveTab] = useState(0)
 
   const [properties, setProperties] = useState<Property[]>([])
@@ -235,8 +238,13 @@ export function ContractForm({
           }))
         })
       }
-      showSuccess('common.saveSuccess')
-      onSuccess()
+      if (isEdit && contract) {
+        showSuccess('common.saveSuccess')
+        onSuccess()
+      } else {
+        setCreatedEntity({ id: newId })
+        showSuccess('common.saveSuccess')
+      }
     } catch (err: unknown) {
       console.error(err)
       const msg = err instanceof Error ? err.message : ''
@@ -259,7 +267,7 @@ export function ContractForm({
 
   return (
     <>
-      {isEdit && (
+      {effectiveIsEdit && (
         <Tabs value={activeTab} onChange={(_, v) => setActiveTab(v)} sx={{ mb: 1 }}>
           <Tab label={t('common.details')} />
           <Tab label={t('contractDetail.documents')} />
@@ -449,16 +457,29 @@ export function ContractForm({
             flexDirection: isRtl ? 'row-reverse' : 'row'
           }}
         >
-          <Button variant="outlined" onClick={onCancel} disabled={isSubmitting}>
-            {t('common.cancel')}
-          </Button>
-          <Button type="submit" variant="contained" disabled={isSubmitting}>
-            {t('common.save')}
-          </Button>
+          {createdEntity ? (
+            <>
+              <Button variant="outlined" onClick={onCancel} disabled={isSubmitting}>
+                {t('common.cancel')}
+              </Button>
+              <Button variant="contained" onClick={onSuccess} disabled={isSubmitting}>
+                {t('common.close')}
+              </Button>
+            </>
+          ) : (
+            <>
+              <Button variant="outlined" onClick={onCancel} disabled={isSubmitting}>
+                {t('common.cancel')}
+              </Button>
+              <Button type="submit" variant="contained" disabled={isSubmitting}>
+                {t('common.save')}
+              </Button>
+            </>
+          )}
         </Box>
       </Box>
-      {isEdit && activeTab === 1 && contract && (
-        <EntityDocumentsTab entityType="contract" entityId={contract.id} />
+      {effectiveIsEdit && activeTab === 1 && currentEntityId !== null && (
+        <EntityDocumentsTab entityType="contract" entityId={currentEntityId} />
       )}
       <GlobalSnackbar state={snack} onClose={hideSnackbar} />
     </>

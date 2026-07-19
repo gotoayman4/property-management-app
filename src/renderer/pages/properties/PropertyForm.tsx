@@ -1,5 +1,6 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import {
+  Box,
   Grid,
   TextField,
   MenuItem,
@@ -16,11 +17,13 @@ import { useForm, Controller } from 'react-hook-form'
 import { useTranslation } from 'react-i18next'
 import { z } from 'zod'
 import { AmountField } from '../../components/AmountField'
+import CountryManagerDialog from '../../components/CountryManagerDialog'
 import EntityDocumentsTab from '../../components/EntityDocumentsTab'
 import { FormField } from '../../components/FormField'
 import GlobalSnackbar from '../../components/GlobalSnackbar'
 import StandardDialog from '../../components/StandardDialog'
 import { useSnackbar } from '../../hooks/useSnackbar'
+import { getLocalizedCountryName } from '../../utils/countryUtils'
 
 interface Property {
   id: number
@@ -68,6 +71,7 @@ interface PropertyFormProps {
   onSuccess: () => void
   property?: Property | null
   countries: Country[]
+  onCountriesUpdated?: () => void
 }
 
 export default function PropertyForm({
@@ -75,12 +79,17 @@ export default function PropertyForm({
   onClose,
   onSuccess,
   property = null,
-  countries
+  countries,
+  onCountriesUpdated
 }: PropertyFormProps): React.JSX.Element {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
   const { snack, showError, showSuccess, hideSnackbar } = useSnackbar()
   const isEdit = !!property
+  const [createdEntity, setCreatedEntity] = useState<Property | null>(null)
+  const effectiveIsEdit = isEdit || !!createdEntity
+  const currentEntity = property || createdEntity
   const [activeTab, setActiveTab] = useState(0)
+  const [countryDialogOpen, setCountryDialogOpen] = useState(false)
 
   const {
     control,
@@ -109,6 +118,18 @@ export default function PropertyForm({
   const selectedCountry = watch('country')
   const selectedType = watch('type')
 
+  // Auto-select default country from settings when adding a new property
+  useEffect(() => {
+    if (!isEdit && !selectedCountry) {
+      window.api.settings.get().then((data) => {
+        const defaultCountry = (data as { default_country: string | null }).default_country
+        if (defaultCountry) {
+          setValue('country', defaultCountry)
+        }
+      })
+    }
+  }, [isEdit, selectedCountry, setValue])
+
   useEffect(() => {
     if (selectedCountry && !isEdit) {
       const match = countries.find((c) => c.code === selectedCountry)
@@ -136,11 +157,13 @@ export default function PropertyForm({
     try {
       if (isEdit) {
         await window.api.properties.update({ id: property.id, ...data })
+        showSuccess('common.saveSuccess')
+        onSuccess()
       } else {
-        await window.api.properties.create(data)
+        const result = (await window.api.properties.create(data)) as Property
+        setCreatedEntity(result)
+        showSuccess('common.saveSuccess')
       }
-      showSuccess('common.saveSuccess')
-      onSuccess()
     } catch (err: unknown) {
       console.error(err)
       const errorMessage = err instanceof Error ? err.message : ''
@@ -152,7 +175,16 @@ export default function PropertyForm({
     }
   }
 
-  const actions = (
+  const actions = createdEntity ? (
+    <>
+      <Button onClick={onClose} disabled={isSubmitting}>
+        {t('common.cancel')}
+      </Button>
+      <Button variant="contained" color="primary" onClick={onSuccess} disabled={isSubmitting}>
+        {t('common.close')}
+      </Button>
+    </>
+  ) : (
     <>
       <Button onClick={onClose} disabled={isSubmitting}>
         {t('common.cancel')}
@@ -179,7 +211,7 @@ export default function PropertyForm({
         isDirty={isDirty}
         maxWidth="md"
       >
-        {isEdit && (
+        {effectiveIsEdit && (
           <Tabs value={activeTab} onChange={(_, v) => setActiveTab(v)} sx={{ mb: 1 }}>
             <Tab label={t('common.details')} />
             <Tab label={t('propertyDetail.documents')} />
@@ -248,25 +280,35 @@ export default function PropertyForm({
               </FormControl>
             </Grid>
             <Grid size={{ xs: 12, sm: 6 }}>
-              <FormControl fullWidth size="small" error={!!errors.country}>
-                <InputLabel>{t('property.country')}</InputLabel>
-                <Controller
-                  name="country"
-                  control={control}
-                  render={({ field }) => (
-                    <Select {...field} label={t('property.country')}>
-                      {countries.map((c) => (
-                        <MenuItem key={c.code} value={c.code}>
-                          {t(`countries.${c.code}`, c.code)}
-                        </MenuItem>
-                      ))}
-                    </Select>
+              <Box sx={{ display: 'flex', gap: 1, alignItems: 'flex-start' }}>
+                <FormControl fullWidth size="small" error={!!errors.country}>
+                  <InputLabel>{t('property.country')}</InputLabel>
+                  <Controller
+                    name="country"
+                    control={control}
+                    render={({ field }) => (
+                      <Select {...field} label={t('property.country')}>
+                        {countries.map((c) => (
+                          <MenuItem key={c.code} value={c.code}>
+                            {getLocalizedCountryName(c.code, i18n.language, c.name)}
+                          </MenuItem>
+                        ))}
+                      </Select>
+                    )}
+                  />
+                  {errors.country && (
+                    <FormHelperText>{t(`property.${errors.country.message}`)}</FormHelperText>
                   )}
-                />
-                {errors.country && (
-                  <FormHelperText>{t(`property.${errors.country.message}`)}</FormHelperText>
-                )}
-              </FormControl>
+                </FormControl>
+                <Button
+                  size="small"
+                  variant="outlined"
+                  sx={{ mt: 0.5, whiteSpace: 'nowrap', minWidth: 'auto' }}
+                  onClick={() => setCountryDialogOpen(true)}
+                >
+                  {t('property.manageCountries')}
+                </Button>
+              </Box>
             </Grid>
             <Grid size={{ xs: 12, sm: 6 }}>
               <FormField
@@ -339,10 +381,16 @@ export default function PropertyForm({
             </Grid>
           </Grid>
         </form>
-        {isEdit && activeTab === 1 && property && (
-          <EntityDocumentsTab entityType="property" entityId={property.id} />
+        {effectiveIsEdit && activeTab === 1 && currentEntity && (
+          <EntityDocumentsTab entityType="property" entityId={currentEntity.id} />
         )}
       </StandardDialog>
+      <CountryManagerDialog
+        open={countryDialogOpen}
+        onClose={() => setCountryDialogOpen(false)}
+        onChange={onCountriesUpdated}
+      />
+
       <GlobalSnackbar state={snack} onClose={hideSnackbar} />
     </>
   )

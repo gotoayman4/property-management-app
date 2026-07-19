@@ -2,8 +2,9 @@ import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import { app, shell, BrowserWindow, session } from 'electron'
 import icon from '../../resources/icon.png?asset'
-import { initDatabase } from './db/database'
+import { db, initDatabase } from './db/database'
 import { registerAuthIpcHandlers } from './ipc/authIpc'
+import { registerBackupIpcHandlers } from './ipc/backupIpc'
 import { registerContractIpcHandlers } from './ipc/contractIpc'
 import { registerDashboardIpcHandlers } from './ipc/dashboardIpc'
 import { registerDocumentIpcHandlers } from './ipc/documentIpc'
@@ -20,6 +21,7 @@ import {
 import { registerReportsIpcHandlers } from './ipc/reportsIpc'
 import { registerSearchIpcHandlers } from './ipc/searchIpc'
 import { registerTenantIpcHandlers } from './ipc/tenantIpc'
+import { createBackup, pruneOldBackups } from './services/backupService'
 
 function createWindow(): void {
   // Create the browser window.
@@ -78,6 +80,9 @@ app.whenReady().then(() => {
   // Reports & Export (SRS §5.7/§5.8): 5 core reports → Excel + interactive HTML.
   registerReportsIpcHandlers()
 
+  // Backup & Restore (SRS Module 11): manual + automatic backup, restore, verify
+  registerBackupIpcHandlers()
+
   // Evaluate notifications on startup — check for rent due, contract expiry, etc.
   evaluateNotifications()
 
@@ -95,6 +100,32 @@ app.whenReady().then(() => {
   })
 
   createWindow()
+
+  // FR-BAK-02 / BR-12: prune old backups on startup using the stored retention limit.
+  try {
+    const settings = db
+      .prepare('SELECT max_backup_count, backup_path FROM settings WHERE id = 1')
+      .get() as { max_backup_count: number; backup_path: string | null } | undefined
+    if (settings) {
+      pruneOldBackups(db, settings.max_backup_count ?? 10)
+    }
+  } catch {
+    /* best-effort */
+  }
+
+  // FR-BAK-02: auto-backup on quit (before-quit is cancellable; this runs before close begins).
+  app.on('before-quit', () => {
+    try {
+      const settings = db.prepare('SELECT backup_path FROM settings WHERE id = 1').get() as
+        { backup_path: string | null } | undefined
+      const backupDir = settings?.backup_path?.trim()
+        ? settings.backup_path.trim()
+        : join(app.getPath('documents'), 'PropertyManager', 'Backups')
+      createBackup(db, backupDir, 'automatic')
+    } catch {
+      /* best-effort — don't block quit */
+    }
+  })
 
   // NFR-SEC-03: Security headers — CSP for the renderer process.
   // CONSTRAINT: offline-only app; no external scripts, styles, or connections allowed.
