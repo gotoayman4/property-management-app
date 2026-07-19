@@ -1,12 +1,10 @@
 /**
- * INTENT: Display full contract details across tabs: data, escalation schedule, audit history,
- *         and attached documents. The backend data comes from contracts:getDetail which returns
- *         { contract, schedule, history }.
- * CONSTRAINT: Uses PageHeader, StandardTable, and explicit dir props on dialogs (portal RTL).
- * DECISION: Tab loading is lazy — data fetched only when the tab is first activated.
+ * INTENT: Full contract detail view — tabs for Data, Escalation Schedule, History, and Documents.
+ *         Data fetched from contracts:getDetail. Explicit dir props on dialogs (portal RTL).
  */
 import {
   ArrowBack as BackIcon,
+  Autorenew as RenewIcon,
   Delete as DeleteIcon,
   Description as ContractIcon,
   ExpandMore as ExpandMoreIcon
@@ -22,7 +20,6 @@ import {
   Typography,
   Card,
   CardContent,
-  Grid,
   Collapse
 } from '@mui/material'
 import { GridColDef } from '@mui/x-data-grid'
@@ -31,10 +28,13 @@ import { useTranslation } from 'react-i18next'
 import { useNavigate, useParams } from 'react-router-dom'
 import DocumentUploadForm from '../../components/DocumentUploadForm'
 import GlobalSnackbar from '../../components/GlobalSnackbar'
+import StandardDialog from '../../components/StandardDialog'
 import StandardTable from '../../components/StandardTable'
 import { useSnackbar } from '../../hooks/useSnackbar'
+import { ContractDataTab } from './ContractDataTab'
+import { ContractRenewalForm } from './ContractRenewalForm'
 
-interface ContractData {
+export interface ContractData {
   id: number
   contract_number: string
   property_id: number
@@ -91,6 +91,7 @@ const STATUS_COLORS: Record<string, 'success' | 'warning' | 'error' | 'default'>
   active: 'success',
   draft: 'warning',
   expired: 'error',
+  cancelled: 'error',
   terminated: 'default'
 }
 
@@ -109,6 +110,7 @@ export default function ContractDetail(): React.ReactElement {
   const [showUploadForm, setShowUploadForm] = useState<boolean>(false)
   const [loading, setLoading] = useState<boolean>(true)
   const [error, setError] = useState<string | null>(null)
+  const [renewalOpen, setRenewalOpen] = useState<boolean>(false)
 
   const fetchDetail = useCallback(async (): Promise<void> => {
     if (!id) return
@@ -266,132 +268,6 @@ export default function ContractDetail(): React.ReactElement {
     }
   ]
 
-  const renderDataTab = (): React.JSX.Element => (
-    <Card elevation={1} sx={{ borderRadius: 3 }}>
-      <CardContent>
-        <Grid container spacing={3}>
-          <Grid size={{ xs: 12, sm: 6 }}>
-            <Typography variant="caption" color="text.secondary">
-              {t('contract.contractNumber')}
-            </Typography>
-            <Typography variant="body1" sx={{ fontWeight: 600 }}>
-              {contract.contract_number}
-            </Typography>
-          </Grid>
-          <Grid size={{ xs: 12, sm: 6 }}>
-            <Typography variant="caption" color="text.secondary">
-              {t('common.status')}
-            </Typography>
-            <Box sx={{ mt: 0.5 }}>
-              <Chip
-                label={t(`contract.${contract.status}`)}
-                color={STATUS_COLORS[contract.status] ?? 'default'}
-                size="small"
-              />
-            </Box>
-          </Grid>
-          <Grid size={{ xs: 12, sm: 6 }}>
-            <Typography variant="caption" color="text.secondary">
-              {t('common.property')}
-            </Typography>
-            <Typography variant="body1">
-              {contract.property_name} ({contract.property_code})
-            </Typography>
-          </Grid>
-          <Grid size={{ xs: 12, sm: 6 }}>
-            <Typography variant="caption" color="text.secondary">
-              {t('common.tenant')}
-            </Typography>
-            <Typography variant="body1">{contract.tenant_fullname}</Typography>
-          </Grid>
-          <Grid size={{ xs: 12, sm: 6 }}>
-            <Typography variant="caption" color="text.secondary">
-              {t('contract.startDate')}
-            </Typography>
-            <Typography variant="body1">{contract.start_date}</Typography>
-          </Grid>
-          <Grid size={{ xs: 12, sm: 6 }}>
-            <Typography variant="caption" color="text.secondary">
-              {t('contract.endDate')}
-            </Typography>
-            <Typography variant="body1">{contract.end_date}</Typography>
-          </Grid>
-          <Grid size={{ xs: 12, sm: 6 }}>
-            <Typography variant="caption" color="text.secondary">
-              {t('contract.rentAmount')}
-            </Typography>
-            <Typography variant="body1" sx={{ fontWeight: 600 }}>
-              {contract.rent_amount.toLocaleString()} {contract.currency}
-            </Typography>
-          </Grid>
-          <Grid size={{ xs: 12, sm: 6 }}>
-            <Typography variant="caption" color="text.secondary">
-              {t('contract.securityDeposit')}
-            </Typography>
-            <Typography variant="body1">
-              {contract.security_deposit != null
-                ? `${contract.security_deposit.toLocaleString()} ${contract.currency}`
-                : '—'}
-            </Typography>
-          </Grid>
-          <Grid size={{ xs: 12, sm: 6 }}>
-            <Typography variant="caption" color="text.secondary">
-              {t('contract.frequency')}
-            </Typography>
-            <Typography variant="body1">{t(`contract.${contract.payment_frequency}`)}</Typography>
-          </Grid>
-          <Grid size={{ xs: 12, sm: 6 }}>
-            <Typography variant="caption" color="text.secondary">
-              {t('payment.paymentMethod')}
-            </Typography>
-            <Typography variant="body1">
-              {contract.payment_method
-                ? t(
-                    `payment.method${contract.payment_method.charAt(0).toUpperCase() + contract.payment_method.slice(1)}`
-                  )
-                : '—'}
-            </Typography>
-          </Grid>
-          {contract.has_variable_escalation ? (
-            <Grid size={{ xs: 12, sm: 6 }}>
-              <Typography variant="caption" color="text.secondary">
-                {t('contract.increaseMode')}
-              </Typography>
-              <Typography variant="body1">
-                {t('contract.variableMode')} ({contract.contract_term_years} {t('contract.year')})
-              </Typography>
-            </Grid>
-          ) : contract.annual_increase_percent != null ? (
-            <Grid size={{ xs: 12, sm: 6 }}>
-              <Typography variant="caption" color="text.secondary">
-                {t('contract.annualIncreasePercent')}
-              </Typography>
-              <Typography variant="body1">{contract.annual_increase_percent}%</Typography>
-            </Grid>
-          ) : null}
-          {contract.notes && (
-            <Grid size={{ xs: 12 }}>
-              <Typography variant="caption" color="text.secondary">
-                {t('contract.notes')}
-              </Typography>
-              <Typography variant="body1">{contract.notes}</Typography>
-            </Grid>
-          )}
-          {contract.cancellation_reason && (
-            <Grid size={{ xs: 12 }}>
-              <Typography variant="caption" color="text.secondary">
-                {t('contract.cancellationReason')}
-              </Typography>
-              <Typography variant="body1" color="error">
-                {contract.cancellation_reason}
-              </Typography>
-            </Grid>
-          )}
-        </Grid>
-      </CardContent>
-    </Card>
-  )
-
   return (
     <Box sx={{ py: 3, px: 4 }}>
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 3 }}>
@@ -407,6 +283,17 @@ export default function ContractDetail(): React.ReactElement {
             {contract.property_name} — {contract.tenant_fullname}
           </Typography>
         </Box>
+        {(contract.status === 'active' || contract.status === 'expired') && (
+          <Button
+            variant="contained"
+            color="primary"
+            startIcon={<RenewIcon />}
+            onClick={() => setRenewalOpen(true)}
+            sx={{ marginInlineStart: 2 }}
+          >
+            {t('contract.renew')}
+          </Button>
+        )}
         <Chip
           label={t(`contract.${contract.status}`)}
           color={STATUS_COLORS[contract.status] ?? 'default'}
@@ -414,7 +301,6 @@ export default function ContractDetail(): React.ReactElement {
           sx={{ marginInlineStart: 'auto' }}
         />
       </Box>
-
       <Tabs value={tab} onChange={(_, v) => setTab(v)} sx={{ mb: 3 }}>
         <Tab label={t('contract.detailTabData')} />
         <Tab label={t('contract.detailTabSchedule')} />
@@ -422,8 +308,7 @@ export default function ContractDetail(): React.ReactElement {
         <Tab label={`${t('contract.detailTabDocuments')} (${documents.length})`} />
       </Tabs>
 
-      {tab === 0 && renderDataTab()}
-
+      {tab === 0 && <ContractDataTab contract={contract} />}
       {tab === 1 && (
         <StandardTable
           columns={scheduleColumns}
@@ -432,7 +317,6 @@ export default function ContractDetail(): React.ReactElement {
           emptyMessage={t('contract.detailNoSchedule')}
         />
       )}
-
       {tab === 2 && (
         <StandardTable
           columns={historyColumns}
@@ -441,7 +325,6 @@ export default function ContractDetail(): React.ReactElement {
           emptyMessage={t('contract.detailNoHistory')}
         />
       )}
-
       {tab === 3 && (
         <StandardTable
           columns={docColumns}
@@ -481,6 +364,27 @@ export default function ContractDetail(): React.ReactElement {
             </Card>
           </Collapse>
         </Box>
+      )}
+
+      {/* Renewal dialog — contract + schedule come from the already-fetched detail data */}
+      {renewalOpen && contract && (
+        <StandardDialog
+          open
+          onClose={() => setRenewalOpen(false)}
+          title={t('contract.renewTitle')}
+          maxWidth="lg"
+        >
+          <ContractRenewalForm
+            sourceContract={contract}
+            sourceSchedule={schedule}
+            onSuccess={() => {
+              setRenewalOpen(false)
+              fetchDetail()
+              showSuccess('contract.renewSuccess')
+            }}
+            onCancel={() => setRenewalOpen(false)}
+          />
+        </StandardDialog>
       )}
 
       <GlobalSnackbar state={snack} onClose={hideSnackbar} />

@@ -42,7 +42,7 @@ const contractSchema = z
     currency: z.string().min(3).max(3),
     payment_frequency: z.enum(['monthly', 'quarterly', 'semi-annual', 'annual']).default('monthly'),
     security_deposit: z.number().nonnegative().default(0.0),
-    status: z.enum(['draft', 'active', 'expired', 'terminated']).default('draft'),
+    status: z.enum(['draft', 'active', 'expired', 'renewing', 'cancelled']).default('draft'),
     annual_increase_percent: z.number().min(0).max(100).optional().nullable(),
     payment_method: z.string().optional().nullable(),
     notes: z.string().optional().nullable()
@@ -81,7 +81,7 @@ interface Contract {
   currency: string
   payment_frequency: 'monthly' | 'quarterly' | 'semi-annual' | 'annual'
   security_deposit: number
-  status: 'draft' | 'active' | 'expired' | 'terminated'
+  status: 'draft' | 'active' | 'expired' | 'renewing' | 'cancelled'
   notes?: string
 }
 
@@ -301,7 +301,7 @@ export function ContractForm({
                     <MenuItem value="draft">{t('contract.draft')}</MenuItem>
                     <MenuItem value="active">{t('contract.active')}</MenuItem>
                     <MenuItem value="expired">{t('contract.expired')}</MenuItem>
-                    <MenuItem value="terminated">{t('contract.terminated')}</MenuItem>
+                    <MenuItem value="cancelled">{t('contract.cancelled')}</MenuItem>
                   </Select>
                 )}
               />

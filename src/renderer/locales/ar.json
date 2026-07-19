@@ -261,6 +261,8 @@
     "active": "نشط",
     "expired": "منتهي",
     "terminated": "مفسوخ",
+    "cancelled": "ملغي",
+    "renewing": "قيد التجديد",
     "monthly": "شهري",
     "quarterly": "ربع سنوي",
     "semiAnnual": "نصف سنوي",
@@ -298,7 +300,17 @@
     "historyDate": "التاريخ",
     "historyNote": "ملاحظة",
     "historyPrevious": "القيم السابقة",
-    "yearNumber": "السنة رقم"
+    "yearNumber": "السنة رقم",
+    "renew": "تجديد",
+    "renewTitle": "تجديد العقد",
+    "renewSourceInfo": "تجديد العقد {{number}} — {{property}} / {{tenant}}",
+    "renewPriorTerm": "المدة السابقة: {{start}} → {{end}}",
+    "renewalStartDate": "تاريخ بدء التجديد",
+    "renewalNewEndDate": "تاريخ الانتهاء الجديد",
+    "renewalNewRent": "قيمة الإيجار الجديدة",
+    "renewSuccess": "تم تجديد العقد بنجاح. تم حفظ الحالة السابقة في سجل التاريخ.",
+    "notEligibleForRenewal": "يمكن تجديد العقود النشطة أو المنتهية فقط.",
+    "renewalEndBeforeStart": "تاريخ الانتهاء الجديد يجب أن يكون بعد تاريخ بدء التجديد."
   },
   "payment": {
     "title": "المدفوعات والإيرادات",

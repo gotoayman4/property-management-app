@@ -24,11 +24,43 @@ const contractCreateSchema = z.object({
   currency: z.string().min(3).max(3),
   payment_frequency: z.enum(['monthly', 'quarterly', 'semi-annual', 'annual']).default('monthly'),
   security_deposit: z.number().nonnegative().default(0.0),
-  status: z.enum(['draft', 'active', 'expired', 'terminated']).default('draft'),
+  // INTENT: align with the migration 014 enum (active/expired/renewing/cancelled + draft superset).
+  //         'terminated' was removed by migration 014 (rows migrated to 'cancelled').
+  status: z.enum(['draft', 'active', 'expired', 'renewing', 'cancelled']).default('draft'),
   contract_term_years: z.number().int().min(1).max(20).default(1),
   has_variable_escalation: z.number().int().min(0).max(1).default(0),
   annual_increase_percent: z.number().min(0).max(100).optional().nullable(),
   payment_method: z.string().optional().nullable(),
+  notes: z.string().optional().nullable()
+})
+
+/**
+ * INTENT: Validate the payload for contracts:renew (FR-CON-04/13).
+ * CONSTRAINT: property/tenant/contract_number are NOT editable in renewal (D5); the schedule
+ *             is required when has_variable_escalation = 1 and rejected otherwise.
+ * CAVEAT: new_start_date becomes the contract's new start_date (D2); the original inception
+ *         date is preserved in the earliest contract_history row.
+ */
+const contractRenewSchema = z.object({
+  contract_id: z.number().int().positive(),
+  new_start_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  new_end_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  rent_amount: z.number().positive(),
+  security_deposit: z.number().nonnegative().default(0.0),
+  has_variable_escalation: z.number().int().min(0).max(1),
+  contract_term_years: z.number().int().min(1).max(20),
+  annual_increase_percent: z.number().min(0).max(100).optional().nullable(),
+  schedule: z
+    .array(
+      z.object({
+        year_number: z.number().int().positive(),
+        effective_start_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+        rent_amount: z.number().positive(),
+        increase_percent_applied: z.number().min(0).max(100).optional().nullable(),
+        notes: z.string().optional().nullable()
+      })
+    )
+    .optional(),
   notes: z.string().optional().nullable()
 })
 
@@ -308,8 +340,10 @@ export function registerContractIpcHandlers(): void {
       if (!old) throw new Error('CONTRACT_NOT_FOUND')
 
       db.transaction(() => {
+        // INTENT: migration 014 replaced 'terminated' with 'cancelled' in the enum; the
+        //         previous 'terminated' write here would violate the CHECK constraint.
         db.prepare(
-          `UPDATE contracts SET status = 'terminated', cancellation_reason = ?,
+          `UPDATE contracts SET status = 'cancelled', cancellation_reason = ?,
              updated_at = CURRENT_TIMESTAMP WHERE id = ?`
         ).run(reason ?? null, id)
         logHistory(id, 'cancelled', old, reason ?? undefined)
@@ -319,6 +353,97 @@ export function registerContractIpcHandlers(): void {
     } catch (error) {
       console.error('Error terminating contract:', error)
       throw new Error('FAILED_TO_TERMINATE_CONTRACT')
+    }
+  })
+
+  /**
+   * INTENT: Renew an existing contract in place (FR-CON-04, FR-CON-13; SRS §11.3 / §11.3b).
+   * CONSTRAINT: One atomic transaction — contract UPDATE + schedule replacement + history
+   *             snapshot + property status sync all succeed together or all roll back.
+   * DECISION: Renewal updates start_date to the renewal date so the escalation validator's
+   *           BR-17 ("year-1 date must equal contract start") holds without modification.
+   *           The full prior state (contract row + schedule) is snapshotted into
+   *           contract_history.previous_values_json with action_type='renewed' (BR-07).
+   * CAVEAT: Eligibility is status IN ('active','expired'). 'draft' / 'cancelled' / 'renewing'
+   *         cannot be renewed (D4).
+   */
+  ipcMain.handle('contracts:renew', async (_, data: unknown) => {
+    try {
+      const v = contractRenewSchema.parse(data)
+
+      if (new Date(v.new_end_date) <= new Date(v.new_start_date)) {
+        throw new Error('RENEWAL_END_BEFORE_START')
+      }
+
+      const old = db
+        .prepare('SELECT * FROM contracts WHERE id = ? AND is_archived = 0')
+        .get(v.contract_id) as Record<string, unknown> | undefined
+      if (!old) throw new Error('CONTRACT_NOT_FOUND')
+
+      if (old.status !== 'active' && old.status !== 'expired') {
+        throw new Error('CONTRACT_NOT_RENEWABLE')
+      }
+
+      // Variable escalation: validate the schedule against BR-17 using the NEW start date.
+      if (v.has_variable_escalation === 1) {
+        if (!v.schedule || v.schedule.length < 2) {
+          throw new Error('SCHEDULE_TOO_SHORT')
+        }
+        validateEscalationSchedule(v.new_start_date, v.schedule as EscalationYearInput[])
+      }
+
+      const priorSchedule = db
+        .prepare(
+          'SELECT * FROM rent_escalation_schedule WHERE contract_id = ? ORDER BY year_number'
+        )
+        .all(v.contract_id) as unknown[]
+
+      db.transaction(() => {
+        db.prepare(
+          `UPDATE contracts SET
+             start_date = @new_start_date, end_date = @new_end_date,
+             rent_amount = @rent_amount, security_deposit = @security_deposit,
+             has_variable_escalation = @has_variable_escalation,
+             contract_term_years = @contract_term_years,
+             annual_increase_percent = @annual_increase_percent,
+             status = 'active', cancellation_reason = NULL,
+             notes = @notes, updated_at = CURRENT_TIMESTAMP
+           WHERE id = @contract_id`
+        ).run({
+          contract_id: v.contract_id,
+          new_start_date: v.new_start_date,
+          new_end_date: v.new_end_date,
+          rent_amount: v.rent_amount,
+          security_deposit: v.security_deposit,
+          has_variable_escalation: v.has_variable_escalation,
+          contract_term_years: v.contract_term_years,
+          annual_increase_percent: v.annual_increase_percent ?? null,
+          notes: v.notes ?? null
+        })
+
+        if (v.has_variable_escalation === 1 && v.schedule) {
+          persistSchedule(db, v.contract_id, v.schedule as EscalationYearInput[])
+        } else if (priorSchedule.length > 0) {
+          // Clear stale schedule when renewing into flat mode (or staying flat with a prior variable history).
+          db.prepare('DELETE FROM rent_escalation_schedule WHERE contract_id = ?').run(
+            v.contract_id
+          )
+        }
+
+        logHistory(
+          v.contract_id,
+          'renewed',
+          { contract: old, schedule: priorSchedule },
+          `renewed: ${v.new_start_date} → ${v.new_end_date}`
+        )
+        syncPropertyStatus(old.property_id as number)
+      })()
+      return { success: true, id: v.contract_id }
+    } catch (error: unknown) {
+      console.error('Error renewing contract:', error)
+      if (error instanceof EscalationValidationError) throw new Error(error.message)
+      if (error instanceof z.ZodError) throw new Error('INVALID_INPUT')
+      throw error
     }
   })
 

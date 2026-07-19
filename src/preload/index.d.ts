@@ -75,6 +75,24 @@ declare global {
         create: (data: unknown) => Promise<unknown>
         update: (data: unknown) => Promise<unknown>
         setEscalation: (data: unknown) => Promise<{ success: boolean; yearCount: number }>
+        renew: (data: {
+          contract_id: number
+          new_start_date: string
+          new_end_date: string
+          rent_amount: number
+          security_deposit?: number
+          has_variable_escalation: number
+          contract_term_years: number
+          annual_increase_percent?: number | null
+          schedule?: Array<{
+            year_number: number
+            effective_start_date: string
+            rent_amount: number
+            increase_percent_applied?: number | null
+            notes?: string | null
+          }>
+          notes?: string | null
+        }) => Promise<{ success: boolean; id: number }>
         terminate: (payload: { id: number; reason?: string }) => Promise<{ success: boolean }>
         delete: (id: number) => Promise<{ success: boolean }>
       }

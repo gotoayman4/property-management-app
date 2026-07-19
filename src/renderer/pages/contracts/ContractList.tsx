@@ -1,5 +1,6 @@
 import {
   Add as AddIcon,
+  Autorenew as RenewIcon,
   Block as BlockIcon,
   Delete as DeleteIcon,
   Description as DescriptionIcon,
@@ -17,6 +18,11 @@ import StandardDialog from '../../components/StandardDialog'
 import StandardTable from '../../components/StandardTable'
 import { useSnackbar } from '../../hooks/useSnackbar'
 import { ContractForm } from './ContractForm'
+import {
+  ContractRenewalForm,
+  type RenewalSourceContract,
+  type RenewalSourceScheduleRow
+} from './ContractRenewalForm'
 
 interface Contract {
   id: number
@@ -33,7 +39,7 @@ interface Contract {
   currency: string
   payment_frequency: 'monthly' | 'quarterly' | 'semi-annual' | 'annual'
   security_deposit: number
-  status: 'draft' | 'active' | 'expired' | 'terminated'
+  status: 'draft' | 'active' | 'expired' | 'renewing' | 'cancelled'
   contract_term_years: number
   has_variable_escalation: number
   notes?: string
@@ -54,6 +60,10 @@ export function ContractList(): React.ReactElement {
   const [openDialog, setOpenDialog] = useState<boolean>(false)
   const [selectedContract, setSelectedContract] = useState<Contract | null>(null)
   const [pendingAction, setPendingAction] = useState<PendingAction>(null)
+  const [renewalSource, setRenewalSource] = useState<{
+    contract: RenewalSourceContract
+    schedule: RenewalSourceScheduleRow[]
+  } | null>(null)
 
   const fetchContracts = useCallback(async (): Promise<void> => {
     try {
@@ -92,6 +102,22 @@ export function ContractList(): React.ReactElement {
     setPendingAction({ id, kind: 'delete' })
   }
 
+  // INTENT: Fetch the full contract detail (including escalation schedule) and open the
+  //         renewal dialog. The list row only has summary fields; the renewal form needs the
+  //         schedule too so it can pre-fill the variable-escalation editor.
+  const handleRenewClick = async (contract: Contract): Promise<void> => {
+    try {
+      const detail = (await window.api.contracts.getDetail(contract.id)) as {
+        contract: RenewalSourceContract
+        schedule: RenewalSourceScheduleRow[]
+      }
+      setRenewalSource({ contract: detail.contract, schedule: detail.schedule })
+    } catch (err) {
+      console.error(err)
+      showError('common.error')
+    }
+  }
+
   const confirmAction = async (): Promise<void> => {
     if (!pendingAction) return
     const { id, kind } = pendingAction
@@ -118,6 +144,8 @@ export function ContractList(): React.ReactElement {
       case 'draft':
         return 'warning'
       case 'expired':
+        return 'error'
+      case 'cancelled':
         return 'error'
       default:
         return 'default'
@@ -220,6 +248,18 @@ export function ContractList(): React.ReactElement {
                 </IconButton>
               </Tooltip>
             )}
+            {(row.status === 'active' || row.status === 'expired') && (
+              <Tooltip title={t('contract.renew')}>
+                <IconButton
+                  size="small"
+                  color="primary"
+                  onClick={() => handleRenewClick(row)}
+                  aria-label={t('contract.renew')}
+                >
+                  <RenewIcon fontSize="small" />
+                </IconButton>
+              </Tooltip>
+            )}
             <Tooltip title={t('common.delete')}>
               <IconButton
                 size="small"
@@ -278,6 +318,27 @@ export function ContractList(): React.ReactElement {
           onCancel={() => setOpenDialog(false)}
         />
       </StandardDialog>
+
+      {/* Renewal dialog */}
+      {renewalSource && (
+        <StandardDialog
+          open
+          onClose={() => setRenewalSource(null)}
+          title={t('contract.renewTitle')}
+          maxWidth="lg"
+        >
+          <ContractRenewalForm
+            sourceContract={renewalSource.contract}
+            sourceSchedule={renewalSource.schedule}
+            onSuccess={() => {
+              setRenewalSource(null)
+              fetchContracts()
+              showSuccess('contract.renewSuccess')
+            }}
+            onCancel={() => setRenewalSource(null)}
+          />
+        </StandardDialog>
+      )}
 
       {/* Terminate / delete confirmation */}
       <ConfirmDialog

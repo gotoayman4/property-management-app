@@ -261,6 +261,8 @@
     "active": "Active",
     "expired": "Expired",
     "terminated": "Terminated",
+    "cancelled": "Cancelled",
+    "renewing": "Renewing",
     "monthly": "Monthly",
     "quarterly": "Quarterly",
     "semiAnnual": "Semi-Annual",
@@ -298,7 +300,17 @@
     "historyDate": "Date",
     "historyNote": "Note",
     "historyPrevious": "Previous Values",
-    "yearNumber": "Year #"
+    "yearNumber": "Year #",
+    "renew": "Renew",
+    "renewTitle": "Renew Contract",
+    "renewSourceInfo": "Renewing contract {{number}} — {{property}} / {{tenant}}",
+    "renewPriorTerm": "Prior term: {{start}} → {{end}}",
+    "renewalStartDate": "Renewal Start Date",
+    "renewalNewEndDate": "New End Date",
+    "renewalNewRent": "New Rent Amount",
+    "renewSuccess": "Contract renewed successfully. The prior state was preserved in the history log.",
+    "notEligibleForRenewal": "Only active or expired contracts can be renewed.",
+    "renewalEndBeforeStart": "New end date must be after the renewal start date."
   },
   "payment": {
     "title": "Payments & Income",

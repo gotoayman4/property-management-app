@@ -34,6 +34,7 @@ const api = {
     create: (data: unknown) => ipcRenderer.invoke('contracts:create', data),
     update: (data: unknown) => ipcRenderer.invoke('contracts:update', data),
     setEscalation: (data: unknown) => ipcRenderer.invoke('contracts:setEscalation', data),
+    renew: (data: unknown) => ipcRenderer.invoke('contracts:renew', data),
     terminate: (payload: { id: number; reason?: string }) =>
       ipcRenderer.invoke('contracts:terminate', payload),
     delete: (id: number) => ipcRenderer.invoke('contracts:delete', id)
