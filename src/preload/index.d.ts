@@ -426,6 +426,9 @@ declare global {
           language?: 'ar' | 'en'
         }) => Promise<{ filePath: string | null }>
       }
+      dialog: {
+        pickFolder: () => Promise<{ filePath: string | null; canceled: boolean }>
+      }
       backup: {
         create: () => Promise<{
           success: boolean
@@ -455,7 +458,9 @@ declare global {
           requiresRestart?: boolean
           error?: string
         }>
+        delete: (data: { backupId: number }) => Promise<{ success: boolean; error?: string }>
         prune: () => Promise<{ deleted: number; errors: string[] }>
+        relaunch: () => Promise<void>
       }
     }
   }

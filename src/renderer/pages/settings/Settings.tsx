@@ -4,6 +4,7 @@
  *         the settings singleton table (001_initial_schema.sql §settings).
  * CONSTRAINT (AGENTS.md): i18n keys only, logical CSS, theme.palette tokens.
  */
+import FolderOpenIcon from '@mui/icons-material/FolderOpen'
 import SettingsIcon from '@mui/icons-material/Settings'
 import {
   Box,
@@ -22,7 +23,9 @@ import {
   Select,
   MenuItem,
   InputLabel,
-  Alert
+  Alert,
+  IconButton,
+  InputAdornment
 } from '@mui/material'
 import React, { useCallback, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -111,6 +114,21 @@ export default function Settings(): React.JSX.Element {
       showSuccess('common.saveSuccess')
     } catch {
       showError('common.saveError')
+    }
+  }
+
+  /**
+   * INTENT: Open the native OS folder picker and persist the chosen directory as backup_path.
+   * DECISION: Mirrors the Browse button on BackupPage.tsx so both entry points stay consistent.
+   * CAVEAT: On cancel or error this is a silent no-op — dismissal is not an error condition.
+   */
+  const handleBrowse = async (): Promise<void> => {
+    try {
+      const result = await window.api.dialog.pickFolder()
+      if (result.canceled || !result.filePath) return
+      await updateField('backup_path', result.filePath)
+    } catch {
+      showError('backup.browseError')
     }
   }
 
@@ -405,6 +423,22 @@ export default function Settings(): React.JSX.Element {
                 onChange={(e) => updateField('backup_path', e.target.value)}
                 placeholder={t('settings.backupPathPlaceholder')}
                 helperText={t('settings.backupPathHelp')}
+                slotProps={{
+                  htmlInput: { dir: 'ltr' },
+                  input: {
+                    endAdornment: (
+                      <InputAdornment position="end">
+                        <IconButton
+                          onClick={handleBrowse}
+                          edge="end"
+                          aria-label={t('backup.browse')}
+                        >
+                          <FolderOpenIcon />
+                        </IconButton>
+                      </InputAdornment>
+                    )
+                  }
+                }}
                 sx={{ mb: 2.5 }}
               />
 

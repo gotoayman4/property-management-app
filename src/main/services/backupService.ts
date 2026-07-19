@@ -78,12 +78,20 @@ function fileSizeKB(filePath: string): number {
  * 3. Computes SHA-256 checksum.
  * 4. Logs the operation to backup_log.
  *
+ * INTENT: `dbPath` is supplied by the caller (the canonical `dbPath` exported from
+ *         db/database.ts) so the service never has to ask SQLite where its own file lives.
+ * CONSTRAINT: FR-BAK-01, FR-BAK-03, FR-BAK-06, FR-BAK-07.
+ * CAVEAT: Earlier versions resolved `dbPath` via `db.pragma('database_list', { simple: true })`,
+ *         which returns only the `seq` column (the integer `0`), not the file path — silently
+ *         making every backup fail. See regression test "fails when dbPath is missing".
+ *
  * FR-BAK-01, FR-BAK-03, FR-BAK-06, FR-BAK-07
  */
 export function createBackup(
   db: Database,
   backupDir: string,
-  type: 'manual' | 'automatic'
+  type: 'manual' | 'automatic',
+  dbPath: string
 ): BackupResult {
   try {
     // Ensure backup directory exists
@@ -101,9 +109,6 @@ export function createBackup(
     const fileName = `Backup_${timestamp}.db`
     const destPath = join(backupDir, fileName)
 
-    // Copy the DB file — using the database() exported path via pragma
-    const pragmaResult = db.pragma('database_list', { simple: true }) as unknown[]
-    const dbPath = (pragmaResult[0] as [number, string, string])?.[2]
     if (!dbPath) {
       return {
         success: false,
@@ -275,4 +280,41 @@ export function pruneOldBackups(
   }
 
   return { deleted, errors }
+}
+
+/**
+ * Delete a single backup record and its on-disk file.
+ *
+ * INTENT: Per-row deletion for the Backup page's row actions. Unlike `pruneOldBackups` (which
+ *         removes by FIFO retention), this deletes a user-chosen entry regardless of age or type.
+ *
+ * CONSTRAINT:
+ *   - Best-effort file removal: if the file is already gone (manual cleanup, moved folder), the
+ *     DB row is still deleted — we don't fail the whole operation over a missing file.
+ *   - Pre-restore emergency backups can also be deleted this way; deletion is not limited to
+ *     `status = 'success'` rows, since failed entries and pre-restore snapshots may also need
+ *     cleanup.
+ *
+ * @returns `{ success, error? }` — `success` is false only when the record doesn't exist or the
+ *          DB write itself fails. Missing files do NOT count as failure.
+ */
+export function deleteBackup(db: Database, backupId: number): { success: boolean; error?: string } {
+  const row = db.prepare('SELECT backup_file_path FROM backup_log WHERE id = ?').get(backupId) as
+    { backup_file_path: string } | undefined
+  if (!row) return { success: false, error: 'Backup record not found' }
+
+  try {
+    if (row.backup_file_path && existsSync(row.backup_file_path)) {
+      unlinkSync(row.backup_file_path)
+    }
+  } catch (err) {
+    // Best-effort: log and continue. We still want to delete the DB row so the list reflects
+    // the user's intent — a stranded file on disk is recoverable manually; a stranded row is not.
+    console.warn(
+      `Failed to delete backup file ${row.backup_file_path}: ${err instanceof Error ? err.message : String(err)}`
+    )
+  }
+
+  db.prepare('DELETE FROM backup_log WHERE id = ?').run(backupId)
+  return { success: true }
 }

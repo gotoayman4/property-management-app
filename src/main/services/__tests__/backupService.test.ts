@@ -17,29 +17,34 @@ import {
   verifyBackup,
   restoreFromBackup,
   pruneOldBackups,
+  deleteBackup,
   type BackupLogRow
 } from '../backupService'
 
 describe('backupService', () => {
   let db: Database.Database
   let backupDir: string
+  /**
+   * INTENT: A real file-backed DB path — backups must read the on-disk file.
+   * CONSTRAINT: Earlier versions used `:memory:` (where `PRAGMA database_list` returns NULL for
+   *             `file`), masking the path-resolution bug. We now use a temp .db file so the
+   *             backup service can actually copy bytes off disk.
+   */
+  let dbPath: string
 
   beforeEach(() => {
-    db = new Database(':memory:')
+    backupDir = mkdtempSync(join(tmpdir(), 'backup-test-'))
+    dbPath = join(backupDir, 'live.db')
+    db = new Database(dbPath)
     db.pragma('foreign_keys = ON')
     runMigrations(db)
 
-    // Create a temp directory for backups
-    backupDir = mkdtempSync(join(tmpdir(), 'backup-test-'))
-
-    // Seed minimal data so we can verify it's backed up
+    // Seed minimal data so we can verify it's backed up.
+    // NOTE: The `settings` singleton row (id=1) is already seeded by migration 001_initial_schema.sql,
+    // so we must NOT insert a duplicate — that triggers `UNIQUE constraint failed: settings.id`.
     db.prepare(
       `INSERT INTO properties (code, name, type, country, currency, status, monthly_rent_default)
        VALUES ('TEST-001', 'Test Property', 'apartment', 'JO', 'JOD', 'vacant', 500)`
-    ).run()
-    db.prepare(
-      `INSERT INTO settings (id, app_language, theme, font_size, date_format)
-       VALUES (1, 'ar', 'light', 'medium', 'YYYY-MM-DD')`
     ).run()
   })
 
@@ -55,7 +60,7 @@ describe('backupService', () => {
 
   describe('createBackup (FR-BAK-01/03/06/07)', () => {
     it('creates a backup file on disk and logs it', () => {
-      const result = createBackup(db, backupDir, 'manual')
+      const result = createBackup(db, backupDir, 'manual', dbPath)
 
       expect(result.success).toBe(true)
       expect(result.filePath).toBeTruthy()
@@ -72,8 +77,14 @@ describe('backupService', () => {
     })
 
     it('logs a failure entry when the backup directory is invalid', () => {
-      const invalidDir = join(backupDir, 'nonexistent_subdir_that_cant_exist____', 'deep')
-      const result = createBackup(db, invalidDir, 'automatic')
+      // INTENT: Force a real failure. `mkdirSync(recursive: true)` happily creates deeply
+      // nested missing dirs, so a non-existent path won't fail. We point backupDir at a
+      // sub-path of an existing FILE — mkdir can't create a directory inside a file.
+      const blockingFile = join(backupDir, 'blocking_file')
+      writeFileSync(blockingFile, 'not a directory')
+      const invalidDir = join(blockingFile, 'subdir')
+
+      const result = createBackup(db, invalidDir, 'automatic', dbPath)
 
       // The attempt should fail — but the function catches the error and logs it
       expect(result.success).toBe(false)
@@ -85,7 +96,7 @@ describe('backupService', () => {
     })
 
     it('creates an automatic backup with the correct type label', () => {
-      const result = createBackup(db, backupDir, 'automatic')
+      const result = createBackup(db, backupDir, 'automatic', dbPath)
       expect(result.success).toBe(true)
 
       const log = db.prepare('SELECT * FROM backup_log').get() as BackupLogRow
@@ -100,8 +111,8 @@ describe('backupService', () => {
     })
 
     it('returns backups in reverse chronological order', () => {
-      const r1 = createBackup(db, backupDir, 'manual')
-      const r2 = createBackup(db, backupDir, 'manual')
+      const r1 = createBackup(db, backupDir, 'manual', dbPath)
+      const r2 = createBackup(db, backupDir, 'manual', dbPath)
       expect(r1.success).toBe(true)
       expect(r2.success).toBe(true)
 
@@ -116,7 +127,7 @@ describe('backupService', () => {
 
   describe('verifyBackup (FR-BAK-06)', () => {
     it('returns valid=true for a freshly created backup', () => {
-      const result = createBackup(db, backupDir, 'manual')
+      const result = createBackup(db, backupDir, 'manual', dbPath)
       expect(result.success).toBe(true)
 
       const logs = listBackups(db)
@@ -133,7 +144,7 @@ describe('backupService', () => {
     })
 
     it('returns valid=false when the backup file is missing from disk', () => {
-      const result = createBackup(db, backupDir, 'manual')
+      const result = createBackup(db, backupDir, 'manual', dbPath)
       expect(result.success).toBe(true)
 
       const logs = listBackups(db)
@@ -150,12 +161,14 @@ describe('backupService', () => {
   describe('restoreFromBackup (FR-BAK-05)', () => {
     it('creates a pre-restore emergency backup ahead of the restore', () => {
       // Create a backup first
-      const backupResult = createBackup(db, backupDir, 'manual')
+      const backupResult = createBackup(db, backupDir, 'manual', dbPath)
       expect(backupResult.success).toBe(true)
 
       const logs = listBackups(db)
 
-      // Use the in-memory DB's pragma to get a fake path for restore
+      // Simulate a separate "current" DB file that will be overwritten by restore.
+      // We can't reuse `dbPath` here because the live connection still holds it open;
+      // a stand-in file is sufficient to prove the emergency-backup + overwrite flow.
       const fakeDbPath = join(backupDir, 'current.db')
       writeFileSync(fakeDbPath, 'fake-db-content')
 
@@ -184,7 +197,7 @@ describe('backupService', () => {
     it('removes backups exceeding the limit (FIFO)', () => {
       // Create 5 backups
       for (let i = 0; i < 5; i++) {
-        const r = createBackup(db, backupDir, 'manual')
+        const r = createBackup(db, backupDir, 'manual', dbPath)
         expect(r.success).toBe(true)
       }
 
@@ -199,7 +212,7 @@ describe('backupService', () => {
     })
 
     it('does nothing when under the limit', () => {
-      createBackup(db, backupDir, 'manual')
+      createBackup(db, backupDir, 'manual', dbPath)
       const result = pruneOldBackups(db, 10)
       expect(result.deleted).toBe(0)
       expect(listBackups(db)).toHaveLength(1)
@@ -207,7 +220,7 @@ describe('backupService', () => {
 
     it('deletes the oldest files from disk', () => {
       for (let i = 0; i < 4; i++) {
-        const r = createBackup(db, backupDir, 'manual')
+        const r = createBackup(db, backupDir, 'manual', dbPath)
         expect(r.success).toBe(true)
       }
 
@@ -219,6 +232,116 @@ describe('backupService', () => {
 
       // The oldest file should be gone from disk
       expect(existsSync(pathToBeDeleted)).toBe(false)
+    })
+  })
+
+  describe('deleteBackup (per-row deletion)', () => {
+    it('removes the backup record and its on-disk file', () => {
+      const createResult = createBackup(db, backupDir, 'manual', dbPath)
+      expect(createResult.success).toBe(true)
+      const filePath = createResult.filePath!
+      expect(existsSync(filePath)).toBe(true)
+
+      const logs = listBackups(db)
+      expect(logs).toHaveLength(1)
+
+      const result = deleteBackup(db, logs[0].id)
+      expect(result.success).toBe(true)
+
+      // DB row gone, file gone
+      expect(listBackups(db)).toHaveLength(0)
+      expect(existsSync(filePath)).toBe(false)
+    })
+
+    it('returns success even if the file is already missing from disk (best-effort)', () => {
+      const createResult = createBackup(db, backupDir, 'manual', dbPath)
+      expect(createResult.success).toBe(true)
+      const logs = listBackups(db)
+
+      // Manually delete the file first — service should still clear the DB row.
+      rmSync(createResult.filePath!, { force: true })
+
+      const result = deleteBackup(db, logs[0].id)
+      expect(result.success).toBe(true)
+      expect(listBackups(db)).toHaveLength(0)
+    })
+
+    it('returns failure with an error when the backup record does not exist', () => {
+      const result = deleteBackup(db, 99999)
+      expect(result.success).toBe(false)
+      expect(result.error).toBeTruthy()
+    })
+
+    it('can delete a pre_restore (emergency) backup, not just success entries', () => {
+      // Create a normal backup, then restore from it (which produces a pre_restore entry).
+      const createResult = createBackup(db, backupDir, 'manual', dbPath)
+      expect(createResult.success).toBe(true)
+      const logs = listBackups(db)
+      const fakeDbPath = join(backupDir, 'current.db')
+      writeFileSync(fakeDbPath, 'fake-db-content')
+      const restoreResult = restoreFromBackup(db, logs[0].id, backupDir, fakeDbPath)
+      expect(restoreResult.success).toBe(true)
+
+      // Two entries now: the original manual + the pre_restore emergency backup.
+      const allLogs = listBackups(db)
+      const preRestore = allLogs.find((l) => l.backup_type === 'pre_restore')
+      expect(preRestore).toBeTruthy()
+      const emergencyFile = preRestore!.backup_file_path
+      expect(existsSync(emergencyFile)).toBe(true)
+
+      // Delete the pre_restore entry — deleteBackup is not limited to status='success'.
+      const result = deleteBackup(db, preRestore!.id)
+      expect(result.success).toBe(true)
+      expect(existsSync(emergencyFile)).toBe(false)
+
+      rmSync(fakeDbPath, { force: true })
+    })
+  })
+
+  /**
+   * REGRESSION: path resolution via `pragma('database_list', { simple: true })`.
+   *
+   * CONTEXT: The original createBackup resolved the DB file path with
+   *   `db.pragma('database_list', { simple: true })`, expecting an array of rows.
+   *   With `simple: true`, better-sqlite3 returns `.pluck().get()` — the FIRST COLUMN of the
+   *   first row, which is the `seq` integer (0), NOT the file path. Every backup silently
+   *   failed with "Could not resolve database path".
+   *
+   * These tests pin the contract: the caller supplies `dbPath`, and the copied backup
+   * file actually contains the live database bytes (not an empty/placeholder file).
+   */
+  describe('path resolution regression (c6556f5 bug)', () => {
+    it('copies the actual database file when dbPath is provided', () => {
+      const result = createBackup(db, backupDir, 'manual', dbPath)
+      expect(result.success).toBe(true)
+      expect(result.filePath).toBeTruthy()
+
+      // The backup file must be a valid SQLite database — open it and read a row.
+      // If path resolution were broken, this would either be missing or not a SQLite file.
+      const restored = new Database(result.filePath!)
+      const row = restored.prepare('SELECT code, name FROM properties LIMIT 1').get() as
+        { code: string; name: string } | undefined
+      restored.close()
+
+      expect(row).toBeTruthy()
+      expect(row!.code).toBe('TEST-001')
+      expect(row!.name).toBe('Test Property')
+    })
+
+    it('fails explicitly when dbPath is empty', () => {
+      const result = createBackup(db, backupDir, 'manual', '')
+      expect(result.success).toBe(false)
+      expect(result.error).toBe('Could not resolve database path')
+    })
+
+    it('does not use pragma database_list with simple:true (the buggy call)', () => {
+      // INTENT: Document the forbidden call shape so a future edit doesn't reintroduce it.
+      // The `simple: true` option returns the `seq` column (0), not the file path.
+      const buggyResult = db.pragma('database_list', { simple: true })
+      expect(buggyResult).not.toBeInstanceOf(Array)
+      // The buggy cast assumed `unknown[]` and indexed `[0][2]` to read the path.
+      // With `simple: true` the result is the plucked first column — a number, not a row.
+      expect(typeof buggyResult).toBe('number')
     })
   })
 })

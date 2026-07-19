@@ -2,11 +2,12 @@ import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import { app, shell, BrowserWindow, session } from 'electron'
 import icon from '../../resources/icon.png?asset'
-import { db, initDatabase } from './db/database'
+import { db, dbPath, initDatabase } from './db/database'
 import { registerAuthIpcHandlers } from './ipc/authIpc'
 import { registerBackupIpcHandlers } from './ipc/backupIpc'
 import { registerContractIpcHandlers } from './ipc/contractIpc'
 import { registerDashboardIpcHandlers } from './ipc/dashboardIpc'
+import { registerDialogIpcHandlers } from './ipc/dialogIpc'
 import { registerDocumentIpcHandlers } from './ipc/documentIpc'
 import { registerExchangeRateIpcHandlers } from './ipc/exchangeRateIpc'
 import { registerExpenseIpcHandlers } from './ipc/expenseIpc'
@@ -72,6 +73,7 @@ app.whenReady().then(() => {
   registerLedgerIpcHandlers()
   registerAuthIpcHandlers()
   registerDashboardIpcHandlers()
+  registerDialogIpcHandlers()
   registerExchangeRateIpcHandlers()
   registerRecurringExpenseIpcHandlers()
   registerDocumentIpcHandlers()
@@ -121,7 +123,7 @@ app.whenReady().then(() => {
       const backupDir = settings?.backup_path?.trim()
         ? settings.backup_path.trim()
         : join(app.getPath('documents'), 'PropertyManager', 'Backups')
-      createBackup(db, backupDir, 'automatic')
+      createBackup(db, backupDir, 'automatic', dbPath)
     } catch {
       /* best-effort — don't block quit */
     }

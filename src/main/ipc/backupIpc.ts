@@ -14,13 +14,14 @@
 import { join } from 'path'
 import { ipcMain, app } from 'electron'
 import { z } from 'zod'
-import { db } from '../db/database'
+import { db, dbPath } from '../db/database'
 import {
   createBackup,
   listBackups,
   verifyBackup,
   restoreFromBackup,
-  pruneOldBackups
+  pruneOldBackups,
+  deleteBackup
 } from '../services/backupService'
 
 /** Resolve the backup directory: settings.backup_path → Documents/Backups → fallback. */
@@ -33,17 +34,6 @@ function resolveBackupDir(): string {
   return join(app.getPath('documents'), 'PropertyManager', 'Backups')
 }
 
-/** Resolve the active DB file path from pragma. */
-function getDbPath(): string {
-  const paths = db.pragma('database_list', { simple: true }) as string[]
-  return paths[0] || join(app.getPath('userData'), 'database.db')
-}
-
-// Reserved for future two-phase restore validation
-// const restoreConfirmSchema = z.object({
-//   backupId: z.number().int().positive()
-// })
-
 export function registerBackupIpcHandlers(): void {
   /**
    * backup:create — Perform a manual backup (FR-BAK-01).
@@ -52,7 +42,7 @@ export function registerBackupIpcHandlers(): void {
   ipcMain.handle('backup:create', async () => {
     try {
       const backupDir = resolveBackupDir()
-      const result = createBackup(db, backupDir, 'manual')
+      const result = createBackup(db, backupDir, 'manual', dbPath)
 
       // On success, prune old backups per retention limit
       if (result.success) {
@@ -136,7 +126,6 @@ export function registerBackupIpcHandlers(): void {
 
       // Phase 2: perform restore
       const backupDir = resolveBackupDir()
-      const dbPath = getDbPath()
       const result = restoreFromBackup(db, parsed.backupId, backupDir, dbPath)
 
       if (result.success) {
@@ -174,5 +163,38 @@ export function registerBackupIpcHandlers(): void {
       console.error('Backup prune error:', error)
       throw new Error('FAILED_TO_PRUNE_BACKUPS')
     }
+  })
+
+  /**
+   * backup:delete — Delete a single backup record + its on-disk file.
+   *
+   * INTENT: Per-row deletion from the Backup page's row actions. Unlike `backup:prune` (bulk
+   *         FIFO retention), this removes one user-chosen entry. The renderer confirms the
+   *         destructive action via ConfirmDialog before calling this.
+   * CONSTRAINT: NFR-SEC-05 — parameterized query. `backupId` is Zod-validated.
+   */
+  ipcMain.handle('backup:delete', async (_, data: unknown) => {
+    try {
+      const parsed = z.object({ backupId: z.number().int().positive() }).parse(data)
+      return deleteBackup(db, parsed.backupId)
+    } catch (error) {
+      if (error instanceof z.ZodError) throw new Error('INVALID_INPUT')
+      console.error('Backup delete error:', error)
+      throw new Error('FAILED_TO_DELETE_BACKUP')
+    }
+  })
+
+  /**
+   * app:relaunch — Quit and relaunch the Electron app (FR-BAK-05 post-restore restart).
+   *
+   * INTENT: After a successful restore, the running better-sqlite3 connection still serves the
+   *         pre-restore page cache. The only safe way to pick up the new .db file is a full
+   *         process restart — `app.relaunch()` spawns a fresh instance, `app.exit(0)` terminates
+   *         the current one. The renderer triggers this after the user confirms.
+   * CONSTRAINT: Never call this except after a confirmed restore — it is a hard process exit.
+   */
+  ipcMain.handle('app:relaunch', async () => {
+    app.relaunch()
+    app.exit(0)
   })
 }

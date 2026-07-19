@@ -13,13 +13,26 @@ import { ipcMain } from 'electron'
 // eslint-disable-next-line import-x/order -- vitest vi.mock pattern forces structural separation
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 
-// Create in-memory DB before any module mocking
-const { testDb } = vi.hoisted(() => {
+/**
+ * INTENT: Create a file-backed DB before any module mocking.
+ * CONSTRAINT: Earlier versions used `:memory:`, but `backup:create` copies the DB FILE off disk.
+ *             With `:memory:` there is no file to copy — the test falsely "passed" by side-effect.
+ *             Using a real temp file makes the IPC test exercise the same code path as production.
+ */
+const { testDb, testDbPath } = vi.hoisted(() => {
   // eslint-disable-next-line @typescript-eslint/no-require-imports -- required inside hoisted scope (ESM imports not yet initialized)
   const Database = require('better-sqlite3')
-  const db = new Database(':memory:')
+  // eslint-disable-next-line @typescript-eslint/no-require-imports -- required inside hoisted scope (ESM imports not yet initialized)
+  const { mkdtempSync } = require('fs')
+  // eslint-disable-next-line @typescript-eslint/no-require-imports -- required inside hoisted scope (ESM imports not yet initialized)
+  const { tmpdir } = require('os')
+  // eslint-disable-next-line @typescript-eslint/no-require-imports -- required inside hoisted scope (ESM imports not yet initialized)
+  const { join } = require('path')
+  const dir = mkdtempSync(join(tmpdir(), 'backup-ipc-db-'))
+  const path = join(dir, 'live.db')
+  const db = new Database(path)
   db.pragma('foreign_keys = ON')
-  return { testDb: db }
+  return { testDb: db, testDbPath: path }
 })
 
 vi.mock('electron', () => ({
@@ -27,11 +40,17 @@ vi.mock('electron', () => ({
   app: {
     isPackaged: false,
     getAppPath: () => process.cwd(),
-    getPath: () => process.cwd()
+    getPath: () => process.cwd(),
+    relaunch: vi.fn(),
+    exit: vi.fn()
   }
 }))
 
-vi.mock('../../db/database', () => ({ db: testDb, initDatabase: () => undefined }))
+vi.mock('../../db/database', () => ({
+  db: testDb,
+  dbPath: testDbPath,
+  initDatabase: () => undefined
+}))
 
 import { runMigrations } from '../../db/migrations'
 import { registerBackupIpcHandlers } from '../backupIpc'
@@ -46,12 +65,11 @@ describe('backupIpc', () => {
     resetDb(testDb)
     backupDir = mkdtempSync(join(tmpdir(), 'backup-ipc-test-'))
 
-    // Seed settings with a valid backup path
+    // Seed settings with a valid backup path.
+    // NOTE: Migration 001_initial_schema.sql already seeds the singleton settings row (id=1),
+    // so we UPDATE rather than INSERT to avoid `UNIQUE constraint failed: settings.id`.
     testDb
-      .prepare(
-        `INSERT INTO settings (id, app_language, theme, font_size, date_format, backup_path, max_backup_count)
-       VALUES (1, 'ar', 'light', 'medium', 'YYYY-MM-DD', ?, 10)`
-      )
+      .prepare('UPDATE settings SET backup_path = ?, max_backup_count = 10 WHERE id = 1')
       .run(backupDir)
 
     // Seed a property + tenant for data integrity
@@ -151,6 +169,38 @@ describe('backupIpc', () => {
 
       const result = (await invoke(registry, 'backup:prune')) as { deleted: number }
       expect(result.deleted).toBeGreaterThan(0)
+    })
+  })
+
+  describe('backup:delete (per-row deletion)', () => {
+    it('deletes a single backup and returns success', async () => {
+      await invoke(registry, 'backup:create')
+      const listBefore = (await invoke(registry, 'backup:list')) as { id: number }[]
+      expect(listBefore.length).toBe(1)
+
+      const result = (await invoke(registry, 'backup:delete', {
+        backupId: listBefore[0].id
+      })) as { success: boolean }
+
+      expect(result.success).toBe(true)
+      const listAfter = (await invoke(registry, 'backup:list')) as unknown[]
+      expect(listAfter).toHaveLength(0)
+    })
+
+    it('rejects invalid input (non-positive id)', async () => {
+      await expect(invoke(registry, 'backup:delete', { backupId: 0 })).rejects.toThrow()
+      await expect(
+        invoke(registry, 'backup:delete', { backupId: 'not-a-number' })
+      ).rejects.toThrow()
+    })
+  })
+
+  describe('app:relaunch (FR-BAK-05 post-restore restart)', () => {
+    it('calls app.relaunch() and app.exit(0) to restart the app', async () => {
+      const { app } = await import('electron')
+      await invoke(registry, 'app:relaunch')
+      expect(vi.mocked(app.relaunch)).toHaveBeenCalledTimes(1)
+      expect(vi.mocked(app.exit)).toHaveBeenCalledWith(0)
     })
   })
 })

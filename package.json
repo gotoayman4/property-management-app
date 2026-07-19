@@ -15,7 +15,7 @@
     "rebuild:node": "npm rebuild better-sqlite3",
     "rebuild:electron": "electron-rebuild -f -v 43.1.1",
     "start": "npm run rebuild:electron && electron-vite preview",
-    "dev": "npm run rebuild:electron && electron-vite dev",
+    "dev": "electron-vite dev",
     "build": "npm run check:i18n && npm run rebuild:electron && npm run typecheck && electron-vite build",
     "postinstall": "electron-builder install-app-deps",
     "build:unpack": "npm run build && electron-builder --dir",

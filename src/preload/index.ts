@@ -130,13 +130,18 @@ const api = {
     exportExcel: (data: unknown) => ipcRenderer.invoke('reports:exportExcel', data),
     exportHtml: (data: unknown) => ipcRenderer.invoke('reports:exportHtml', data)
   },
+  dialog: {
+    pickFolder: () => ipcRenderer.invoke('dialog:pickFolder')
+  },
   backup: {
     create: () => ipcRenderer.invoke('backup:create'),
     list: () => ipcRenderer.invoke('backup:list'),
     verify: (data: { backupId: number }) => ipcRenderer.invoke('backup:verify', data),
     restore: (data: { backupId: number; confirm?: boolean }) =>
       ipcRenderer.invoke('backup:restore', data),
-    prune: () => ipcRenderer.invoke('backup:prune')
+    delete: (data: { backupId: number }) => ipcRenderer.invoke('backup:delete', data),
+    prune: () => ipcRenderer.invoke('backup:prune'),
+    relaunch: () => ipcRenderer.invoke('app:relaunch')
   }
 }
 

@@ -623,6 +623,16 @@
     "createSuccess": "Backup created successfully",
     "createFailed": "Failed to create backup",
     "noBackups": "No backups yet. Click \"Backup Now\" to create your first backup.",
+    "settingsTitle": "Backup Settings",
+    "settingsSubtitle": "Choose where backups are stored and how many to keep",
+    "locationLabel": "Backup Location",
+    "locationHelp": "Folders where manual and automatic backups are stored",
+    "locationDefault": "Not set — using default: {{path}}",
+    "locationSet": "Click Browse to change the backup folder",
+    "browse": "Browse",
+    "browseError": "Failed to open folder picker",
+    "maxBackups": "Max Backups to Keep",
+    "maxBackupsHelp": "Oldest backups are automatically deleted when this limit is exceeded",
     "type": {
       "label": "Type",
       "manual": "Manual",
@@ -647,7 +657,16 @@
     "prune": "Prune Old",
     "pruneSuccess": "Deleted {{count}} old backup(s).",
     "pruneFailed": "Failed to prune old backups",
-    "status": "Status"
+    "status": {
+      "label": "Status",
+      "success": "Success",
+      "failed": "Failed"
+    },
+    "restoreRestartTitle": "Restart Required",
+    "restoreRestartBody": "The backup was restored successfully. The app must restart to load the restored data. Restart now?",
+    "restoreRestartButton": "Restart Now",
+    "restoreRestartLater": "Later",
+    "confirmDeleteMessage": "This will permanently delete the backup file and remove it from the history. This action cannot be undone."
   },
   "reports": {
     "title": "Reports & Exports",

@@ -11,26 +11,29 @@
  */
 
 import BackupIcon from '@mui/icons-material/Backup'
-import DeleteIcon from '@mui/icons-material/DeleteSweep'
+import DeleteRowIcon from '@mui/icons-material/Delete'
 import RestoreIcon from '@mui/icons-material/RestorePage'
 import VerifiedIcon from '@mui/icons-material/Verified'
 import {
+  Alert,
   Box,
   Button,
-  Stack,
   Chip,
-  TextField,
+  CircularProgress,
   Dialog,
-  DialogTitle,
-  DialogContent,
   DialogActions,
-  Typography,
-  Alert,
-  CircularProgress
+  DialogContent,
+  DialogTitle,
+  IconButton,
+  TextField,
+  Tooltip,
+  Typography
 } from '@mui/material'
 import { GridColDef } from '@mui/x-data-grid'
 import React, { useCallback, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import BackupSettingsCard from '../../components/BackupSettingsCard'
+import ConfirmDialog from '../../components/ConfirmDialog'
 import GlobalSnackbar from '../../components/GlobalSnackbar'
 import PageHeader from '../../components/PageHeader'
 import StandardTable from '../../components/StandardTable'
@@ -72,6 +75,13 @@ export default function BackupPage(): React.ReactElement {
     open: false,
     valid: false
   })
+
+  // Post-restore restart prompt
+  const [restartDialogOpen, setRestartDialogOpen] = useState(false)
+
+  // Per-row delete confirmation state — idiom matches PropertyList/ContractList/TenantList:
+  // handleDeleteClick only stages the id; the ConfirmDialog onConfirm performs the actual call.
+  const [pendingDeleteId, setPendingDeleteId] = useState<number | null>(null)
 
   useEffect(() => {
     let cancelled = false
@@ -149,7 +159,9 @@ export default function BackupPage(): React.ReactElement {
       })
       setRestoreDialogOpen(false)
       if (result.success && result.requiresRestart) {
-        showSuccess('backup.restoreSuccess')
+        // INTENT: Don't auto-restart — the user might have unsaved view state.
+        //         Prompt explicitly; "Restart Now" calls window.api.backup.relaunch().
+        setRestartDialogOpen(true)
       } else {
         showError(result.error || 'backup.restoreFailed')
       }
@@ -158,21 +170,47 @@ export default function BackupPage(): React.ReactElement {
     } finally {
       setRestoring(false)
     }
-  }, [selectedBackup, showSuccess, showError])
+  }, [selectedBackup, showError])
 
-  const handlePrune = useCallback(async (): Promise<void> => {
+  const handleRestartNow = useCallback(async (): Promise<void> => {
     try {
-      const result = await window.api.backup.prune()
-      showSuccess(t('backup.pruneSuccess', { count: result.deleted }))
-      fetchBackups()
+      await window.api.backup.relaunch()
     } catch {
-      showError('backup.pruneFailed')
+      showError('backup.restoreFailed')
     }
-  }, [showSuccess, showError, fetchBackups, t])
+  }, [showError])
+
+  /**
+   * INTENT: Stage a backup row for deletion. The ConfirmDialog's onConfirm performs the actual
+   *         API call — this only opens the dialog. Mirrors the pendingDeleteId idiom in
+   *         PropertyList/ContractList so destructive actions never fire without confirmation.
+   */
+  const handleDeleteClick = useCallback((id: number): void => {
+    setPendingDeleteId(id)
+  }, [])
+
+  const confirmDelete = useCallback(async (): Promise<void> => {
+    if (pendingDeleteId === null) return
+    try {
+      const result = await window.api.backup.delete({ backupId: pendingDeleteId })
+      if (result.success) {
+        showSuccess('common.deleteSuccess')
+        fetchBackups()
+      } else {
+        showError(result.error || 'common.deleteError')
+      }
+    } catch {
+      showError('common.deleteError')
+    } finally {
+      setPendingDeleteId(null)
+    }
+  }, [pendingDeleteId, showSuccess, showError, fetchBackups])
 
   const typeLabel = (type: string): string => t(`backup.type.${type}`, type)
-  const statusLabel = (status: string): 'success' | 'error' =>
+  const statusColor = (status: string): 'success' | 'error' =>
     status === 'success' ? 'success' : 'error'
+  const statusText = (status: string): string =>
+    t(`backup.status.${status === 'success' ? 'success' : 'failed'}`)
   const formatFileSize = (kb: number | null): string =>
     kb != null ? `${kb.toLocaleString()} KB` : '—'
 
@@ -219,46 +257,58 @@ export default function BackupPage(): React.ReactElement {
     },
     {
       field: 'status',
-      headerName: t('backup.status'),
+      headerName: t('backup.status.label'),
       flex: 1,
       minWidth: 90,
       renderCell: (params: { row: BackupRow }) => (
         <Chip
           size="small"
-          label={statusLabel(params.row.status)}
-          color={statusLabel(params.row.status)}
+          label={statusText(params.row.status)}
+          color={statusColor(params.row.status)}
         />
       )
     },
     {
       field: 'actions',
       headerName: t('common.actions'),
-      flex: 2,
-      minWidth: 200,
+      flex: 1,
+      minWidth: 140,
       sortable: false,
       renderCell: (params: { row: BackupRow }) => (
-        <Stack direction="row" spacing={0.5}>
-          <Button
-            size="small"
-            variant="outlined"
-            color="info"
-            startIcon={<VerifiedIcon />}
-            onClick={() => handleVerify(params.row.id)}
-            disabled={params.row.status !== 'success'}
-          >
-            {t('backup.verify')}
-          </Button>
-          <Button
-            size="small"
-            variant="outlined"
-            color="warning"
-            startIcon={<RestoreIcon />}
-            onClick={() => openRestoreDialog(params.row)}
-            disabled={params.row.status !== 'success'}
-          >
-            {t('backup.restore')}
-          </Button>
-        </Stack>
+        <Box sx={{ display: 'flex', gap: 0.5 }}>
+          <Tooltip title={t('backup.verify')}>
+            <IconButton
+              size="small"
+              color="info"
+              onClick={() => handleVerify(params.row.id)}
+              disabled={params.row.status !== 'success'}
+              aria-label={t('backup.verify')}
+            >
+              <VerifiedIcon fontSize="small" />
+            </IconButton>
+          </Tooltip>
+          <Tooltip title={t('backup.restore')}>
+            <IconButton
+              size="small"
+              color="warning"
+              onClick={() => openRestoreDialog(params.row)}
+              disabled={params.row.status !== 'success'}
+              aria-label={t('backup.restore')}
+            >
+              <RestoreIcon fontSize="small" />
+            </IconButton>
+          </Tooltip>
+          <Tooltip title={t('common.delete')}>
+            <IconButton
+              size="small"
+              color="error"
+              onClick={() => handleDeleteClick(params.row.id)}
+              aria-label={t('common.delete')}
+            >
+              <DeleteRowIcon fontSize="small" />
+            </IconButton>
+          </Tooltip>
+        </Box>
       )
     }
   ]
@@ -270,26 +320,21 @@ export default function BackupPage(): React.ReactElement {
         title={t('backup.title')}
         subtitle={t('backup.subtitle')}
         action={
-          <Stack direction="row" spacing={1}>
-            <Button
-              variant="contained"
-              startIcon={creating ? <CircularProgress size={18} color="inherit" /> : <BackupIcon />}
-              onClick={handleCreateBackup}
-              disabled={creating}
-            >
-              {creating ? t('backup.creating') : t('backup.createNow')}
-            </Button>
-            <Button
-              variant="outlined"
-              color="error"
-              startIcon={<DeleteIcon />}
-              onClick={handlePrune}
-            >
-              {t('backup.prune')}
-            </Button>
-          </Stack>
+          <Button
+            variant="contained"
+            startIcon={creating ? <CircularProgress size={18} color="inherit" /> : <BackupIcon />}
+            onClick={handleCreateBackup}
+            disabled={creating}
+          >
+            {creating ? t('backup.creating') : t('backup.createNow')}
+          </Button>
         }
       />
+
+      {/* Backup Settings card — folder picker + retention limit.
+          Extracted to its own component (BackupSettingsCard) so this file stays under the
+          ESLint 500-line max. Sync with the Settings page is via mount-time refetch. */}
+      <BackupSettingsCard />
 
       <StandardTable
         columns={columns}
@@ -361,6 +406,33 @@ export default function BackupPage(): React.ReactElement {
           </Button>
         </DialogActions>
       </Dialog>
+
+      {/* Post-restore restart prompt (FR-BAK-05) */}
+      <Dialog open={restartDialogOpen} dir={isRtl ? 'rtl' : 'ltr'}>
+        <DialogTitle>{t('backup.restoreRestartTitle')}</DialogTitle>
+        <DialogContent>
+          <Alert severity="success">{t('backup.restoreRestartBody')}</Alert>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setRestartDialogOpen(false)}>
+            {t('backup.restoreRestartLater')}
+          </Button>
+          <Button variant="contained" color="warning" onClick={handleRestartNow}>
+            {t('backup.restoreRestartButton')}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Per-row delete confirmation — shared ConfirmDialog idiom (PropertyList/ContractList). */}
+      <ConfirmDialog
+        open={pendingDeleteId !== null}
+        title={t('common.confirmDelete')}
+        message={t('backup.confirmDeleteMessage')}
+        confirmLabel={t('common.delete')}
+        onConfirm={confirmDelete}
+        onCancel={() => setPendingDeleteId(null)}
+        severity="error"
+      />
 
       <GlobalSnackbar state={snack} onClose={hideSnackbar} />
     </Box>

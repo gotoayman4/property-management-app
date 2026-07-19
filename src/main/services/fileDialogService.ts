@@ -87,3 +87,40 @@ export async function showSaveDialog(
     canceled: result.canceled
   }
 }
+
+/**
+ * Show a native Open dialog restricted to directory selection (folder picker).
+ *
+ * INTENT: The folder-picker counterpart to `showSaveDialog`. Used by the Backup and Settings pages
+ *         so the user can choose the backup destination via the OS browser instead of typing a
+ *         path. The chosen directory is returned to the renderer, which decides whether to persist
+ *         it via `settings:update` — this service never writes settings itself.
+ *
+ * DECISION: `defaultPath` reuses `resolveDefaultExportDir()` so the dialog opens at the currently
+ *           configured backup folder (if any), or the Documents fallback. Single-selection only —
+ *           we return `filePaths[0]`; multi-folder selection is not a meaningful UX for backups.
+ *
+ * @returns the chosen directory path (or null if cancelled). Never throws.
+ */
+export async function showOpenDirectoryDialog(): Promise<SaveDialogResult> {
+  const defaultDir = resolveDefaultExportDir()
+  // Prefer a focused parent window so the dialog is modal to it; fall back to the no-parent
+  // overload if there is none. We pick the overload dynamically so the TS types stay satisfied
+  // without an eslint-disable.
+  const focused = BrowserWindow.getFocusedWindow()
+  const options: Electron.OpenDialogOptions = {
+    title: 'Select backup folder',
+    defaultPath: defaultDir,
+    properties: ['openDirectory']
+  }
+
+  const result = focused
+    ? await dialog.showOpenDialog(focused, options)
+    : await dialog.showOpenDialog(options)
+
+  const chosen = result.canceled ? null : (result.filePaths[0] ?? null)
+  return {
+    filePath: chosen,
+    canceled: result.canceled
+  }
+}
