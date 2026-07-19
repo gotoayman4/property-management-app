@@ -199,6 +199,7 @@
     "codeRequired": "Tenant code is required",
     "codeUnique": "Tenant code must be unique",
     "codeInvalid": "Invalid code (letters, numbers, hyphens only, no spaces)",
+    "nationalIdUnique": "This National ID is already in use by another tenant",
     "fullnameRequired": "Full name is required",
     "phoneRequired": "Phone number is required",
     "noTenants": "No tenants added yet. Start by adding your first tenant!",

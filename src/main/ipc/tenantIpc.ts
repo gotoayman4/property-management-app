@@ -102,6 +102,16 @@ export function registerTenantIpcHandlers(): void {
         throw new Error('TENANT_CODE_DUPLICATE')
       }
 
+      // Ensure national_id is unique if provided
+      if (validatedData.national_id) {
+        const existingNid = db
+          .prepare('SELECT 1 FROM tenants WHERE national_id = ?')
+          .get(validatedData.national_id)
+        if (existingNid) {
+          throw new Error('NATIONAL_ID_DUPLICATE')
+        }
+      }
+
       const stmt = db.prepare(`
         INSERT INTO tenants (
           code, fullname, national_id, country_code, phone, email, type, company_reg_no, representative_name,
@@ -134,6 +144,16 @@ export function registerTenantIpcHandlers(): void {
         .get(validatedData.code, validatedData.id)
       if (existing) {
         throw new Error('TENANT_CODE_DUPLICATE')
+      }
+
+      // Ensure national_id is unique if provided (exclude self)
+      if (validatedData.national_id) {
+        const existingNid = db
+          .prepare('SELECT 1 FROM tenants WHERE national_id = ? AND id != ?')
+          .get(validatedData.national_id, validatedData.id)
+        if (existingNid) {
+          throw new Error('NATIONAL_ID_DUPLICATE')
+        }
       }
 
       const stmt = db.prepare(`

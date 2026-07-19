@@ -29,6 +29,7 @@ import { OccupiedDonut, TrendChart } from '../../components/dashboardCharts'
 import PageHeader from '../../components/PageHeader'
 import StandardTable from '../../components/StandardTable'
 import StatCard from '../../components/StatCard'
+import { getLocalizedCountryName } from '../../utils/countryUtils'
 import type {
   DashboardSummary,
   UpcomingDueRow,
@@ -224,7 +225,11 @@ export default function Dashboard(): React.JSX.Element {
         >
           <Tab label={t('common.all')} value="" />
           {countries.map((c) => (
-            <Tab key={c.code} label={c.name} value={c.code} />
+            <Tab
+              key={c.code}
+              label={getLocalizedCountryName(c.code, i18n.language, c.name)}
+              value={c.code}
+            />
           ))}
         </Tabs>
       )}

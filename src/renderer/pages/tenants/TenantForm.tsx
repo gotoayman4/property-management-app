@@ -166,6 +166,8 @@ export function TenantForm({ tenant, onSuccess, onCancel }: TenantFormProps): Re
       const errorMessage = err instanceof Error ? err.message : ''
       if (errorMessage === 'TENANT_CODE_DUPLICATE') {
         setError('code', { type: 'manual', message: t('tenant.codeUnique') })
+      } else if (errorMessage === 'NATIONAL_ID_DUPLICATE') {
+        setError('national_id', { type: 'manual', message: t('tenant.nationalIdUnique') })
       } else {
         showError('common.saveError')
       }
