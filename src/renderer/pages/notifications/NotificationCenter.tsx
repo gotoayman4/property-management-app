@@ -17,6 +17,7 @@ import GlobalSnackbar from '../../components/GlobalSnackbar'
 import PageHeader from '../../components/PageHeader'
 import StandardTable from '../../components/StandardTable'
 import { useSnackbar } from '../../hooks/useSnackbar'
+import { buildWhatsAppUrl } from '../../utils/whatsappUtils'
 
 interface NotificationRow {
   id: number
@@ -104,12 +105,12 @@ export default function NotificationCenter(): React.ReactElement {
     }
   }
 
-  // Open WhatsApp chat pre-filled with the tenant's phone number (FR-NOT-05).
-  // Uses wa.me deep-link which opens WhatsApp Web/Desktop when installed.
+  // INTENT: Open WhatsApp chat with the notification message pre-filled in the input box.
+  //         Uses wa.me deep-link with ?text= parameter — user only needs to hit Send.
   const handleWhatsApp = (row: NotificationRow): void => {
-    const phone = `${row.tenant_country_code ?? ''}${row.tenant_phone ?? ''}`.replace(/^\+?/, '')
-    if (phone) {
-      window.open(`https://wa.me/${phone}`, '_blank')
+    if (row.tenant_phone) {
+      const url = buildWhatsAppUrl(row.tenant_phone, row.tenant_country_code, row.message)
+      window.open(url, '_blank')
     }
   }
 

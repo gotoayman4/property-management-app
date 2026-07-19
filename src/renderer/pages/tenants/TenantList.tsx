@@ -16,6 +16,7 @@ import PageHeader from '../../components/PageHeader'
 import StandardDialog from '../../components/StandardDialog'
 import StandardTable from '../../components/StandardTable'
 import { useSnackbar } from '../../hooks/useSnackbar'
+import { buildWhatsAppUrl } from '../../utils/whatsappUtils'
 import { TenantForm } from './TenantForm'
 
 interface Tenant {
@@ -200,10 +201,7 @@ export function TenantList(): React.ReactElement {
                   size="small"
                   color="success"
                   onClick={() =>
-                    window.open(
-                      `https://wa.me/${(row.country_code ?? '').replace(/^\+/, '')}${row.phone}`,
-                      '_blank'
-                    )
+                    window.open(buildWhatsAppUrl(row.phone, row.country_code), '_blank')
                   }
                   aria-label={t('common.sendWhatsApp')}
                 >
