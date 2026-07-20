@@ -115,10 +115,40 @@ export default function Reports(): React.ReactElement {
   const { snack, showSuccess, showError, hideSnackbar } = useSnackbar()
 
   const [reportType, setReportType] = useState<ReportType | ''>('')
+  const [presetPeriod, setPresetPeriod] = useState<string>('custom')
   const [fromDate, setFromDate] = useState('')
   const [toDate, setToDate] = useState('')
   const [propertyId, setPropertyId] = useState<number | ''>('')
   const [tenantId, setTenantId] = useState<number | ''>('')
+
+  const handlePresetChange = (preset: string): void => {
+    setPresetPeriod(preset)
+    if (preset === 'custom') return
+
+    const now = new Date()
+    const year = now.getFullYear()
+    const month = now.getMonth()
+
+    const formatDate = (d: Date): string => d.toISOString().split('T')[0]
+
+    if (preset === 'this_month') {
+      setFromDate(formatDate(new Date(year, month, 1)))
+      setToDate(formatDate(new Date(year, month + 1, 0)))
+    } else if (preset === 'last_month') {
+      setFromDate(formatDate(new Date(year, month - 1, 1)))
+      setToDate(formatDate(new Date(year, month, 0)))
+    } else if (preset === 'this_quarter') {
+      const qStart = Math.floor(month / 3) * 3
+      setFromDate(formatDate(new Date(year, qStart, 1)))
+      setToDate(formatDate(new Date(year, qStart + 3, 0)))
+    } else if (preset === 'this_year') {
+      setFromDate(`${year}-01-01`)
+      setToDate(`${year}-12-31`)
+    } else if (preset === 'last_year') {
+      setFromDate(`${year - 1}-01-01`)
+      setToDate(`${year - 1}-12-31`)
+    }
+  }
 
   const [properties, setProperties] = useState<Property[]>([])
   const [tenants, setTenants] = useState<Tenant[]>([])
@@ -296,12 +326,39 @@ export default function Reports(): React.ReactElement {
                 </Select>
               </FormControl>
             </Grid>
+            <Grid size={{ xs: 12, sm: 6, md: 2 }}>
+              <FormControl fullWidth>
+                <InputLabel>{t('reports.presetPeriod', 'Period Preset')}</InputLabel>
+                <Select
+                  label={t('reports.presetPeriod', 'Period Preset')}
+                  value={presetPeriod}
+                  onChange={(e) => handlePresetChange(e.target.value)}
+                  dir={isRtl ? 'rtl' : 'ltr'}
+                >
+                  <MenuItem value="custom">{t('reports.presetCustom', 'Custom Range')}</MenuItem>
+                  <MenuItem value="this_month">
+                    {t('reports.presetThisMonth', 'This Month')}
+                  </MenuItem>
+                  <MenuItem value="last_month">
+                    {t('reports.presetLastMonth', 'Last Month')}
+                  </MenuItem>
+                  <MenuItem value="this_quarter">
+                    {t('reports.presetThisQuarter', 'This Quarter')}
+                  </MenuItem>
+                  <MenuItem value="this_year">{t('reports.presetThisYear', 'This Year')}</MenuItem>
+                  <MenuItem value="last_year">{t('reports.presetLastYear', 'Last Year')}</MenuItem>
+                </Select>
+              </FormControl>
+            </Grid>
             <Grid size={{ xs: 6, sm: 6, md: 2 }}>
               <TextField
                 label={t('reports.fromDate')}
                 type="date"
                 value={fromDate}
-                onChange={(e) => setFromDate(e.target.value)}
+                onChange={(e) => {
+                  setFromDate(e.target.value)
+                  setPresetPeriod('custom')
+                }}
                 fullWidth
                 slotProps={{ inputLabel: { shrink: true } }}
               />
@@ -311,7 +368,10 @@ export default function Reports(): React.ReactElement {
                 label={t('reports.toDate')}
                 type="date"
                 value={toDate}
-                onChange={(e) => setToDate(e.target.value)}
+                onChange={(e) => {
+                  setToDate(e.target.value)
+                  setPresetPeriod('custom')
+                }}
                 fullWidth
                 slotProps={{ inputLabel: { shrink: true } }}
               />
@@ -418,7 +478,9 @@ export default function Reports(): React.ReactElement {
           ))}
           {data.consolidatedNote && (
             <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic', mt: 1 }}>
-              {t('reports.consolidatedNoteMultiCurrency')}
+              {data.consolidatedNote.startsWith('reports.')
+                ? t(data.consolidatedNote)
+                : data.consolidatedNote}
             </Typography>
           )}
         </Box>

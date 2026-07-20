@@ -240,6 +240,59 @@ function buildScript(): string {
 </script>`
 }
 
+function renderSvgChart(data: ReportData): string {
+  if (data.groups.length === 0 || data.groups[0].rows.length === 0) return ''
+
+  const group = data.groups[0]
+  const rows = group.rows.slice(0, 8)
+  const firstRow = rows[0]
+
+  const labelKey =
+    'name' in firstRow ? 'name' : 'code' in firstRow ? 'code' : Object.keys(firstRow)[0]
+  const valKey =
+    'net_profit' in firstRow
+      ? 'net_profit'
+      : 'total_income' in firstRow
+        ? 'total_income'
+        : 'amount' in firstRow
+          ? 'amount'
+          : null
+
+  if (!valKey) return ''
+
+  const chartHeight = 220
+  const chartWidth = 600
+  const barWidth = Math.max(24, Math.floor(chartWidth / (rows.length * 2)))
+  const maxVal = Math.max(...rows.map((r) => Math.abs(Number(r[valKey] ?? 0))), 1)
+
+  const bars = rows
+    .map((r, i) => {
+      const val = Number(r[valKey] ?? 0)
+      const height = Math.round((Math.abs(val) / maxVal) * 130)
+      const x = i * (barWidth + 24) + 40
+      const y = 160 - height
+      const label = escapeHtml(String(r[labelKey] ?? ''))
+      const color = val >= 0 ? '#10b981' : '#ef4444'
+
+      return `
+        <rect x="${x}" y="${y}" width="${barWidth}" height="${height}" fill="${color}" rx="4" />
+        <text x="${x + barWidth / 2}" y="180" text-anchor="middle" font-size="11" fill="#64748b">${label.slice(0, 12)}</text>
+        <text x="${x + barWidth / 2}" y="${y - 6}" text-anchor="middle" font-size="10" font-weight="bold" fill="#334155">${val}</text>
+      `
+    })
+    .join('')
+
+  return `
+    <div class="report-chart-container" style="margin: 20px 0; padding: 16px; background: #f8fafc; border-radius: 8px; border: 1px solid #e2e8f0;">
+      <h3 style="margin: 0 0 12px 0; font-size: 14px; color: #475569;">Summary Chart (${escapeHtml(group.currency)})</h3>
+      <svg width="100%" height="${chartHeight}" viewBox="0 0 ${chartWidth} ${chartHeight}">
+        <line x1="20" y1="160" x2="${chartWidth - 20}" y2="160" stroke="#cbd5e1" stroke-width="1" />
+        ${bars}
+      </svg>
+    </div>
+  `
+}
+
 /**
  * Build the complete standalone HTML document string for `data`.
  */
@@ -271,6 +324,7 @@ export function buildHtmlDocument(data: ReportData, lang: ExportLanguage): strin
     )
     .join('')
 
+  const chartHtml = renderSvgChart(data)
   const groupsHtml = data.groups.map((g) => renderGroup(g, data.columns, lang)).join('')
   const consolidatedHtml = data.consolidatedNote
     ? `<div class="consolidated-note">${escapeHtml(data.consolidatedNote)}</div>`
@@ -305,6 +359,7 @@ export function buildHtmlDocument(data: ReportData, lang: ExportLanguage): strin
     <div class="col-toggle">${toggleItems}</div>
   </details>
 </div>
+${chartHtml}
 ${groupsHtml}
 ${consolidatedHtml}
 <footer>

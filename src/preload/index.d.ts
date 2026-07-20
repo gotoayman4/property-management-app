@@ -240,6 +240,7 @@ declare global {
         }>
         recentPayments: (country?: string) => Promise<unknown[]>
         recentExpenses: (country?: string) => Promise<unknown[]>
+        recentActivities: (country?: string) => Promise<unknown[]>
         upcomingDue: (country?: string) => Promise<
           {
             id: number

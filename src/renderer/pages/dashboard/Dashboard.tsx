@@ -29,6 +29,7 @@ import PageHeader from '../../components/PageHeader'
 import StandardTable from '../../components/StandardTable'
 import StatCard from '../../components/StatCard'
 import { getLocalizedCountryName } from '../../utils/countryUtils'
+import { useDataChangedListener } from '../../utils/eventBus'
 import type {
   DashboardSummary,
   CurrencyFinancialRow,
@@ -54,17 +55,24 @@ export default function Dashboard(): React.JSX.Element {
   const [expiringDocs, setExpiringDocs] = useState<ExpiringDocumentRow[]>([])
   const [recentPayments, setRecentPayments] = useState<RecentPaymentRow[]>([])
   const [recentExpenses, setRecentExpenses] = useState<RecentExpenseRow[]>([])
+  const [recentActivities, setRecentActivities] = useState<Record<string, unknown>[]>([])
   const [trends, setTrends] = useState<TrendsData | null>(null)
   const [countries, setCountries] = useState<CountryOption[]>([])
   const [activeCountry, setActiveCountry] = useState<string>('')
+  const [refreshCount, setRefreshCount] = useState(0)
+
+  useDataChangedListener(() => {
+    setRefreshCount((prev) => prev + 1)
+  })
+
   const isNewApp = !loading && summary && summary.totalProperties === 0
-  // Load all data, filtered by selected country (FR-DASH-00)
+  // Load all data, filtered by selected country (FR-DASH-00) and refreshed on data mutation (FR-DASH-11)
   useEffect(() => {
     let cancelled = false
     async function loadAll(): Promise<void> {
       try {
         const country = activeCountry || undefined
-        const [s, due, ov, rec, docs, tr, cnt, pay, exp] = await Promise.all([
+        const [s, due, ov, rec, docs, tr, cnt, pay, exp, act] = await Promise.all([
           window.api.dashboard.summary(country),
           window.api.dashboard.upcomingDue(country).catch(() => []),
           window.api.dashboard.overdue(country).catch(() => []),
@@ -73,7 +81,8 @@ export default function Dashboard(): React.JSX.Element {
           window.api.dashboard.trends(country).catch(() => null),
           window.api.countries.list().catch(() => []),
           window.api.dashboard.recentPayments(country).catch(() => []),
-          window.api.dashboard.recentExpenses(country).catch(() => [])
+          window.api.dashboard.recentExpenses(country).catch(() => []),
+          window.api.dashboard.recentActivities(country).catch(() => [])
         ])
         if (cancelled) return
         setSummary(s as unknown as DashboardSummary)
@@ -85,6 +94,7 @@ export default function Dashboard(): React.JSX.Element {
         setCountries(cnt as CountryOption[])
         setRecentPayments(pay as RecentPaymentRow[])
         setRecentExpenses(exp as RecentExpenseRow[])
+        setRecentActivities(act as Record<string, unknown>[])
       } catch {
         /* handled below — loading state will clear */
       } finally {
@@ -95,7 +105,7 @@ export default function Dashboard(): React.JSX.Element {
     return () => {
       cancelled = true
     }
-  }, [activeCountry])
+  }, [activeCountry, refreshCount])
   /* ------------------------------------------------------------------ */
   /* Welcome empty state for new apps                                   */
   /* ------------------------------------------------------------------ */
@@ -225,6 +235,40 @@ export default function Dashboard(): React.JSX.Element {
       flex: 1,
       minWidth: 100,
       type: 'number'
+    }
+  ]
+  const recentActivityCols: GridColDef[] = [
+    { field: 'activity_date', headerName: t('common.date'), flex: 1, minWidth: 100 },
+    {
+      field: 'entity_type',
+      headerName: t('common.type'),
+      flex: 1,
+      minWidth: 100,
+      renderCell: (params) => {
+        const val = String(params.value ?? '')
+        return (
+          <Chip
+            size="small"
+            label={t(`dashboard.activity.${val}`, val.toUpperCase())}
+            color={
+              val === 'payment'
+                ? 'success'
+                : val === 'expense'
+                  ? 'error'
+                  : val === 'contract'
+                    ? 'info'
+                    : 'default'
+            }
+            variant="outlined"
+          />
+        )
+      }
+    },
+    {
+      field: 'description',
+      headerName: t('common.description', 'Description'),
+      flex: 2,
+      minWidth: 180
     }
   ]
   /* ------------------------------------------------------------------ */
@@ -412,7 +456,7 @@ export default function Dashboard(): React.JSX.Element {
           />
         </Grid>
       </Grid>
-      {/* Bottom row: recent expenses */}
+      {/* Bottom row: recent expenses and recent activities */}
       <Grid container spacing={3} sx={{ mt: 0 }}>
         <Grid size={{ xs: 12, md: 6 }}>
           <Typography variant="h5" sx={{ mb: 1, fontWeight: 600 }}>
@@ -423,6 +467,19 @@ export default function Dashboard(): React.JSX.Element {
             rows={recentExpenses}
             loading={loading}
             emptyMessage={t('dashboard.noExpenses')}
+            pageSize={5}
+            pageSizeOptions={[5]}
+          />
+        </Grid>
+        <Grid size={{ xs: 12, md: 6 }}>
+          <Typography variant="h5" sx={{ mb: 1, fontWeight: 600 }}>
+            {t('dashboard.recentActivities', 'Recent Activities')}
+          </Typography>
+          <StandardTable
+            columns={recentActivityCols}
+            rows={recentActivities}
+            loading={loading}
+            emptyMessage={t('common.noData', 'No recent activities')}
             pageSize={5}
             pageSizeOptions={[5]}
           />

@@ -20,6 +20,7 @@
 
 import { Database } from 'better-sqlite3'
 import { computeRunningBalances } from '../db/ledgerService'
+import { computeConsolidatedNote } from '../utils/currencyHelper'
 import {
   type ReportData,
   type ReportColumn,
@@ -260,10 +261,7 @@ function buildProfitLossReport(db: Database, filters: ReportFilters): ReportData
     titleKey: 'reports.type.profitLoss',
     columns: PNL_COLUMNS,
     groups,
-    // BR-14: a portfolio summary across currencies is intentionally NOT auto-summed. A note
-    // clarifies that the per-currency subtotals are authoritative; consolidated conversion
-    // requires explicit exchange-rate selection (deferred to a follow-up phase).
-    consolidatedNote: groups.length > 1 ? 'reports.consolidatedNoteMultiCurrency' : undefined
+    consolidatedNote: computeConsolidatedNote(db, groups, 'net_profit')
   }
 }
 

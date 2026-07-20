@@ -1,7 +1,8 @@
 import {
   CancelOutlined as CancelOutlinedIcon,
   Payments as PaymentsIcon,
-  Add as AddIcon
+  Add as AddIcon,
+  ReceiptLong as ReceiptLongIcon
 } from '@mui/icons-material'
 import {
   Box,
@@ -20,6 +21,7 @@ import React, { useCallback, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import GlobalSnackbar from '../../components/GlobalSnackbar'
 import PageHeader from '../../components/PageHeader'
+import ReceiptDialog from '../../components/ReceiptDialog'
 import StandardDialog from '../../components/StandardDialog'
 import StandardTable from '../../components/StandardTable'
 import { useSnackbar } from '../../hooks/useSnackbar'
@@ -61,6 +63,7 @@ export function PaymentList(): React.ReactElement {
   const [openDialog, setOpenDialog] = useState<boolean>(false)
   const [voidTarget, setVoidTarget] = useState<Payment | null>(null)
   const [voidReason, setVoidReason] = useState<string>('')
+  const [receiptTarget, setReceiptTarget] = useState<Payment | null>(null)
 
   const fetchPayments = useCallback(async (): Promise<void> => {
     try {
@@ -167,17 +170,31 @@ export function PaymentList(): React.ReactElement {
       sortable: false,
       renderCell: (params) => {
         const row = params.row as Payment
-        return row.is_voided ? null : (
-          <Tooltip title={t('payment.void')}>
-            <IconButton
-              size="small"
-              color="error"
-              onClick={() => handleVoidClick(row)}
-              aria-label={t('payment.void')}
-            >
-              <CancelOutlinedIcon fontSize="small" />
-            </IconButton>
-          </Tooltip>
+        return (
+          <Box sx={{ display: 'flex', gap: 0.5 }}>
+            <Tooltip title={t('receipt.print', 'Print Receipt')}>
+              <IconButton
+                size="small"
+                color="primary"
+                onClick={() => setReceiptTarget(row)}
+                aria-label={t('receipt.print', 'Print Receipt')}
+              >
+                <ReceiptLongIcon fontSize="small" />
+              </IconButton>
+            </Tooltip>
+            {!row.is_voided && (
+              <Tooltip title={t('payment.void')}>
+                <IconButton
+                  size="small"
+                  color="error"
+                  onClick={() => handleVoidClick(row)}
+                  aria-label={t('payment.void')}
+                >
+                  <CancelOutlinedIcon fontSize="small" />
+                </IconButton>
+              </Tooltip>
+            )}
+          </Box>
         )
       }
     }
@@ -264,6 +281,12 @@ export function PaymentList(): React.ReactElement {
           </Button>
         </DialogActions>
       </Dialog>
+
+      <ReceiptDialog
+        open={receiptTarget !== null}
+        onClose={() => setReceiptTarget(null)}
+        payment={receiptTarget}
+      />
 
       <GlobalSnackbar state={snack} onClose={hideSnackbar} />
     </Box>

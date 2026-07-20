@@ -42,3 +42,39 @@ export function convertAmount(
 
   return 'rate_missing'
 }
+
+export function computeConsolidatedNote(
+  db: Database,
+  groups: { currency: string; totals: Record<string, number> }[],
+  sumKey: string
+): string | undefined {
+  if (groups.length <= 1) return undefined
+
+  let targetCurrency = 'JOD'
+  try {
+    const row = db.prepare('SELECT reporting_currency FROM settings WHERE id = 1').get() as
+      { reporting_currency: string } | undefined
+    if (row?.reporting_currency) targetCurrency = row.reporting_currency
+  } catch {
+    // default to JOD
+  }
+
+  let totalSum = 0
+  const missingPairs: string[] = []
+
+  for (const group of groups) {
+    const val = Number(group.totals[sumKey] ?? 0)
+    const converted = convertAmount(db, val, group.currency, targetCurrency)
+    if (converted === 'rate_missing') {
+      missingPairs.push(`${group.currency} -> ${targetCurrency}`)
+    } else {
+      totalSum += converted
+    }
+  }
+
+  if (missingPairs.length > 0) {
+    return `Consolidated Total (${targetCurrency}): Rate missing for ${missingPairs.join(', ')}`
+  }
+
+  return `Consolidated Total: ${totalSum.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${targetCurrency} (Converted using latest saved rates)`
+}

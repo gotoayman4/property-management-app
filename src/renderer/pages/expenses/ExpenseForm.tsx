@@ -22,6 +22,7 @@ import { FormField } from '../../components/FormField'
 import GlobalSnackbar from '../../components/GlobalSnackbar'
 import { useCurrencyConversion } from '../../hooks/useCurrencyConversion'
 import { useSnackbar } from '../../hooks/useSnackbar'
+import { notifyDataChanged } from '../../utils/eventBus'
 
 /**
  * INTENT: Record an expense. Category is required (FR-EXP-01); property is optional so a general
@@ -138,6 +139,7 @@ export function ExpenseForm({ onSuccess, onCancel }: ExpenseFormProps): React.Re
         notes: data.notes ?? null
       })
       showSuccess('common.saveSuccess')
+      notifyDataChanged()
       onSuccess()
     } catch (err: unknown) {
       console.error(err)

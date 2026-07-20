@@ -86,6 +86,8 @@ const api = {
     summary: (country?: string) => ipcRenderer.invoke('dashboard:summary', country),
     recentPayments: (country?: string) => ipcRenderer.invoke('dashboard:recentPayments', country),
     recentExpenses: (country?: string) => ipcRenderer.invoke('dashboard:recentExpenses', country),
+    recentActivities: (country?: string) =>
+      ipcRenderer.invoke('dashboard:recentActivities', country),
     upcomingDue: (country?: string) => ipcRenderer.invoke('dashboard:upcomingDue', country),
     overdue: (country?: string) => ipcRenderer.invoke('dashboard:overdue', country),
     upcomingRecurring: (country?: string) =>

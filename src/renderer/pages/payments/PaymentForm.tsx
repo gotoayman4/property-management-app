@@ -21,6 +21,7 @@ import { FormField } from '../../components/FormField'
 import GlobalSnackbar from '../../components/GlobalSnackbar'
 import { useCurrencyConversion } from '../../hooks/useCurrencyConversion'
 import { useSnackbar } from '../../hooks/useSnackbar'
+import { notifyDataChanged } from '../../utils/eventBus'
 
 /**
  * INTENT: Create a payment (income). Editing/voiding are separate flows — a payment's amount is
@@ -168,6 +169,7 @@ export function PaymentForm({ onSuccess, onCancel }: PaymentFormProps): React.Re
         notes: data.notes ?? null
       })
       showSuccess('common.saveSuccess')
+      notifyDataChanged()
       onSuccess(result.receipt_number)
     } catch (err: unknown) {
       console.error(err)

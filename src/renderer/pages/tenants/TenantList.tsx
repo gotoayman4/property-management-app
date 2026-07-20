@@ -4,12 +4,14 @@ import {
   Edit as EditIcon,
   People as PeopleIcon,
   Search as SearchIcon,
-  Send as SendWhatsAppIcon
+  Send as SendWhatsAppIcon,
+  Visibility as VisibilityIcon
 } from '@mui/icons-material'
 import { Box, Typography, Button, IconButton, TextField, Chip, Tooltip } from '@mui/material'
 import { GridColDef } from '@mui/x-data-grid'
 import React, { useCallback, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { useNavigate } from 'react-router-dom'
 import ConfirmDialog from '../../components/ConfirmDialog'
 import GlobalSnackbar from '../../components/GlobalSnackbar'
 import PageHeader from '../../components/PageHeader'
@@ -35,6 +37,7 @@ interface Tenant {
 
 export function TenantList(): React.ReactElement {
   const { t, i18n } = useTranslation()
+  const navigate = useNavigate()
   const isRtl = i18n.language === 'ar'
   const { snack, showError, showSuccess, hideSnackbar } = useSnackbar()
   const [tenants, setTenants] = useState<Tenant[]>([])
@@ -173,6 +176,16 @@ export function TenantList(): React.ReactElement {
         const row = params.row as Tenant
         return (
           <Box sx={{ display: 'flex', gap: 0.5 }}>
+            <Tooltip title={t('common.view')}>
+              <IconButton
+                size="small"
+                color="primary"
+                onClick={() => navigate(`/tenants/${row.id}`)}
+                aria-label={t('common.view')}
+              >
+                <VisibilityIcon fontSize="small" />
+              </IconButton>
+            </Tooltip>
             <Tooltip title={t('common.edit')}>
               <IconButton
                 size="small"

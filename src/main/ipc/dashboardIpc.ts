@@ -264,6 +264,48 @@ export function registerDashboardIpcHandlers(): void {
     }
   })
 
+  ipcMain.handle('dashboard:recentActivities', async (_, country?: string) => {
+    try {
+      const prClause = country ? ' WHERE pr.country = ?' : ''
+      const propClause = country ? ' WHERE country = ?' : ''
+
+      const query = `
+        SELECT * FROM (
+          SELECT p.id, 'payment' as entity_type, p.payment_date as activity_date,
+                 ('Payment: ' || p.amount || ' ' || p.currency || ' — ' || pr.name) as description, p.created_at
+          FROM payments p
+          JOIN properties pr ON p.property_id = pr.id
+          ${country ? 'WHERE pr.country = ? AND p.is_voided = 0' : 'WHERE p.is_voided = 0'}
+          UNION ALL
+          SELECT e.id, 'expense' as entity_type, e.expense_date as activity_date,
+                 ('Expense: ' || e.amount || ' ' || e.currency || ' — ' || COALESCE(pr.name, 'General')) as description, e.created_at
+          FROM expenses e
+          LEFT JOIN properties pr ON e.property_id = pr.id
+          ${country ? 'WHERE (pr.country = ? OR e.property_id IS NULL) AND e.is_voided = 0' : 'WHERE e.is_voided = 0'}
+          UNION ALL
+          SELECT c.id, 'contract' as entity_type, c.start_date as activity_date,
+                 ('Contract: ' || c.contract_number || ' — ' || pr.name) as description, c.created_at
+          FROM contracts c
+          JOIN properties pr ON c.property_id = pr.id
+          ${prClause}
+          UNION ALL
+          SELECT id, 'property' as entity_type, substr(created_at, 1, 10) as activity_date,
+                 ('Property Added: ' || name || ' (' || code || ')') as description, created_at
+          FROM properties
+          ${propClause}
+          UNION ALL
+          SELECT id, 'tenant' as entity_type, substr(created_at, 1, 10) as activity_date,
+                 ('Tenant Added: ' || fullname || ' (' || code || ')') as description, created_at
+          FROM tenants
+        ) ORDER BY created_at DESC LIMIT 10
+      `
+      return db.prepare(query).all(...(country ? [country, country, country, country] : []))
+    } catch (err) {
+      console.error(err)
+      throw new Error('FAILED_TO_LOAD_RECENT_ACTIVITIES')
+    }
+  })
+
   /* ------------------------------------------------------------------ */
   /* FR-DASH-04: Upcoming rent due in the next 7 days                    */
   /* ------------------------------------------------------------------ */

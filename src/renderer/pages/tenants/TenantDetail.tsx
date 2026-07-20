@@ -3,8 +3,8 @@
  *         payments, and documents. Accessed from TenantList via link.
  * CONSTRAINT (AGENTS.md): i18n keys only, StandardTable for lists, logical CSS.
  */
-import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
 import PeopleIcon from '@mui/icons-material/People'
+import ReceiptLongIcon from '@mui/icons-material/ReceiptLong'
 import {
   Box,
   Typography,
@@ -15,15 +15,16 @@ import {
   Grid,
   Chip,
   Breadcrumbs,
-  Button,
-  Collapse
+  IconButton,
+  Tooltip
 } from '@mui/material'
 import type { GridColDef, GridValidRowModel } from '@mui/x-data-grid'
-import React, { useState, useEffect, useCallback } from 'react'
+import React, { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useParams, useNavigate, Link } from 'react-router-dom'
-import DocumentUploadForm from '../../components/DocumentUploadForm'
+import EntityDocumentsTab from '../../components/EntityDocumentsTab'
 import PageHeader from '../../components/PageHeader'
+import ReceiptDialog, { ReceiptPaymentData } from '../../components/ReceiptDialog'
 import StandardTable from '../../components/StandardTable'
 
 interface TenantData {
@@ -51,19 +52,8 @@ export default function TenantDetail(): React.JSX.Element {
   const [tab, setTab] = useState(0)
   const [contracts, setContracts] = useState<GridValidRowModel[]>([])
   const [payments, setPayments] = useState<GridValidRowModel[]>([])
-  const [documents, setDocuments] = useState<GridValidRowModel[]>([])
-  const [showUploadForm, setShowUploadForm] = useState<boolean>(false)
   const [loading, setLoading] = useState(true)
-
-  const fetchDocuments = useCallback(async (): Promise<void> => {
-    if (!id) return
-    try {
-      const data = await window.api.documents.list({ entity_type: 'tenant', entity_id: Number(id) })
-      setDocuments(data as GridValidRowModel[])
-    } catch {
-      /* documents stay empty */
-    }
-  }, [id])
+  const [receiptTarget, setReceiptTarget] = useState<ReceiptPaymentData | null>(null)
 
   useEffect(() => {
     if (!id) return
@@ -96,16 +86,6 @@ export default function TenantDetail(): React.JSX.Element {
         } else if (tab === 1) {
           const data = await window.api.payments.list({ tenant_id: tid })
           if (!cancelled) setPayments(data as GridValidRowModel[])
-        } else if (tab === 2) {
-          try {
-            const docData = await window.api.documents.list({
-              entity_type: 'tenant',
-              entity_id: tid
-            })
-            if (!cancelled) setDocuments(docData as GridValidRowModel[])
-          } catch {
-            /* documents stay empty */
-          }
         }
       } catch {
         /* tab data stays empty */
@@ -132,25 +112,28 @@ export default function TenantDetail(): React.JSX.Element {
     { field: 'property_name', headerName: t('common.property'), flex: 1 },
     { field: 'amount', headerName: t('common.amount'), flex: 1, type: 'number' },
     { field: 'payment_type', headerName: t('payment.paymentType'), flex: 1 },
-    { field: 'receipt_number', headerName: t('common.receipt'), flex: 1 }
-  ]
-
-  const docCols: GridColDef[] = [
-    { field: 'file_name', headerName: t('documents.fileName'), flex: 2 },
-    { field: 'mime_type', headerName: t('documents.mimeType'), flex: 1 },
+    { field: 'receipt_number', headerName: t('common.receipt'), flex: 1 },
     {
-      field: 'issue_date',
-      headerName: t('documents.issueDate'),
+      field: 'actions',
+      headerName: t('common.actions'),
       flex: 1,
-      renderCell: (params) => (params.row as GridValidRowModel).issue_date ?? '—'
-    },
-    {
-      field: 'expiry_date',
-      headerName: t('documents.expiryDate'),
-      flex: 1,
-      renderCell: (params) => (params.row as GridValidRowModel).expiry_date ?? '—'
-    },
-    { field: 'uploaded_at', headerName: t('documents.uploadedAt'), flex: 1 }
+      sortable: false,
+      renderCell: (params) => {
+        const row = params.row as ReceiptPaymentData
+        return (
+          <Tooltip title={t('receipt.print', 'Print Receipt')}>
+            <IconButton
+              size="small"
+              color="primary"
+              onClick={() => setReceiptTarget(row)}
+              aria-label={t('receipt.print', 'Print Receipt')}
+            >
+              <ReceiptLongIcon fontSize="small" />
+            </IconButton>
+          </Tooltip>
+        )
+      }
+    }
   ]
 
   return (
@@ -252,45 +235,13 @@ export default function TenantDetail(): React.JSX.Element {
           emptyMessage={t('tenantDetail.noPayments')}
         />
       )}
-      {tab === 2 && (
-        <StandardTable
-          columns={docCols}
-          rows={documents}
-          emptyMessage={t('tenantDetail.noDocuments')}
-        />
-      )}
-      {tab === 2 && (
-        <Box sx={{ mt: 2 }}>
-          <Button
-            size="small"
-            startIcon={
-              <ExpandMoreIcon
-                sx={{
-                  transform: showUploadForm ? 'rotate(180deg)' : 'none',
-                  transition: 'transform 0.2s'
-                }}
-              />
-            }
-            onClick={() => setShowUploadForm(!showUploadForm)}
-          >
-            {showUploadForm ? t('common.close') : t('documents.selectFile')}
-          </Button>
-          <Collapse in={showUploadForm}>
-            <Card sx={{ mt: 1 }}>
-              <CardContent>
-                <DocumentUploadForm
-                  entityType="tenant"
-                  entityId={Number(id)}
-                  onSuccess={() => {
-                    fetchDocuments()
-                    setShowUploadForm(false)
-                  }}
-                />
-              </CardContent>
-            </Card>
-          </Collapse>
-        </Box>
-      )}
+      {tab === 2 && id && <EntityDocumentsTab entityType="tenant" entityId={Number(id)} />}
+
+      <ReceiptDialog
+        open={receiptTarget !== null}
+        onClose={() => setReceiptTarget(null)}
+        payment={receiptTarget}
+      />
     </Box>
   )
 }
