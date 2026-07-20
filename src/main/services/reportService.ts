@@ -9,8 +9,11 @@
  * CONSTRAINTS:
  *   - NFR-SEC-05: every query uses named/positional parameters. No string concatenation into SQL.
  *   - NFR-PAGE-01: every list query is bounded by REPORT_ROW_LIMIT.
- *   - BR-13: rows already carry the property's own currency (set at write time); we never
- *            recompute or convert here — conversion is display-only.
+ *   - BR-13: rows already carry the property's own currency (set at write time); detail rows
+ *            never recompute or convert — native currency is shown per property. The
+ *            CONSOLIDATED total uses the frozen exchange-rate snapshot captured at each
+ *            transaction's write time (sumReportingSnapshot), so historical reports are
+ *            deterministic and immune to later rate changes.
  *   - BR-22: the ledger report reuses `computeRunningBalances` so the running balance is always
  *            derived fresh from the first entry ever, even when filtering to a sub-period.
  *
@@ -20,17 +23,29 @@
 
 import { Database } from 'better-sqlite3'
 import { computeRunningBalances } from '../db/ledgerService'
-import { computeConsolidatedNote } from '../utils/currencyHelper'
+import {
+  sumReportingSnapshot,
+  formatConsolidatedSnapshotNote,
+  computeConsolidatedNote,
+  getReportingCurrency
+} from '../utils/currencyHelper'
 import {
   type ReportData,
   type ReportColumn,
   groupByCurrency,
+  buildConsolidatedGroup,
   REPORT_ROW_LIMIT
 } from './exportService/exportUtils'
 import { extendedBuilders } from './reportServiceExtended'
 
 // Re-export for reportServiceExtended.ts
-export { type ReportData, type ReportColumn, groupByCurrency, REPORT_ROW_LIMIT }
+export {
+  type ReportData,
+  type ReportColumn,
+  groupByCurrency,
+  buildConsolidatedGroup,
+  REPORT_ROW_LIMIT
+}
 
 /** Filters accepted by every report builder. Re-declared here so reportService is self-contained. */
 export interface ReportFilters {
@@ -126,6 +141,7 @@ function buildIncomeReport(db: Database, filters: ReportFilters): ReportData {
   const rows = db
     .prepare(
       `SELECT p.payment_date, p.receipt_number, p.amount, p.currency, p.payment_type, p.payment_method,
+              p.base_amount, p.reporting_currency,
               pr.name AS property_name, t.fullname AS tenant_name
          FROM payments p
          LEFT JOIN properties pr ON p.property_id = pr.id
@@ -140,7 +156,10 @@ function buildIncomeReport(db: Database, filters: ReportFilters): ReportData {
   return {
     titleKey: 'reports.type.income',
     columns: INCOME_COLUMNS,
-    groups
+    groups,
+    // One consolidated group in the reporting currency (frozen base_amount per row). Undefined
+    // when every payment is already in the reporting currency — renderer skips the duplicate.
+    consolidatedGroup: buildConsolidatedGroup(rows, getReportingCurrency(db), 'amount')
   }
 }
 
@@ -172,6 +191,7 @@ function buildExpenseReport(db: Database, filters: ReportFilters): ReportData {
   const rows = db
     .prepare(
       `SELECT e.expense_date, e.amount, e.currency, e.vendor_name,
+              e.base_amount, e.reporting_currency,
               ec.name_key AS category_key,
               pr.name AS property_name
          FROM expenses e
@@ -187,7 +207,8 @@ function buildExpenseReport(db: Database, filters: ReportFilters): ReportData {
   return {
     titleKey: 'reports.type.expense',
     columns: EXPENSE_COLUMNS,
-    groups
+    groups,
+    consolidatedGroup: buildConsolidatedGroup(rows, getReportingCurrency(db), 'amount')
   }
 }
 
@@ -257,11 +278,92 @@ function buildProfitLossReport(db: Database, filters: ReportFilters): ReportData
   }
 
   const groups = groupByCurrency(rows, 'currency', ['total_income', 'total_expense', 'net_profit'])
+  // Snapshot-aware consolidated note: net = snapshot income − snapshot expense, frozen at each
+  // transaction's write-time rate. Detail rows above still show native-currency amounts per
+  // property (BR-13); only the consolidated total uses the frozen snapshots for determinism.
+  const incomeSnap = sumReportingSnapshot(db, {
+    table: 'payments',
+    dateColumn: 'payment_date',
+    fromDate: filters.from_date,
+    toDate: filters.to_date,
+    extraWhere: filters.property_id ? 'payments.property_id = @property_id' : undefined,
+    params: filters.property_id ? { property_id: filters.property_id } : undefined
+  })
+  const expenseSnap = sumReportingSnapshot(db, {
+    table: 'expenses',
+    dateColumn: 'expense_date',
+    fromDate: filters.from_date,
+    toDate: filters.to_date,
+    extraWhere: filters.property_id ? 'expenses.property_id = @property_id' : undefined,
+    params: filters.property_id ? { property_id: filters.property_id } : undefined
+  })
+  const consolidatedNote =
+    groups.length > 1
+      ? formatConsolidatedSnapshotNote({
+          total: incomeSnap.total - expenseSnap.total,
+          currency: incomeSnap.currency,
+          unconvertedCurrencies: Array.from(
+            new Set([...incomeSnap.unconvertedCurrencies, ...expenseSnap.unconvertedCurrencies])
+          )
+        })
+      : computeConsolidatedNote(db, groups, 'net_profit')
+
+  // Consolidated group: one row per property in the reporting currency, using frozen snapshots.
+  // Mirrors the native P&L shape so the same columns render, but amounts are base_amount sums.
+  const reportingCurrency = getReportingCurrency(db)
+  const consolidatedRows = db
+    .prepare(
+      `SELECT pr.id, pr.name AS property_name, pr.country,
+              '${reportingCurrency}' AS currency,
+              COALESCE(income.total_income, 0) AS total_income,
+              COALESCE(expense.total_expense, 0) AS total_expense,
+              (COALESCE(income.total_income, 0) - COALESCE(expense.total_expense, 0)) AS net_profit,
+              '${reportingCurrency}' AS reporting_currency
+         FROM properties pr
+         LEFT JOIN (
+           SELECT property_id, SUM(COALESCE(base_amount, amount, 0)) AS total_income
+             FROM payments p
+            WHERE p.is_voided = 0 AND ${incomeCond}
+            GROUP BY property_id
+         ) income ON income.property_id = pr.id
+         LEFT JOIN (
+           SELECT property_id, SUM(COALESCE(base_amount, amount, 0)) AS total_expense
+             FROM expenses e
+            WHERE e.is_voided = 0 AND ${expenseCond}
+            GROUP BY property_id
+         ) expense ON expense.property_id = pr.id
+         ${propertyFilter}
+        WHERE pr.is_archived = 0
+        ORDER BY net_profit DESC
+        LIMIT ${REPORT_ROW_LIMIT + 1}`
+    )
+    .all(params) as Array<Record<string, unknown>>
+  for (const row of consolidatedRows) {
+    const income = Number(row.total_income ?? 0)
+    const net = Number(row.net_profit ?? 0)
+    row['margin_percent'] = income > 0 ? Math.round((net / income) * 1000) / 10 : 0
+  }
+  // Only surface a consolidated section when there's at least one property whose currency
+  // differs from the reporting currency (otherwise it duplicates the native table).
+  const hasMultiCurrency = rows.some((r) => r['currency'] !== reportingCurrency)
+  const consolidatedGroup = hasMultiCurrency
+    ? {
+        currency: reportingCurrency,
+        rows: consolidatedRows,
+        totals: {
+          total_income: consolidatedRows.reduce((s, r) => s + Number(r.total_income ?? 0), 0),
+          total_expense: consolidatedRows.reduce((s, r) => s + Number(r.total_expense ?? 0), 0),
+          net_profit: consolidatedRows.reduce((s, r) => s + Number(r.net_profit ?? 0), 0)
+        }
+      }
+    : undefined
+
   return {
-    titleKey: 'reports.type.profitLoss',
+    titleKey: 'reports.type.profit_loss',
     columns: PNL_COLUMNS,
     groups,
-    consolidatedNote: computeConsolidatedNote(db, groups, 'net_profit')
+    consolidatedNote,
+    consolidatedGroup
   }
 }
 
@@ -364,6 +466,10 @@ function buildLedgerReport(db: Database, filters: ReportFilters): ReportData {
   ) as unknown as Record<string, unknown>[]
 
   const groups = groupByCurrency(rows, 'currency', ['debit', 'credit'])
+  // DECISION: the ledger report intentionally has NO consolidatedGroup. A ledger is a single-
+  // currency per-property document (BR-13); mixing debit/credit/running_balance across the
+  // base_amount snapshot would misrepresent the double-entry. The interactive reporting-currency
+  // view lives on the Ledger PAGE (toggle), not in this export.
   return {
     titleKey: 'reports.type.ledger',
     columns: LEDGER_COLUMNS,

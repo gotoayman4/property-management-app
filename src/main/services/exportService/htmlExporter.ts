@@ -325,7 +325,11 @@ export function buildHtmlDocument(data: ReportData, lang: ExportLanguage): strin
     .join('')
 
   const chartHtml = renderSvgChart(data)
-  const groupsHtml = data.groups.map((g) => renderGroup(g, data.columns, lang)).join('')
+  const consolidatedGroupHtml = data.consolidatedGroup
+    ? renderGroup(data.consolidatedGroup, data.columns, lang)
+    : ''
+  const groupsHtml =
+    consolidatedGroupHtml + data.groups.map((g) => renderGroup(g, data.columns, lang)).join('')
   const consolidatedHtml = data.consolidatedNote
     ? `<div class="consolidated-note">${escapeHtml(data.consolidatedNote)}</div>`
     : ''

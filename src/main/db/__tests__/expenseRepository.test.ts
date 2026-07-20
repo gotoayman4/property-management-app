@@ -222,4 +222,110 @@ describe('expenseRepository (BR-11/13/20/21)', () => {
       expect(() => createExpenseCategory(db, '   ')).toThrow(ExpenseError)
     })
   })
+
+  // -----------------------------------------------------------------------
+  // Exchange-rate snapshot — mirror of paymentRepository tests
+  // -----------------------------------------------------------------------
+
+  describe('exchange-rate snapshot (frozen at write time)', () => {
+    function addRate(from: string, to: string, rate: number, date = '2026-07-01'): void {
+      db.prepare(
+        `INSERT INTO exchange_rates (currency_from, currency_to, rate, effective_date, source)
+         VALUES (?, ?, ?, ?, 'manual')`
+      ).run(from, to, rate, date)
+    }
+
+    it('stores reporting_currency, exchange_rate, and base_amount on the expense row at write time', () => {
+      db.prepare("UPDATE settings SET reporting_currency = 'USD' WHERE id = 1").run()
+      addRate('JOD', 'USD', 0.71)
+
+      const created = createExpense(db, baseInput({ amount: 100 }))
+      const expense = db
+        .prepare('SELECT reporting_currency, exchange_rate, base_amount FROM expenses WHERE id = ?')
+        .get(created.expense_id) as {
+        reporting_currency: string | null
+        exchange_rate: number | null
+        base_amount: number | null
+      }
+
+      expect(expense.reporting_currency).toBe('USD')
+      expect(expense.exchange_rate).toBeCloseTo(0.71)
+      expect(expense.base_amount).toBeCloseTo(71)
+    })
+
+    it('stores exchange_rate = 1 for identity currency', () => {
+      const created = createExpense(db, baseInput({ amount: 300 }))
+      const expense = db
+        .prepare('SELECT reporting_currency, exchange_rate, base_amount FROM expenses WHERE id = ?')
+        .get(created.expense_id) as {
+        reporting_currency: string | null
+        exchange_rate: number | null
+        base_amount: number | null
+      }
+
+      expect(expense.reporting_currency).toBe('JOD')
+      expect(expense.exchange_rate).toBe(1)
+      expect(expense.base_amount).toBe(300)
+    })
+
+    it('stores NULL when no rate exists', () => {
+      db.prepare("UPDATE settings SET reporting_currency = 'EUR' WHERE id = 1").run()
+      const created = createExpense(db, baseInput({ amount: 80 }))
+      const expense = db
+        .prepare('SELECT reporting_currency, exchange_rate, base_amount FROM expenses WHERE id = ?')
+        .get(created.expense_id) as {
+        reporting_currency: string | null
+        exchange_rate: number | null
+        base_amount: number | null
+      }
+
+      expect(expense.reporting_currency).toBeNull()
+      expect(expense.exchange_rate).toBeNull()
+      expect(expense.base_amount).toBeNull()
+    })
+
+    it('is frozen — a later rate addition does not change the snapshotted value', () => {
+      db.prepare("UPDATE settings SET reporting_currency = 'USD' WHERE id = 1").run()
+      addRate('JOD', 'USD', 0.7, '2026-05-01')
+
+      const created = createExpense(db, baseInput({ amount: 100 }))
+
+      addRate('JOD', 'USD', 0.72, '2026-07-01')
+
+      const expense = db
+        .prepare('SELECT base_amount FROM expenses WHERE id = ?')
+        .get(created.expense_id) as { base_amount: number }
+
+      expect(expense.base_amount).toBeCloseTo(70)
+    })
+  })
+
+  describe('void reconciliation — reversal reuses the original snapshot', () => {
+    it('the expense_void reversal negates base_amount with the original exchange_rate', () => {
+      db.prepare("UPDATE settings SET reporting_currency = 'USD' WHERE id = 1").run()
+      db.prepare(
+        `INSERT INTO exchange_rates (currency_from, currency_to, rate, effective_date, source)
+         VALUES ('JOD', 'USD', 0.70, '2026-06-01', 'manual')`
+      ).run()
+
+      const created = createExpense(db, baseInput({ amount: 200 }))
+      const voided = voidExpense(db, created.expense_id, 'audit correction')
+
+      const reversal = db
+        .prepare(
+          'SELECT entry_type, reporting_currency, exchange_rate, base_amount FROM ledger_entries WHERE id = ?'
+        )
+        .get(voided.ledger_id) as {
+        entry_type: string
+        reporting_currency: string | null
+        exchange_rate: number | null
+        base_amount: number | null
+      }
+
+      expect(reversal.entry_type).toBe('expense_void')
+      expect(reversal.reporting_currency).toBe('USD')
+      expect(reversal.exchange_rate).toBeCloseTo(0.7)
+      expect(reversal.base_amount).toBeCloseTo(-140)
+    })
+  })
 })

@@ -83,6 +83,8 @@ export function PaymentForm({ onSuccess, onCancel }: PaymentFormProps): React.Re
 
   const [properties, setProperties] = useState<Property[]>([])
   const [contracts, setContracts] = useState<Contract[]>([])
+  // Reporting currency drives the display-only conversion preview (BR-13, FR-FX-06).
+  const [reportingCurrency, setReportingCurrency] = useState<string>('USD')
 
   const defaultValues: PaymentFormValues = {
     property_id: 0,
@@ -113,12 +115,16 @@ export function PaymentForm({ onSuccess, onCancel }: PaymentFormProps): React.Re
   useEffect(() => {
     const load = async (): Promise<void> => {
       try {
-        const [propsData, contractsData] = await Promise.all([
+        const [propsData, contractsData, settings] = await Promise.all([
           window.api.properties.list() as Promise<Property[]>,
-          window.api.contracts.list({ status: 'active' }) as Promise<Contract[]>
+          window.api.contracts.list({ status: 'active' }) as Promise<Contract[]>,
+          window.api.settings.get() as Promise<{ reporting_currency?: string } | null>
         ])
         setProperties(propsData)
         setContracts(contractsData)
+        if (settings?.reporting_currency) {
+          setReportingCurrency(settings.reporting_currency)
+        }
       } catch (err) {
         console.error('Failed to load properties/contracts:', err)
       }
@@ -130,9 +136,11 @@ export function PaymentForm({ onSuccess, onCancel }: PaymentFormProps): React.Re
   const selectedContractId = watch('contract_id')
   const watchedAmount = watch('amount')
   const watchedCurrency = watch('currency')
-  const conversions = useCurrencyConversion(watchedAmount, watchedCurrency)
+  // Single conversion target = reporting currency; the hook returns one result.
+  const conversions = useCurrencyConversion(watchedAmount, watchedCurrency, reportingCurrency)
   const primaryConversion =
-    conversions.find((c) => c.currency === 'USD' && c.currency !== watchedCurrency) ?? null
+    conversions.find((c) => c.currency === reportingCurrency && c.currency !== watchedCurrency) ??
+    null
 
   // Lock currency to the selected property (BR-13) and clear it when none selected.
   useEffect(() => {

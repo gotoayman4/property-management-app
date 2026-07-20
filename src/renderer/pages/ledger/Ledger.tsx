@@ -3,7 +3,9 @@ import {
   Box,
   Button,
   Chip,
+  FormControlLabel,
   Paper,
+  Switch,
   TextField,
   FormControl,
   InputLabel,
@@ -14,7 +16,7 @@ import {
   Stack
 } from '@mui/material'
 import { GridColDef } from '@mui/x-data-grid'
-import React, { useCallback, useEffect, useState } from 'react'
+import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import GlobalSnackbar from '../../components/GlobalSnackbar'
 import PageHeader from '../../components/PageHeader'
@@ -50,6 +52,10 @@ interface LedgerRow {
   credit: number
   currency: string
   running_balance: number
+  /** Frozen reporting-currency snapshot (NULL when no rate existed at write time). */
+  base_amount: number | null
+  reporting_currency: string | null
+  exchange_rate: number | null
 }
 
 interface LedgerSummary {
@@ -81,6 +87,10 @@ export default function Ledger(): React.ReactElement {
   const [summary, setSummary] = useState<LedgerSummary | null>(null)
   const [loading, setLoading] = useState<boolean>(false)
   const [error, setError] = useState<string | null>(null)
+  /** When true, debit/credit/running-balance render in the reporting currency (frozen snapshot). */
+  const [showInReporting, setShowInReporting] = useState<boolean>(false)
+  /** The configured reporting currency — read from settings so the toggle label is meaningful. */
+  const [reportingCurrency, setReportingCurrency] = useState<string>('')
 
   const [reconstructDate, setReconstructDate] = useState<string>('')
   const [reconstructResult, setReconstructResult] = useState<number | null>(null)
@@ -91,8 +101,12 @@ export default function Ledger(): React.ReactElement {
   useEffect(() => {
     const load = async (): Promise<void> => {
       try {
-        const data = (await window.api.properties.list()) as Property[]
+        const [data, settings] = await Promise.all([
+          window.api.properties.list() as Promise<Property[]>,
+          window.api.settings.get() as Promise<{ reporting_currency?: string } | null>
+        ])
         setProperties(data)
+        if (settings?.reporting_currency) setReportingCurrency(settings.reporting_currency)
       } catch (err) {
         console.error('Failed to load properties:', err)
       }
@@ -112,10 +126,17 @@ export default function Ledger(): React.ReactElement {
       const filter = {
         property_id: selectedPropertyId,
         ...(fromDate ? { from_date: fromDate } : {}),
-        ...(toDate ? { to_date: toDate } : {})
+        ...(toDate ? { to_date: toDate } : {}),
+        // Summary uses the reporting-currency variant when the toggle is on; rows always carry
+        // both native and base_amount so no re-fetch is needed for the per-row display switch.
+        ...(showInReporting ? { reporting_currency: true } : {})
       }
       const [ledgerRows, ledgerSummary] = await Promise.all([
-        window.api.ledger.list(filter) as Promise<LedgerRow[]>,
+        window.api.ledger.list({
+          property_id: filter.property_id,
+          from_date: filter.from_date,
+          to_date: filter.to_date
+        }) as Promise<LedgerRow[]>,
         window.api.ledger.summary(filter) as Promise<LedgerSummary>
       ])
       setRows(ledgerRows)
@@ -126,7 +147,7 @@ export default function Ledger(): React.ReactElement {
     } finally {
       setLoading(false)
     }
-  }, [selectedPropertyId, fromDate, toDate, t])
+  }, [selectedPropertyId, fromDate, toDate, showInReporting, t])
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -138,7 +159,8 @@ export default function Ledger(): React.ReactElement {
     try {
       const result = await window.api.ledger.reconstructBalance({
         property_id: selectedPropertyId,
-        as_of_date: reconstructDate
+        as_of_date: reconstructDate,
+        ...(showInReporting ? { reporting_currency: true } : {})
       })
       setReconstructResult(result.balance)
     } catch (err) {
@@ -176,6 +198,33 @@ export default function Ledger(): React.ReactElement {
 
   const selectedProperty = properties.find((p) => p.id === selectedPropertyId)
   const currency = selectedProperty?.currency ?? ''
+
+  /**
+   * When showInReporting is on, project each row into the reporting currency using its frozen
+   * base_amount snapshot. debit/credit are reconstructed from the signed base_amount (positive →
+   * debit, negative → credit) and a reporting-currency running_balance is accumulated. Rows with
+   * a NULL snapshot fall back to native values (graceful). When the toggle is off, rows pass
+   * through unchanged so the native view is identical to before.
+   */
+  const displayRows: LedgerRow[] = useMemo(() => {
+    if (!showInReporting) return rows
+    let cumulative = 0
+    return rows.map((r) => {
+      const signed =
+        r.base_amount != null ? r.base_amount : Number(r.debit ?? 0) - Number(r.credit ?? 0)
+      cumulative += signed
+      return {
+        ...r,
+        debit: signed > 0 ? signed : 0,
+        credit: signed < 0 ? Math.abs(signed) : 0,
+        running_balance: cumulative,
+        currency: r.reporting_currency ?? r.currency
+      }
+    })
+  }, [rows, showInReporting])
+
+  /** The currency label shown on debit/credit/running-balance cells and the summary bar. */
+  const displayCurrency = showInReporting ? reportingCurrency || currency : currency
 
   const columns: GridColDef[] = [
     { field: 'entry_date', headerName: t('ledger.entryDate'), flex: 1.1 },
@@ -322,25 +371,43 @@ export default function Ledger(): React.ReactElement {
         </Grid>
       </Paper>
 
-      {/* Summary bar — only meaningful once a property is selected */}
+      {/* Reporting-currency toggle: shows when the property currency differs from the reporting
+          currency (otherwise the native view IS the reporting view). Toggling ON re-fetches the
+          summary in reporting currency; per-row cells and the summary bar switch to base_amount. */}
+      {reportingCurrency && selectedProperty && selectedProperty.currency !== reportingCurrency && (
+        <FormControlLabel
+          control={
+            <Switch
+              checked={showInReporting}
+              onChange={(_, checked) => setShowInReporting(checked)}
+              size="small"
+            />
+          }
+          label={t('ledger.showInReportingCurrency', { currency: reportingCurrency })}
+          sx={{ mb: 2, ml: 0 }}
+        />
+      )}
+
+      {/* Summary bar — only meaningful once a property is selected. Currency label switches
+          with the reporting-currency toggle; totals come from computeSummaryReporting when on. */}
       {summary && selectedPropertyId && (
         <Stack direction="row" spacing={2} sx={{ mb: 3, flexWrap: 'wrap', gap: 2 }}>
           <SummaryCard
             label={t('ledger.summaryTotalDebit')}
             value={summary.total_debit}
-            currency={currency}
+            currency={displayCurrency}
             tone="success"
           />
           <SummaryCard
             label={t('ledger.summaryTotalCredit')}
             value={summary.total_credit}
-            currency={currency}
+            currency={displayCurrency}
             tone="error"
           />
           <SummaryCard
             label={t('ledger.summaryNet')}
             value={summary.net_balance}
-            currency={currency}
+            currency={displayCurrency}
             tone={summary.net_balance >= 0 ? 'success' : 'error'}
           />
         </Stack>
@@ -348,7 +415,7 @@ export default function Ledger(): React.ReactElement {
 
       <StandardTable
         columns={columns}
-        rows={rows}
+        rows={displayRows}
         loading={loading}
         error={error ?? undefined}
         onRetry={fetchLedger}
@@ -391,7 +458,7 @@ export default function Ledger(): React.ReactElement {
               <Grid size={{ xs: 12 }}>
                 <Typography sx={{ fontWeight: 600 }}>
                   {t('ledger.reconstructResult', {
-                    amount: `${reconstructResult.toLocaleString()} ${currency}`
+                    amount: `${reconstructResult.toLocaleString()} ${displayCurrency}`
                   })}
                 </Typography>
               </Grid>

@@ -25,6 +25,7 @@ import { CurrencyInput } from '../../components/CurrencyInput'
 import ExpenseCategoryManagerDialog from '../../components/ExpenseCategoryManagerDialog'
 import { FormField } from '../../components/FormField'
 import GlobalSnackbar from '../../components/GlobalSnackbar'
+import { useCurrencyConversion } from '../../hooks/useCurrencyConversion'
 import { useSnackbar } from '../../hooks/useSnackbar'
 
 const templateSchema = z.object({
@@ -85,6 +86,8 @@ export function RecurringExpenseForm({
   const [properties, setProperties] = useState<Property[]>([])
   const [categories, setCategories] = useState<Category[]>([])
   const [manageCatsOpen, setManageCatsOpen] = useState<boolean>(false)
+  // Reporting currency drives the display-only conversion preview (BR-13, FR-FX-06).
+  const [reportingCurrency, setReportingCurrency] = useState<string>('USD')
 
   const defaultValues: TemplateFormValues = {
     name: template?.name ?? '',
@@ -123,8 +126,14 @@ export function RecurringExpenseForm({
   useEffect(() => {
     const load = async (): Promise<void> => {
       try {
-        const propsData = await window.api.properties.list()
+        const [propsData, settings] = await Promise.all([
+          window.api.properties.list(),
+          window.api.settings.get() as Promise<{ reporting_currency?: string } | null>
+        ])
         setProperties(propsData as Property[])
+        if (settings?.reporting_currency) {
+          setReportingCurrency(settings.reporting_currency)
+        }
         loadCategories()
       } catch (err) {
         console.error('Failed to load properties:', err)
@@ -135,6 +144,11 @@ export function RecurringExpenseForm({
 
   const selectedPropertyId = watch('property_id')
   const selectedCurrency = watch('currency')
+  const watchedAmount = watch('amount')
+  const conversions = useCurrencyConversion(watchedAmount, selectedCurrency, reportingCurrency)
+  const primaryConversion =
+    conversions.find((c) => c.currency === reportingCurrency && c.currency !== selectedCurrency) ??
+    null
 
   useEffect(() => {
     if (selectedPropertyId) {
@@ -287,6 +301,7 @@ export function RecurringExpenseForm({
               label={t('common.amount')}
               currency={selectedCurrency}
               required
+              conversion={primaryConversion}
               noRateLabel={t('common.noRateAvailable')}
             />
           </Grid>

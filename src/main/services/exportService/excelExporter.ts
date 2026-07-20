@@ -296,6 +296,12 @@ export async function buildExcelWorkbook(data: ReportData, lang: ExportLanguage)
   workbook.creator = 'Property Manager'
   workbook.created = new Date()
 
+  // Consolidated reporting-currency sheet first (if present) so the reporting-currency
+  // view is the most prominent sheet. Shares the same columns; rows carry the frozen snapshot.
+  if (data.consolidatedGroup) {
+    addGroupSheet(workbook, data, data.consolidatedGroup, data.columns, lang)
+  }
+
   for (const group of data.groups) {
     addGroupSheet(workbook, data, group, data.columns, lang)
   }

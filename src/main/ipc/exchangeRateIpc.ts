@@ -3,11 +3,14 @@
  *         Manual entry is the primary flow. Online fetch (ADR-001) is a convenience
  *         button, not a dependency.
  * CONSTRAINT (ADR-001): online fetch uses Electron net.fetch(), user-initiated only.
- * CONSTRAINT (BR-13): conversion is display-only; ledger always records in base currency.
+ * CONSTRAINT (BR-13): conversion is display-only. The ledger records each transaction
+ *                    in its own currency; conversion is a read-only preview for the UI
+ *                    and a consolidation step for reports/dashboard.
  */
 import { ipcMain, net } from 'electron'
 import { z } from 'zod'
 import { db } from '../db/database'
+import { getLatestRate } from '../utils/currencyHelper'
 
 const rateAddSchema = z.object({
   currency_from: z.string().min(3).max(3),
@@ -54,19 +57,14 @@ export function registerExchangeRateIpcHandlers(): void {
     }
   )
 
-  // Get the latest rate for a specific pair (most recent effective_date)
+  // Get the latest rate for a specific pair (most recent effective_date).
+  // Falls back to the reciprocal pair (1/rate) when only the reverse direction exists (BR-15),
+  // so a stored `USD→JOD` row also satisfies a `JOD→USD` request. Delegates to getLatestRate
+  // to keep the direct/reverse resolution rule in exactly one place (currencyHelper.ts).
   ipcMain.handle('exchangeRates:latest', async (_, data: unknown) => {
     try {
       const parsed = ratePairSchema.parse(data)
-      const row = db
-        .prepare(
-          `SELECT * FROM exchange_rates
-           WHERE currency_from = ? AND currency_to = ?
-           ORDER BY effective_date DESC, fetched_at DESC
-           LIMIT 1`
-        )
-        .get(parsed.currency_from, parsed.currency_to)
-      return row ?? null
+      return getLatestRate(db, parsed.currency_from, parsed.currency_to)
     } catch (error: unknown) {
       if (error instanceof z.ZodError) {
         throw new Error('INVALID_INPUT')

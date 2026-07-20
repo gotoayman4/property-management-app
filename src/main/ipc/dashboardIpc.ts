@@ -8,7 +8,7 @@
  */
 import { ipcMain } from 'electron'
 import { db } from '../db/database'
-import { convertAmount } from '../utils/currencyHelper'
+import { sumReportingSnapshot } from '../utils/currencyHelper'
 
 interface CurrencyFinancialRow {
   currency: string
@@ -19,9 +19,9 @@ interface CurrencyFinancialRow {
 
 interface ConsolidatedSummary {
   reporting_currency: string
-  total_income: number | 'rate_missing'
-  total_expenses: number | 'rate_missing'
-  total_net_profit: number | 'rate_missing'
+  total_income: number
+  total_expenses: number
+  total_net_profit: number
 }
 
 interface DashboardSummary {
@@ -180,35 +180,37 @@ export function registerDashboardIpcHandlers(): void {
         })
       )
 
-      // Fetch target reporting currency from settings
-      const settings = db.prepare('SELECT reporting_currency FROM settings LIMIT 1').get() as
-        | {
-            reporting_currency: string
-          }
-        | undefined
-      const targetCurrency = settings?.reporting_currency ?? 'USD'
+      // Consolidated totals use the FROZEN exchange-rate snapshot captured at each
+      // transaction's write time (sumReportingSnapshot), so the dashboard's reporting-currency
+      // figures are deterministic and do not drift when rates change later. The per-currency
+      // `financialSummary` above still shows native-currency breakdowns for display.
+      // The country filter uses a NAMED param (@country) because sumReportingSnapshot binds
+      // all params by name; the positional `?` form used by the legacy queries above cannot
+      // be mixed with named bindings in one statement.
+      const countryClause = country ? ' AND (pr.country = @country OR pr.country IS NULL)' : ''
+      const snapshotParams: Record<string, unknown> = { currentMonth }
+      if (country) snapshotParams.country = country
 
-      let totalIncome = 0
-      let totalExpenses = 0
-      let hasMissingRate = false
-
-      for (const row of financialSummary) {
-        const inc = convertAmount(db, row.income, row.currency, targetCurrency)
-        const exp = convertAmount(db, row.expenses, row.currency, targetCurrency)
-
-        if (inc === 'rate_missing' || exp === 'rate_missing') {
-          hasMissingRate = true
-        } else {
-          totalIncome += inc
-          totalExpenses += exp
-        }
-      }
+      const incomeSnap = sumReportingSnapshot(db, {
+        table: 'payments',
+        dateColumn: 'payment_date',
+        join: 'LEFT JOIN properties pr ON payments.property_id = pr.id',
+        extraWhere: `strftime('%Y-%m', payments.payment_date) = @currentMonth${countryClause}`,
+        params: snapshotParams
+      })
+      const expenseSnap = sumReportingSnapshot(db, {
+        table: 'expenses',
+        dateColumn: 'expense_date',
+        join: 'LEFT JOIN properties pr ON expenses.property_id = pr.id',
+        extraWhere: `strftime('%Y-%m', expenses.expense_date) = @currentMonth${countryClause}`,
+        params: snapshotParams
+      })
 
       const consolidatedSummary: ConsolidatedSummary = {
-        reporting_currency: targetCurrency,
-        total_income: hasMissingRate ? 'rate_missing' : totalIncome,
-        total_expenses: hasMissingRate ? 'rate_missing' : totalExpenses,
-        total_net_profit: hasMissingRate ? 'rate_missing' : totalIncome - totalExpenses
+        reporting_currency: incomeSnap.currency,
+        total_income: incomeSnap.total,
+        total_expenses: expenseSnap.total,
+        total_net_profit: incomeSnap.total - expenseSnap.total
       }
 
       return {
@@ -230,6 +232,7 @@ export function registerDashboardIpcHandlers(): void {
       return db
         .prepare(
           `SELECT p.id, p.payment_date, p.amount, p.currency, p.payment_type, p.receipt_number,
+                  p.base_amount, p.reporting_currency,
                   pr.name as property_name, t.fullname as tenant_name
            FROM payments p
            LEFT JOIN properties pr ON p.property_id = pr.id
@@ -250,6 +253,7 @@ export function registerDashboardIpcHandlers(): void {
       return db
         .prepare(
           `SELECT e.id, e.expense_date, e.amount, e.currency, e.vendor_name,
+                  e.base_amount, e.reporting_currency,
                   ec.name_key as category_key, pr.name as property_name
            FROM expenses e
            LEFT JOIN expense_categories ec ON e.category_id = ec.id
@@ -272,34 +276,38 @@ export function registerDashboardIpcHandlers(): void {
       const query = `
         SELECT * FROM (
           SELECT p.id, 'payment' as entity_type, p.payment_date as activity_date,
-                 p.amount, p.currency, pr.name as property_name,
+                 p.amount, p.currency, p.base_amount, p.reporting_currency,
+                 pr.name as property_name,
                  NULL as contract_number, NULL as entity_name, NULL as entity_code, p.created_at
           FROM payments p
           JOIN properties pr ON p.property_id = pr.id
           ${country ? 'WHERE pr.country = ? AND p.is_voided = 0' : 'WHERE p.is_voided = 0'}
           UNION ALL
           SELECT e.id, 'expense' as entity_type, e.expense_date as activity_date,
-                 e.amount, e.currency, COALESCE(pr.name, '') as property_name,
+                 e.amount, e.currency, e.base_amount, e.reporting_currency, COALESCE(pr.name, '') as property_name,
                  NULL as contract_number, NULL as entity_name, NULL as entity_code, e.created_at
           FROM expenses e
           LEFT JOIN properties pr ON e.property_id = pr.id
           ${country ? 'WHERE (pr.country = ? OR e.property_id IS NULL) AND e.is_voided = 0' : 'WHERE e.is_voided = 0'}
           UNION ALL
           SELECT c.id, 'contract' as entity_type, c.start_date as activity_date,
-                 NULL as amount, NULL as currency, pr.name as property_name,
+                 NULL as amount, NULL as currency, NULL as base_amount, NULL as reporting_currency,
+                 pr.name as property_name,
                  c.contract_number, NULL as entity_name, NULL as entity_code, c.created_at
           FROM contracts c
           JOIN properties pr ON c.property_id = pr.id
           ${prClause}
           UNION ALL
           SELECT id, 'property' as entity_type, substr(created_at, 1, 10) as activity_date,
-                 NULL as amount, NULL as currency, NULL as property_name,
+                 NULL as amount, NULL as currency, NULL as base_amount, NULL as reporting_currency,
+                 NULL as property_name,
                  NULL as contract_number, name as entity_name, code as entity_code, created_at
           FROM properties
           ${propClause}
           UNION ALL
           SELECT id, 'tenant' as entity_type, substr(created_at, 1, 10) as activity_date,
-                 NULL as amount, NULL as currency, NULL as property_name,
+                 NULL as amount, NULL as currency, NULL as base_amount, NULL as reporting_currency,
+                 NULL as property_name,
                  NULL as contract_number, fullname as entity_name, code as entity_code, created_at
           FROM tenants
         ) ORDER BY created_at DESC LIMIT 10

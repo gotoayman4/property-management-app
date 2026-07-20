@@ -39,6 +39,18 @@ export interface LedgerEntryInput {
   credit?: number
   currency: string
   isManualAdjustment?: boolean
+  /**
+   * Frozen reporting-currency snapshot for the row's signed amount (debit - credit).
+   * When provided, the row carries reporting_currency/exchange_rate/base_amount so reports
+   * can consolidate deterministically without re-deriving rates. Omit for manual_adjustment
+   * rows that have no natural transaction currency.
+   */
+  snapshot?: {
+    reportingCurrency: string
+    exchangeRate: number
+    /** (debit - credit) * exchangeRate, in reporting currency. */
+    baseAmount: number
+  } | null
 }
 
 /** A ledger row with its computed running balance (BR-22). */
@@ -57,6 +69,10 @@ export interface LedgerRowWithBalance {
   created_at: string
   /** Cumulative (debit - credit) from the FIRST entry for this property up to and including this row. */
   running_balance: number
+  /** Frozen reporting-currency snapshot (NULL when no rate existed at write time). */
+  reporting_currency: string | null
+  exchange_rate: number | null
+  base_amount: number | null
 }
 
 /** Summary totals for a property over an optional date window. */
@@ -95,13 +111,16 @@ export function appendLedgerEntry(db: Database, input: LedgerEntryInput): number
     throw new LedgerError('LEDGER_ZERO_AMOUNT')
   }
 
+  const snapshot = input.snapshot ?? null
   const result = db
     .prepare(
       `INSERT INTO ledger_entries
          (entry_date, entry_type, reference_type, reference_id, property_id,
-          description, debit, credit, currency, is_manual_adjustment)
+          description, debit, credit, currency, is_manual_adjustment,
+          reporting_currency, exchange_rate, base_amount)
        VALUES (@entry_date, @entry_type, @reference_type, @reference_id, @property_id,
-               @description, @debit, @credit, @currency, @is_manual_adjustment)`
+               @description, @debit, @credit, @currency, @is_manual_adjustment,
+               @reporting_currency, @exchange_rate, @base_amount)`
     )
     .run({
       entry_date: input.entryDate,
@@ -113,7 +132,10 @@ export function appendLedgerEntry(db: Database, input: LedgerEntryInput): number
       debit,
       credit,
       currency: input.currency,
-      is_manual_adjustment: input.isManualAdjustment ? 1 : 0
+      is_manual_adjustment: input.isManualAdjustment ? 1 : 0,
+      reporting_currency: snapshot?.reportingCurrency ?? null,
+      exchange_rate: snapshot?.exchangeRate ?? null,
+      base_amount: snapshot?.baseAmount ?? null
     })
   return Number(result.lastInsertRowid)
 }
@@ -142,6 +164,7 @@ export function computeRunningBalances(
       SELECT
         id, entry_date, entry_type, reference_type, reference_id, property_id,
         description, debit, credit, currency, is_manual_adjustment, created_at,
+        reporting_currency, exchange_rate, base_amount,
         SUM(debit - credit) OVER (
           ORDER BY entry_date ASC, id ASC
           ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW
@@ -170,10 +193,19 @@ export function computeRunningBalances(
  * (debit - credit) across ALL ledger entries for the property dated on or before `asOfDate`.
  * Pure SELECT — never depends on any cached/stored balance.
  */
-export function reconstructBalanceAsOf(db: Database, propertyId: number, asOfDate: string): number {
+export function reconstructBalanceAsOf(
+  db: Database,
+  propertyId: number,
+  asOfDate: string,
+  inReportingCurrency = false
+): number {
+  // When inReportingCurrency is requested, sum the frozen base_amount snapshot (signed net per
+  // row) instead of native debit-credit. Rows with no snapshot fall back to debit-credit so the
+  // reconstruction never silently drops history.
+  const sumExpr = inReportingCurrency ? 'COALESCE(base_amount, debit - credit)' : '(debit - credit)'
   const row = db
     .prepare(
-      `SELECT COALESCE(SUM(debit - credit), 0) AS balance
+      `SELECT COALESCE(SUM(${sumExpr}), 0) AS balance
        FROM ledger_entries
        WHERE property_id = ? AND entry_date <= ?`
     )
@@ -196,6 +228,52 @@ export function computeSummary(
       COALESCE(SUM(debit), 0)  AS total_debit,
       COALESCE(SUM(credit), 0) AS total_credit,
       COUNT(*)                  AS row_count
+    FROM ledger_entries
+    WHERE property_id = @propertyId
+  `
+  const params: Record<string, unknown> = { propertyId }
+  if (fromDate) {
+    query += ' AND entry_date >= @fromDate'
+    params.fromDate = fromDate
+  }
+  if (toDate) {
+    query += ' AND entry_date <= @toDate'
+    params.toDate = toDate
+  }
+  const row = db.prepare(query).get(params) as
+    { total_debit: number; total_credit: number; row_count: number } | undefined
+  const totalDebit = row?.total_debit ?? 0
+  const totalCredit = row?.total_credit ?? 0
+  return {
+    total_debit: totalDebit,
+    total_credit: totalCredit,
+    net_balance: totalDebit - totalCredit,
+    row_count: row?.row_count ?? 0
+  }
+}
+
+/**
+ * Same as computeSummary but returns totals in the configured REPORTING currency via the frozen
+ * base_amount snapshot on each ledger row. Used by the Ledger page toggle.
+ *
+ * CONSTRAINT: base_amount is the SIGNED net (debit - credit) snapshot, so the reporting-currency
+ *             debit/credit split is reconstructed as positive vs negative contributions — this
+ *             preserves the net_balance exactly while giving the UI a debit/credit-style display.
+ *             Rows with NULL base_amount fall back to native debit-credit (graceful).
+ */
+export function computeSummaryReporting(
+  db: Database,
+  propertyId: number,
+  fromDate?: string,
+  toDate?: string
+): LedgerSummary {
+  let query = `
+    SELECT
+      COALESCE(SUM(CASE WHEN COALESCE(base_amount, debit - credit) > 0
+                        THEN COALESCE(base_amount, debit - credit) ELSE 0 END), 0) AS total_debit,
+      COALESCE(SUM(CASE WHEN COALESCE(base_amount, debit - credit) < 0
+                        THEN ABS(COALESCE(base_amount, debit - credit)) ELSE 0 END), 0) AS total_credit,
+      COUNT(*) AS row_count
     FROM ledger_entries
     WHERE property_id = @propertyId
   `

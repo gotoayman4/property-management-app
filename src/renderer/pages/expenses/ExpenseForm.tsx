@@ -15,7 +15,6 @@ import React, { useEffect, useState } from 'react'
 import { useForm, Controller } from 'react-hook-form'
 import { useTranslation } from 'react-i18next'
 import { z } from 'zod'
-import { AmountField } from '../../components/AmountField'
 import { CurrencyInput } from '../../components/CurrencyInput'
 import ExpenseCategoryManagerDialog from '../../components/ExpenseCategoryManagerDialog'
 import { FormField } from '../../components/FormField'
@@ -67,6 +66,8 @@ export function ExpenseForm({ onSuccess, onCancel }: ExpenseFormProps): React.Re
   const [properties, setProperties] = useState<Property[]>([])
   const [categories, setCategories] = useState<Category[]>([])
   const [manageCatsOpen, setManageCatsOpen] = useState<boolean>(false)
+  // Reporting currency drives the display-only conversion preview (BR-13, FR-FX-06).
+  const [reportingCurrency, setReportingCurrency] = useState<string>('USD')
 
   const defaultValues: ExpenseFormValues = {
     property_id: null,
@@ -102,8 +103,14 @@ export function ExpenseForm({ onSuccess, onCancel }: ExpenseFormProps): React.Re
   useEffect(() => {
     const load = async (): Promise<void> => {
       try {
-        const propsData = await window.api.properties.list()
+        const [propsData, settings] = await Promise.all([
+          window.api.properties.list(),
+          window.api.settings.get() as Promise<{ reporting_currency?: string } | null>
+        ])
         setProperties(propsData as Property[])
+        if (settings?.reporting_currency) {
+          setReportingCurrency(settings.reporting_currency)
+        }
         loadCategories()
       } catch (err) {
         console.error('Failed to load properties:', err)
@@ -115,9 +122,12 @@ export function ExpenseForm({ onSuccess, onCancel }: ExpenseFormProps): React.Re
   const selectedPropertyId = watch('property_id')
   const selectedCurrency = watch('currency')
   const watchedAmount = watch('amount')
-  const conversions = useCurrencyConversion(watchedAmount, selectedCurrency)
+  // Single conversion target = reporting currency; applies to both property-linked and
+  // general (no-property) expense branches so every monetary field shows the preview.
+  const conversions = useCurrencyConversion(watchedAmount, selectedCurrency, reportingCurrency)
   const primaryConversion =
-    conversions.find((c) => c.currency === 'USD' && c.currency !== selectedCurrency) ?? null
+    conversions.find((c) => c.currency === reportingCurrency && c.currency !== selectedCurrency) ??
+    null
 
   // Lock currency to the selected property (BR-13); when no property, keep the editable default.
   useEffect(() => {
@@ -252,24 +262,19 @@ export function ExpenseForm({ onSuccess, onCancel }: ExpenseFormProps): React.Re
           </Grid>
 
           <Grid size={{ xs: 12, sm: 6 }}>
-            {selectedPropertyId ? (
-              <CurrencyInput
-                name="amount"
-                control={control}
-                label={t('expense.amount')}
-                currency={selectedCurrency}
-                required
-                conversion={primaryConversion}
-                noRateLabel={t('common.noRateAvailable')}
-              />
-            ) : (
-              <AmountField
-                name="amount"
-                control={control}
-                label={t('expense.amount')}
-                endAdornment={<strong>{selectedCurrency}</strong>}
-              />
-            )}
+            {/* Both property-linked and general expenses show the conversion preview;
+                the IPC resolves reverse-rate fallbacks so a stored `USD→JOD` also
+                satisfies a `JOD→USD` request. Currency is locked by the property when
+                one is selected, editable otherwise. */}
+            <CurrencyInput
+              name="amount"
+              control={control}
+              label={t('expense.amount')}
+              currency={selectedCurrency}
+              required
+              conversion={primaryConversion}
+              noRateLabel={t('common.noRateAvailable')}
+            />
           </Grid>
 
           {/* Currency is read-only when a property locks it; editable for general expenses. */}

@@ -9,6 +9,7 @@
  */
 
 import { Database } from 'better-sqlite3'
+import { getReportingCurrency } from '../utils/currencyHelper'
 import {
   type ReportFilters,
   type ReportData,
@@ -80,10 +81,56 @@ function buildPropertyProfitabilityReport(db: Database, filters: ReportFilters):
   }
 
   const groups = groupByCurrency(rows, 'currency', ['total_income', 'total_expense', 'net_profit'])
+  // Consolidated group: per-property sums in the reporting currency via frozen base_amount
+  // snapshots. Same shape as the native rows so the same columns render.
+  const reportingCurrency = getReportingCurrency(db)
+  const consolidatedRows = db
+    .prepare(
+      `SELECT pr.id, pr.name AS property_name, pr.country,
+              '${reportingCurrency}' AS currency,
+              COALESCE(income.total_income, 0) AS total_income,
+              COALESCE(expense.total_expense, 0) AS total_expense,
+              (COALESCE(income.total_income, 0) - COALESCE(expense.total_expense, 0)) AS net_profit,
+              '${reportingCurrency}' AS reporting_currency
+         FROM properties pr
+         LEFT JOIN (
+           SELECT property_id, SUM(COALESCE(base_amount, amount, 0)) AS total_income
+             FROM payments p WHERE p.is_voided = 0 AND ${incomeCond}
+             GROUP BY property_id
+         ) income ON income.property_id = pr.id
+         LEFT JOIN (
+           SELECT property_id, SUM(COALESCE(base_amount, amount, 0)) AS total_expense
+             FROM expenses e WHERE e.is_voided = 0 AND ${expenseCond}
+             GROUP BY property_id
+         ) expense ON expense.property_id = pr.id
+         ${propertyFilter}
+        WHERE pr.is_archived = 0
+        ORDER BY net_profit DESC
+        LIMIT ${REPORT_ROW_LIMIT + 1}`
+    )
+    .all(params) as Array<Record<string, unknown>>
+  for (const row of consolidatedRows) {
+    const income = Number(row.total_income ?? 0)
+    const net = Number(row.net_profit ?? 0)
+    row['margin_percent'] = income > 0 ? Math.round((net / income) * 1000) / 10 : 0
+  }
+  const hasMultiCurrency = rows.some((r) => r['currency'] !== reportingCurrency)
+  const consolidatedGroup = hasMultiCurrency
+    ? {
+        currency: reportingCurrency,
+        rows: consolidatedRows,
+        totals: {
+          total_income: consolidatedRows.reduce((s, r) => s + Number(r.total_income ?? 0), 0),
+          total_expense: consolidatedRows.reduce((s, r) => s + Number(r.total_expense ?? 0), 0),
+          net_profit: consolidatedRows.reduce((s, r) => s + Number(r.net_profit ?? 0), 0)
+        }
+      }
+    : undefined
   return {
-    titleKey: 'reports.type.propertyProfitability',
+    titleKey: 'reports.type.property_profitability',
     columns: PROP_PROFITABILITY_COLUMNS,
-    groups
+    groups,
+    consolidatedGroup
   }
 }
 
@@ -139,7 +186,15 @@ function buildTenantPaymentHistoryReport(db: Database, filters: ReportFilters): 
   }
 
   const groups = groupByCurrency(rows, 'currency', ['total_due', 'total_paid', 'remaining'])
-  return { titleKey: 'reports.type.tenantPaymentHistory', columns: TENANT_PAYMENT_COLUMNS, groups }
+  // DECISION: tenant_payment_history intentionally has NO consolidatedGroup. Only `total_paid`
+  // has a frozen snapshot; `total_due` (contract monthly_rent) and `remaining` do not. Mixing
+  // snapshot-converted payments with native rent would produce a half-converted, misleading
+  // "remaining" value. The per-currency native tables remain the correct view for this report.
+  return {
+    titleKey: 'reports.type.tenant_payment_history',
+    columns: TENANT_PAYMENT_COLUMNS,
+    groups
+  }
 }
 
 /* -------------------------------------------------------------------------- */
@@ -178,7 +233,7 @@ function buildOutstandingBalancesReport(db: Database, filters: ReportFilters): R
     .all(params) as Array<Record<string, unknown> & { amount_due: number; days_overdue: number }>
 
   const groups = groupByCurrency(rows, 'currency', ['amount_due'])
-  return { titleKey: 'reports.type.outstandingBalances', columns: OUTSTANDING_COLUMNS, groups }
+  return { titleKey: 'reports.type.outstanding_balances', columns: OUTSTANDING_COLUMNS, groups }
 }
 
 /* -------------------------------------------------------------------------- */
@@ -225,7 +280,7 @@ function buildContractExpiryReport(db: Database, filters: ReportFilters): Report
     .all(params) as Record<string, unknown>[]
 
   const groups = groupByCurrency(rows, 'currency', ['current_rent'])
-  return { titleKey: 'reports.type.contractExpiry', columns: CONTRACT_EXPIRY_COLUMNS, groups }
+  return { titleKey: 'reports.type.contract_expiry', columns: CONTRACT_EXPIRY_COLUMNS, groups }
 }
 
 /* -------------------------------------------------------------------------- */
@@ -269,7 +324,11 @@ function buildRecurringScheduleReport(db: Database, filters: ReportFilters): Rep
     .all(params) as Record<string, unknown>[]
 
   const groups = groupByCurrency(rows, 'currency', ['amount'])
-  return { titleKey: 'reports.type.recurringSchedule', columns: RECURRING_SCHEDULE_COLUMNS, groups }
+  return {
+    titleKey: 'reports.type.recurring_schedule',
+    columns: RECURRING_SCHEDULE_COLUMNS,
+    groups
+  }
 }
 
 /* -------------------------------------------------------------------------- */
@@ -315,7 +374,7 @@ function buildDocumentExpiryReport(db: Database, filters: ReportFilters): Report
     .all(params) as Record<string, unknown>[]
 
   return {
-    titleKey: 'reports.type.documentExpiry',
+    titleKey: 'reports.type.document_expiry',
     columns: DOCUMENT_EXPIRY_COLUMNS,
     groups: [{ currency: '—', rows, totals: {} }]
   }

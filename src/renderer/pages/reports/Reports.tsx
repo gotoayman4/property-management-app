@@ -73,6 +73,8 @@ interface ReportData {
   columns: ReportColumn[]
   groups: ReportGroup[]
   consolidatedNote?: string
+  /** Optional single group in the reporting currency (frozen base_amount per row). */
+  consolidatedGroup?: ReportGroup
 }
 
 interface Property {
@@ -461,6 +463,33 @@ export default function Reports(): React.ReactElement {
       {/* Preview */}
       {data && (
         <Box>
+          {data.consolidatedGroup && (
+            <Box
+              sx={{
+                mb: 3,
+                p: 2,
+                border: '1px solid',
+                borderColor: 'primary.main',
+                borderRadius: 1,
+                bgcolor: 'action.hover'
+              }}
+            >
+              <Typography variant="h6" sx={{ mb: 0.5, fontWeight: 700, color: 'primary.main' }}>
+                {t('reports.consolidatedGroup')}: {data.consolidatedGroup.currency}
+              </Typography>
+              <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
+                {t('reports.consolidatedSnapshotNote')}
+              </Typography>
+              <StandardTable
+                columns={gridColumns}
+                rows={data.consolidatedGroup.rows}
+                emptyMessage={t('reports.noData')}
+                getRowId={makeRowId(`consolidated-${data.consolidatedGroup.currency}`)}
+                pageSize={25}
+                pageSizeOptions={[10, 25, 50, 100]}
+              />
+            </Box>
+          )}
           {data.groups.map((g) => (
             <Box key={g.currency} sx={{ mb: 3 }}>
               <Typography variant="h6" sx={{ mb: 1, fontWeight: 600 }}>

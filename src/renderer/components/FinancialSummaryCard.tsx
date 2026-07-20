@@ -1,5 +1,4 @@
 import { AccountBalanceWallet, Payments, ReceiptLong } from '@mui/icons-material'
-import WarningIcon from '@mui/icons-material/Warning'
 import { Card, CardContent, Grid, Stack, Typography, Chip } from '@mui/material'
 import React from 'react'
 import { useTranslation } from 'react-i18next'
@@ -37,14 +36,13 @@ export default function FinancialSummaryCard({
     if (!consolidatedSummary) return null
 
     const currency = consolidatedSummary.reporting_currency
-    const isMissing = consolidatedSummary.total_income === 'rate_missing'
 
     return (
       <Grid size={{ xs: 12, sm: 6, md: 4 }}>
         <Card
           sx={{
             border: '2px solid',
-            borderColor: isMissing ? 'warning.main' : 'primary.main',
+            borderColor: 'primary.main',
             height: '100%',
             position: 'relative',
             overflow: 'hidden'
@@ -70,86 +68,62 @@ export default function FinancialSummaryCard({
               />
             </Stack>
 
-            {isMissing ? (
-              <Stack
-                direction="row"
-                spacing={1}
-                sx={{ mt: 2, alignItems: 'center', color: 'warning.main' }}
-              >
-                <WarningIcon fontSize="small" />
-                <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                  {t('dashboard.rateMissingWarning')}
+            <Stack spacing={0.5} sx={{ mt: 1 }}>
+              <Stack direction="row" sx={{ justifyContent: 'space-between', alignItems: 'center' }}>
+                <Stack direction="row" spacing={0.5} sx={{ alignItems: 'center' }}>
+                  <Payments sx={{ fontSize: 15, color: 'success.main' }} />
+                  <Typography variant="body2" color="text.secondary">
+                    {t('dashboard.incomeLabel')}
+                  </Typography>
+                </Stack>
+                <Typography variant="body2" sx={{ fontWeight: 600, color: 'success.main' }}>
+                  {fmt(consolidatedSummary.total_income)}
                 </Typography>
               </Stack>
-            ) : (
-              <Stack spacing={0.5} sx={{ mt: 1 }}>
-                <Stack
-                  direction="row"
-                  sx={{ justifyContent: 'space-between', alignItems: 'center' }}
-                >
-                  <Stack direction="row" spacing={0.5} sx={{ alignItems: 'center' }}>
-                    <Payments sx={{ fontSize: 15, color: 'success.main' }} />
-                    <Typography variant="body2" color="text.secondary">
-                      {t('dashboard.incomeLabel')}
-                    </Typography>
-                  </Stack>
-                  <Typography variant="body2" sx={{ fontWeight: 600, color: 'success.main' }}>
-                    {fmt(consolidatedSummary.total_income as number)}
+              <Stack direction="row" sx={{ justifyContent: 'space-between', alignItems: 'center' }}>
+                <Stack direction="row" spacing={0.5} sx={{ alignItems: 'center' }}>
+                  <ReceiptLong sx={{ fontSize: 15, color: 'error.main' }} />
+                  <Typography variant="body2" color="text.secondary">
+                    {t('dashboard.expensesLabel')}
                   </Typography>
                 </Stack>
-                <Stack
-                  direction="row"
-                  sx={{ justifyContent: 'space-between', alignItems: 'center' }}
-                >
-                  <Stack direction="row" spacing={0.5} sx={{ alignItems: 'center' }}>
-                    <ReceiptLong sx={{ fontSize: 15, color: 'error.main' }} />
-                    <Typography variant="body2" color="text.secondary">
-                      {t('dashboard.expensesLabel')}
-                    </Typography>
-                  </Stack>
-                  <Typography variant="body2" sx={{ fontWeight: 600, color: 'error.main' }}>
-                    {fmt(consolidatedSummary.total_expenses as number)}
+                <Typography variant="body2" sx={{ fontWeight: 600, color: 'error.main' }}>
+                  {fmt(consolidatedSummary.total_expenses)}
+                </Typography>
+              </Stack>
+              <Stack
+                direction="row"
+                sx={{
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  pt: 0.5,
+                  borderTop: '1px solid',
+                  borderColor: 'divider'
+                }}
+              >
+                <Stack direction="row" spacing={0.5} sx={{ alignItems: 'center' }}>
+                  <AccountBalanceWallet
+                    sx={{
+                      fontSize: 15,
+                      color:
+                        consolidatedSummary.total_net_profit >= 0 ? 'success.main' : 'error.main'
+                    }}
+                  />
+                  <Typography variant="body2" color="text.secondary">
+                    {t('dashboard.netBalance')}
                   </Typography>
                 </Stack>
-                <Stack
-                  direction="row"
+                <Typography
+                  variant="body2"
                   sx={{
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    pt: 0.5,
-                    borderTop: '1px solid',
-                    borderColor: 'divider'
+                    fontWeight: 700,
+                    color: consolidatedSummary.total_net_profit >= 0 ? 'success.main' : 'error.main'
                   }}
                 >
-                  <Stack direction="row" spacing={0.5} sx={{ alignItems: 'center' }}>
-                    <AccountBalanceWallet
-                      sx={{
-                        fontSize: 15,
-                        color:
-                          (consolidatedSummary.total_net_profit as number) >= 0
-                            ? 'success.main'
-                            : 'error.main'
-                      }}
-                    />
-                    <Typography variant="body2" color="text.secondary">
-                      {t('dashboard.netBalance')}
-                    </Typography>
-                  </Stack>
-                  <Typography
-                    variant="body2"
-                    sx={{
-                      fontWeight: 700,
-                      color:
-                        (consolidatedSummary.total_net_profit as number) >= 0
-                          ? 'success.main'
-                          : 'error.main'
-                    }}
-                  >
-                    {fmt(consolidatedSummary.total_net_profit as number)}
-                  </Typography>
-                </Stack>
+                  {fmt(consolidatedSummary.total_net_profit)}
+                </Typography>
               </Stack>
-            )}
+            </Stack>
           </CardContent>
         </Card>
       </Grid>

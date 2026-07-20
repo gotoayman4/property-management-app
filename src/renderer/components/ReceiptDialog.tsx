@@ -87,7 +87,9 @@ export function ReceiptDialog({
       <DialogTitle
         sx={{ m: 0, p: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
       >
-        <Typography variant="h6">{t('receipt.title')}</Typography>
+        <Typography variant="h6" component="span">
+          {t('receipt.title')}
+        </Typography>
       </DialogTitle>
       <DialogContent dividers>
         {/* Printable Area Wrapper */}

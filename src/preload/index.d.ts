@@ -170,6 +170,8 @@ declare global {
           property_id: number
           from_date?: string
           to_date?: string
+          /** When true, totals are returned in the configured reporting currency (frozen snapshot). */
+          reporting_currency?: boolean
         }) => Promise<{
           total_debit: number
           total_credit: number
@@ -179,6 +181,8 @@ declare global {
         reconstructBalance: (payload: {
           property_id: number
           as_of_date: string
+          /** When true, the balance is returned in the configured reporting currency. */
+          reporting_currency?: boolean
         }) => Promise<{ balance: number }>
         addManualAdjustment: (data: unknown) => Promise<{ id: number }>
       }
@@ -295,13 +299,15 @@ declare global {
       exchangeRates: {
         list: (filters?: { currency_from?: string; currency_to?: string }) => Promise<unknown[]>
         latest: (data: { currency_from: string; currency_to: string }) => Promise<{
-          id: number
+          id?: number
           currency_from: string
           currency_to: string
           rate: number
           effective_date: string
           source: string
           fetched_at: string | null
+          /** True when the rate was derived by inverting the stored reverse pair. */
+          inferred_from_reverse: boolean
         } | null>
         add: (data: unknown) => Promise<{ id: number; upserted: boolean }>
         fetchOnline: (data: { currency_from: string; currency_to: string }) => Promise<{
@@ -430,6 +436,12 @@ declare global {
             totals: Record<string, number>
           }>
           consolidatedNote?: string
+          /** Optional single group in the reporting currency (frozen base_amount per row). */
+          consolidatedGroup?: {
+            currency: string
+            rows: Record<string, unknown>[]
+            totals: Record<string, number>
+          }
         }>
         exportExcel: (data: ReportRequestParams) => Promise<{ filePath: string | null }>
         exportHtml: (data: ReportRequestParams) => Promise<{ filePath: string | null }>

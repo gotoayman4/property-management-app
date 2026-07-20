@@ -14,9 +14,9 @@ export interface CurrencyFinancialRow {
 
 export interface ConsolidatedSummary {
   reporting_currency: string
-  total_income: number | 'rate_missing'
-  total_expenses: number | 'rate_missing'
-  total_net_profit: number | 'rate_missing'
+  total_income: number
+  total_expenses: number
+  total_net_profit: number
 }
 
 export interface DashboardSummary {

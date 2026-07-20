@@ -1,4 +1,5 @@
 import { Database } from 'better-sqlite3'
+import { resolveReportingSnapshot } from '../utils/currencyHelper'
 import { appendLedgerEntry } from './ledgerService'
 
 /**
@@ -58,14 +59,19 @@ export function createExpense(db: Database, input: CreateExpenseInput): CreatedE
   if (!category) throw new ExpenseError('EXPENSE_CATEGORY_NOT_FOUND')
 
   return db.transaction(() => {
+    // Freeze the reporting-currency snapshot at write time so reports are deterministic
+    // and immune to later rate changes (NULL when no rate exists — graceful fallback).
+    const snapshot = resolveReportingSnapshot(db, input.amount, input.currency)
     const result = db
       .prepare(
         `INSERT INTO expenses
            (property_id, category_id, recurring_template_id, expense_date, vendor_name,
-            amount, currency, notes, receipt_file_path)
+            amount, currency, notes, receipt_file_path,
+            reporting_currency, exchange_rate, base_amount)
          VALUES
            (@property_id, @category_id, @recurring_template_id, @expense_date, @vendor_name,
-            @amount, @currency, @notes, @receipt_file_path)`
+            @amount, @currency, @notes, @receipt_file_path,
+            @reporting_currency, @exchange_rate, @base_amount)`
       )
       .run({
         property_id: input.property_id ?? null,
@@ -76,7 +82,10 @@ export function createExpense(db: Database, input: CreateExpenseInput): CreatedE
         amount: input.amount,
         currency: input.currency,
         notes: input.notes ?? null,
-        receipt_file_path: input.receipt_file_path ?? null
+        receipt_file_path: input.receipt_file_path ?? null,
+        reporting_currency: snapshot?.reportingCurrency ?? null,
+        exchange_rate: snapshot?.exchangeRate ?? null,
+        base_amount: snapshot?.baseAmount ?? null
       })
     const expenseId = Number(result.lastInsertRowid)
 
@@ -90,7 +99,15 @@ export function createExpense(db: Database, input: CreateExpenseInput): CreatedE
       description,
       debit: 0,
       credit: input.amount,
-      currency: input.currency
+      currency: input.currency,
+      // Mirror the snapshot onto the ledger row (sign carried via debit/credit).
+      snapshot: snapshot
+        ? {
+            reportingCurrency: snapshot.reportingCurrency,
+            exchangeRate: snapshot.exchangeRate,
+            baseAmount: snapshot.baseAmount
+          }
+        : null
     })
     return { expense_id: expenseId, ledger_id: ledgerId }
   })()
@@ -126,7 +143,17 @@ export function voidExpense(
       description: `Void: expense #${expenseId} — ${trimmed}`,
       debit: expense.amount, // equal-and-opposite reversal
       credit: 0,
-      currency: expense.currency
+      currency: expense.currency,
+      // Reuse the ORIGINAL snapshot (sign-flipped via debit-credit) so the void contributes
+      // the exact negation of the original expense to every reporting-currency total.
+      snapshot:
+        expense.reporting_currency && expense.exchange_rate && expense.base_amount != null
+          ? {
+              reportingCurrency: expense.reporting_currency,
+              exchangeRate: expense.exchange_rate,
+              baseAmount: -expense.base_amount
+            }
+          : null
     })
     return { ledger_id: ledgerId }
   })()
@@ -254,6 +281,10 @@ interface ExpenseRow {
   amount: number
   currency: string
   is_voided: number
+  /** Frozen snapshot — reused by the void reversal so it reconciles exactly. */
+  reporting_currency: string | null
+  exchange_rate: number | null
+  base_amount: number | null
 }
 
 function buildExpenseDescription(db: Database, input: CreateExpenseInput): string {

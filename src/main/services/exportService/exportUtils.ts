@@ -65,6 +65,14 @@ export interface ReportData {
   /** When the report spans multiple currencies, an optional consolidated figure may be added by
    *  the builder; it is rendered as a clearly-labeled footnote, never as a silent mixed sum. */
   consolidatedNote?: string
+  /**
+   * Optional single group whose rows are the same transactions expressed in the configured
+   * REPORTING currency via each row's frozen exchange-rate snapshot (base_amount). Rendered as a
+   * distinct "Consolidated" table ABOVE the per-currency groups so the user sees reporting-
+   * currency values without losing the native-currency detail below. Undefined when every row is
+   * already in the reporting currency (no conversion needed → no redundant section).
+   */
+  consolidatedGroup?: ReportCurrencyGroup
 }
 
 /** Page size cap — every list query is bounded per NFR-PAGE-01. */
@@ -100,6 +108,59 @@ export function groupByCurrency(
     groups.push({ currency, rows: groupRows, totals })
   }
   return groups
+}
+
+/**
+ * Build a single consolidated group whose rows are the same transactions as `rows`, but with
+ * each row's primary monetary field replaced by its frozen `base_amount` snapshot and `currency`
+ * set to the reporting currency. Used to surface a reporting-currency view on top of the
+ * per-currency native tables.
+ *
+ * CONSTRAINT: Pure w.r.t. `reportingCurrency` (caller resolves it from settings once and passes
+ *             it in) so this helper stays side-effect-free and unit-testable without a DB.
+ * CONSTRAINT: When a row's `base_amount` is NULL (no rate existed at write time), it falls back
+ *             to its native `amountField` value (graceful) and the row's original currency is
+ *             kept — so the consolidated total is never silently wrong, just mixed where
+ *             snapshots are missing.
+ * DECISION: Returns `undefined` (not an empty group) when EVERY row is already in the reporting
+ *           currency — in that case the consolidated view would duplicate the single native
+ *           group, so the renderer/exporter skips it entirely.
+ *
+ * @param rows              raw rows from the report SELECT; each must carry `base_amount`,
+ *                          `reporting_currency`, and the native field named by `amountField`.
+ * @param reportingCurrency the configured reporting currency (settings.reporting_currency).
+ * @param amountField       the row field that holds the native monetary value AND that the
+ *                          ReportColumn reads (e.g. 'amount' for income/expense,
+ *                          'net_profit' for P&L). The consolidated row writes base_amount here.
+ */
+export function buildConsolidatedGroup(
+  rows: Record<string, unknown>[],
+  reportingCurrency: string,
+  amountField: string
+): ReportCurrencyGroup | undefined {
+  if (rows.length === 0) return undefined
+
+  // Skip when every row is already in the reporting currency (no conversion needed → the
+  // consolidated view would duplicate the single native group).
+  const allNative = rows.every(
+    (r) => r['reporting_currency'] == null || r['reporting_currency'] === reportingCurrency
+  )
+  if (allNative) return undefined
+
+  const consolidatedRows: Record<string, unknown>[] = rows.map((r) => {
+    const base = r['base_amount']
+    if (base == null) {
+      // No snapshot — keep the row as-is (native currency + native amount). Graceful.
+      return { ...r }
+    }
+    return { ...r, [amountField]: base, currency: reportingCurrency }
+  })
+
+  const totals: Record<string, number> = {
+    [amountField]: consolidatedRows.reduce((sum, r) => sum + Number(r[amountField] ?? 0), 0)
+  }
+
+  return { currency: reportingCurrency, rows: consolidatedRows, totals }
 }
 
 /**

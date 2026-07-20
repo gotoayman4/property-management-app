@@ -4,6 +4,7 @@ import { db } from '../db/database'
 import {
   computeRunningBalances,
   computeSummary,
+  computeSummaryReporting,
   reconstructBalanceAsOf,
   appendLedgerEntry,
   LedgerError
@@ -28,11 +29,15 @@ const ledgerListSchema = z.object({
     .optional()
 })
 
-const ledgerSummarySchema = ledgerListSchema
+const ledgerSummarySchema = ledgerListSchema.extend({
+  /** When true, totals are returned in the configured reporting currency via base_amount. */
+  reporting_currency: z.boolean().optional()
+})
 
 const reconstructSchema = z.object({
   property_id: z.number().int().positive(),
-  as_of_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/)
+  as_of_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  reporting_currency: z.boolean().optional()
 })
 
 // SRS §13: manual-adjustment description must be 5–500 characters.
@@ -60,7 +65,11 @@ export function registerLedgerIpcHandlers(): void {
   ipcMain.handle('ledger:summary', async (_, payload: unknown) => {
     try {
       const v = ledgerSummarySchema.parse(payload)
-      return computeSummary(db, v.property_id, v.from_date, v.to_date)
+      // When the caller requests reporting-currency mode, sum the frozen base_amount snapshot
+      // instead of native debit/credit. The Ledger page toggle uses this to switch views.
+      return v.reporting_currency
+        ? computeSummaryReporting(db, v.property_id, v.from_date, v.to_date)
+        : computeSummary(db, v.property_id, v.from_date, v.to_date)
     } catch (error: unknown) {
       console.error('Error computing ledger summary:', error)
       if (error instanceof z.ZodError) throw new Error('INVALID_INPUT')
@@ -71,7 +80,14 @@ export function registerLedgerIpcHandlers(): void {
   ipcMain.handle('ledger:reconstructBalance', async (_, payload: unknown) => {
     try {
       const v = reconstructSchema.parse(payload)
-      return { balance: reconstructBalanceAsOf(db, v.property_id, v.as_of_date) }
+      return {
+        balance: reconstructBalanceAsOf(
+          db,
+          v.property_id,
+          v.as_of_date,
+          v.reporting_currency ?? false
+        )
+      }
     } catch (error: unknown) {
       console.error('Error reconstructing balance:', error)
       if (error instanceof z.ZodError) throw new Error('INVALID_INPUT')

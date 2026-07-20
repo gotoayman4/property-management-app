@@ -276,4 +276,157 @@ describe('paymentRepository (BR-13/20/21)', () => {
       expect(after).toEqual(before)
     })
   })
+
+  // -----------------------------------------------------------------------
+  // Exchange-rate snapshot — the core regression this migration exists to prevent
+  // -----------------------------------------------------------------------
+
+  describe('exchange-rate snapshot (frozen at write time)', () => {
+    /** Adds an exchange rate pair before creating a payment. */
+    function addRate(from: string, to: string, rate: number, date = '2026-07-01'): void {
+      db.prepare(
+        `INSERT INTO exchange_rates (currency_from, currency_to, rate, effective_date, source)
+         VALUES (?, ?, ?, ?, 'manual')`
+      ).run(from, to, rate, date)
+    }
+
+    it('stores reporting_currency, exchange_rate, and base_amount on the payment row at write time', () => {
+      // Change reporting currency to USD, add JOD→USD rate, then create a JOD payment.
+      db.prepare("UPDATE settings SET reporting_currency = 'USD' WHERE id = 1").run()
+      addRate('JOD', 'USD', 0.71)
+
+      const created = createPayment(db, baseInput({ amount: 100 }))
+      const payment = db
+        .prepare('SELECT reporting_currency, exchange_rate, base_amount FROM payments WHERE id = ?')
+        .get(created.payment_id) as {
+        reporting_currency: string | null
+        exchange_rate: number | null
+        base_amount: number | null
+      }
+
+      expect(payment.reporting_currency).toBe('USD')
+      expect(payment.exchange_rate).toBeCloseTo(0.71)
+      expect(payment.base_amount).toBeCloseTo(71)
+    })
+
+    it('stores exchange_rate = 1 when property currency equals reporting currency', () => {
+      // Default reporting currency is JOD; property currency is JOD.
+      const created = createPayment(db, baseInput({ amount: 250 }))
+      const payment = db
+        .prepare('SELECT reporting_currency, exchange_rate, base_amount FROM payments WHERE id = ?')
+        .get(created.payment_id) as {
+        reporting_currency: string | null
+        exchange_rate: number | null
+        base_amount: number | null
+      }
+
+      expect(payment.reporting_currency).toBe('JOD')
+      expect(payment.exchange_rate).toBe(1)
+      expect(payment.base_amount).toBe(250)
+    })
+
+    it('stores NULL for all three columns when no rate exists', () => {
+      // No exchange rate rows and reporting currency differs.
+      db.prepare("UPDATE settings SET reporting_currency = 'EUR' WHERE id = 1").run()
+      const created = createPayment(db, baseInput({ amount: 150 }))
+      const payment = db
+        .prepare('SELECT reporting_currency, exchange_rate, base_amount FROM payments WHERE id = ?')
+        .get(created.payment_id) as {
+        reporting_currency: string | null
+        exchange_rate: number | null
+        base_amount: number | null
+      }
+
+      expect(payment.reporting_currency).toBeNull()
+      expect(payment.exchange_rate).toBeNull()
+      expect(payment.base_amount).toBeNull()
+    })
+
+    it('mirrors the snapshot onto the ledger row (income)', () => {
+      db.prepare("UPDATE settings SET reporting_currency = 'USD' WHERE id = 1").run()
+      addRate('JOD', 'USD', 0.71)
+
+      const created = createPayment(db, baseInput({ amount: 100 }))
+      const ledgerRow = db
+        .prepare(
+          'SELECT reporting_currency, exchange_rate, base_amount FROM ledger_entries WHERE id = ?'
+        )
+        .get(created.ledger_id) as {
+        reporting_currency: string | null
+        exchange_rate: number | null
+        base_amount: number | null
+      }
+
+      expect(ledgerRow.reporting_currency).toBe('USD')
+      expect(ledgerRow.exchange_rate).toBeCloseTo(0.71)
+      expect(ledgerRow.base_amount).toBeCloseTo(71)
+    })
+
+    it('remains frozen — adding a later rate does NOT change the stored snapshot', () => {
+      db.prepare("UPDATE settings SET reporting_currency = 'USD' WHERE id = 1").run()
+      // Rate at write time = 0.70. Later, a newer rate appears at 0.72.
+      addRate('JOD', 'USD', 0.7, '2026-05-01')
+
+      const created = createPayment(db, baseInput({ amount: 100 }))
+
+      addRate('JOD', 'USD', 0.72, '2026-07-01') // newer date, higher rate
+
+      const payment = db
+        .prepare('SELECT base_amount FROM payments WHERE id = ?')
+        .get(created.payment_id) as { base_amount: number }
+
+      // Must still be 70, not 72 — the rate is frozen at write time.
+      expect(payment.base_amount).toBeCloseTo(70)
+    })
+  })
+
+  describe('void reconciliation — reversal uses exactly the original snapshot', () => {
+    it('the income_void reversal carries the same reporting_currency and exchange_rate but negated base_amount', () => {
+      db.prepare("UPDATE settings SET reporting_currency = 'USD' WHERE id = 1").run()
+      db.prepare(
+        `INSERT INTO exchange_rates (currency_from, currency_to, rate, effective_date, source)
+         VALUES ('JOD', 'USD', 0.70, '2026-06-01', 'manual')`
+      ).run()
+
+      const created = createPayment(db, baseInput({ amount: 200 }))
+      const voided = voidPayment(db, created.payment_id, 'recon test')
+
+      const reversal = db
+        .prepare(
+          'SELECT entry_type, reporting_currency, exchange_rate, base_amount FROM ledger_entries WHERE id = ?'
+        )
+        .get(voided.ledger_id) as {
+        entry_type: string
+        reporting_currency: string | null
+        exchange_rate: number | null
+        base_amount: number | null
+      }
+
+      expect(reversal.entry_type).toBe('income_void')
+      expect(reversal.reporting_currency).toBe('USD')
+      expect(reversal.exchange_rate).toBeCloseTo(0.7)
+      // Negated: original income at +140, void at -140.
+      expect(reversal.base_amount).toBeCloseTo(-140)
+    })
+
+    it('summing base_amount across income + void nets to zero', () => {
+      db.prepare("UPDATE settings SET reporting_currency = 'USD' WHERE id = 1").run()
+      db.prepare(
+        `INSERT INTO exchange_rates (currency_from, currency_to, rate, effective_date, source)
+         VALUES ('JOD', 'USD', 0.50, '2026-06-01', 'manual')`
+      ).run()
+
+      const created = createPayment(db, baseInput({ amount: 100 }))
+      voidPayment(db, created.payment_id, 'zero check')
+
+      const rows = db
+        .prepare(
+          `SELECT COALESCE(SUM(base_amount), 0) AS consolidated
+           FROM ledger_entries WHERE property_id = ?`
+        )
+        .get(propertyId) as { consolidated: number }
+
+      expect(rows.consolidated).toBeCloseTo(0)
+    })
+  })
 })

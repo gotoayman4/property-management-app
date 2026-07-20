@@ -1,4 +1,5 @@
 import { Database } from 'better-sqlite3'
+import { resolveReportingSnapshot } from '../utils/currencyHelper'
 import { appendLedgerEntry, generateReceiptNumber } from './ledgerService'
 
 /**
@@ -58,14 +59,19 @@ export function createPayment(db: Database, input: CreatePaymentInput): CreatedP
 
   return db.transaction(() => {
     const receiptNumber = generateReceiptNumber(db)
+    // Freeze the reporting-currency snapshot at write time so reports are deterministic
+    // and immune to later rate changes (NULL when no rate exists — graceful fallback).
+    const snapshot = resolveReportingSnapshot(db, input.amount, input.currency)
     const paymentResult = db
       .prepare(
         `INSERT INTO payments
            (contract_id, property_id, tenant_id, payment_type, payment_date, amount,
-            currency, payment_method, receipt_number, is_partial, related_period_month, notes)
+            currency, payment_method, receipt_number, is_partial, related_period_month, notes,
+            reporting_currency, exchange_rate, base_amount)
          VALUES
            (@contract_id, @property_id, @tenant_id, @payment_type, @payment_date, @amount,
-            @currency, @payment_method, @receipt_number, @is_partial, @related_period_month, @notes)`
+            @currency, @payment_method, @receipt_number, @is_partial, @related_period_month, @notes,
+            @reporting_currency, @exchange_rate, @base_amount)`
       )
       .run({
         contract_id: input.contract_id ?? null,
@@ -79,7 +85,10 @@ export function createPayment(db: Database, input: CreatePaymentInput): CreatedP
         receipt_number: receiptNumber,
         is_partial: input.is_partial ? 1 : 0,
         related_period_month: input.related_period_month ?? null,
-        notes: input.notes ?? null
+        notes: input.notes ?? null,
+        reporting_currency: snapshot?.reportingCurrency ?? null,
+        exchange_rate: snapshot?.exchangeRate ?? null,
+        base_amount: snapshot?.baseAmount ?? null
       })
     const paymentId = Number(paymentResult.lastInsertRowid)
 
@@ -93,7 +102,15 @@ export function createPayment(db: Database, input: CreatePaymentInput): CreatedP
       description,
       debit: input.amount,
       credit: 0,
-      currency: input.currency
+      currency: input.currency,
+      // Mirror the snapshot onto the ledger row so consolidation reads a single table.
+      snapshot: snapshot
+        ? {
+            reportingCurrency: snapshot.reportingCurrency,
+            exchangeRate: snapshot.exchangeRate,
+            baseAmount: snapshot.baseAmount
+          }
+        : null
     })
     if (input.contract_id) {
       db.prepare(
@@ -146,7 +163,17 @@ export function voidPayment(
       description: `Void: ${payment.receipt_number ?? 'payment'} — ${trimmed}`,
       debit: 0,
       credit: payment.amount, // equal-and-opposite reversal
-      currency: payment.currency
+      currency: payment.currency,
+      // Reuse the ORIGINAL snapshot (sign-flipped via debit-credit) so the void contributes
+      // the exact negation of the original income to every reporting-currency total.
+      snapshot:
+        payment.reporting_currency && payment.exchange_rate && payment.base_amount != null
+          ? {
+              reportingCurrency: payment.reporting_currency,
+              exchangeRate: payment.exchange_rate,
+              baseAmount: -payment.base_amount
+            }
+          : null
     })
     return { ledger_id: ledgerId }
   })()
@@ -218,6 +245,10 @@ interface PaymentRow {
   receipt_number: string | null
   notes: string | null
   is_voided: number
+  /** Frozen snapshot — reused by the void reversal so it reconciles exactly. */
+  reporting_currency: string | null
+  exchange_rate: number | null
+  base_amount: number | null
 }
 
 /** Build a human-readable ledger description for a payment (used for audit readability). */
