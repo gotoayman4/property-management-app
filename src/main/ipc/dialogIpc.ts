@@ -20,26 +20,56 @@
  *           imports, etc.) belong here.
  */
 
-import { ipcMain } from 'electron'
+import * as fs from 'fs'
+import * as path from 'path'
+import { dialog, BrowserWindow, ipcMain } from 'electron'
 import { showOpenDirectoryDialog } from '../services/fileDialogService'
 
 export function registerDialogIpcHandlers(): void {
   /**
    * dialog:pickFolder — Open the native folder picker and return the chosen directory.
-   *
-   * @returns { filePath: string | null; canceled: boolean } — `filePath` is the chosen absolute
-   *          directory path, or null if the user cancelled. `canceled` is true when the user
-   *          dismissed the dialog.
    */
   ipcMain.handle('dialog:pickFolder', async () => {
     try {
       return await showOpenDirectoryDialog()
     } catch (error) {
       console.error('Folder picker dialog error:', error)
-      // Return a cancelled result rather than throwing — the renderer treats null/canceled
-      // identically (no path update), and a thrown error would surface as a generic snackbar
-      // which is less actionable than a silent no-op.
       return { filePath: null, canceled: true }
+    }
+  })
+
+  /**
+   * dialog:pickImage — Open the native file picker to select an image,
+   * returning it encoded as a base64 data URI.
+   */
+  ipcMain.handle('dialog:pickImage', async () => {
+    try {
+      const focused = BrowserWindow.getFocusedWindow()
+      const options: Electron.OpenDialogOptions = {
+        title: 'Select Company Logo',
+        filters: [{ name: 'Images', extensions: ['png', 'jpg', 'jpeg', 'svg'] }],
+        properties: ['openFile']
+      }
+      const result = focused
+        ? await dialog.showOpenDialog(focused, options)
+        : await dialog.showOpenDialog(options)
+
+      if (result.canceled || !result.filePaths[0]) {
+        return { base64: null, canceled: true }
+      }
+
+      const selectedPath = result.filePaths[0]
+      const buffer = fs.readFileSync(selectedPath)
+      const ext = path.extname(selectedPath).toLowerCase().replace('.', '')
+      let mimeType = 'image/png'
+      if (ext === 'jpg' || ext === 'jpeg') mimeType = 'image/jpeg'
+      else if (ext === 'svg') mimeType = 'image/svg+xml'
+
+      const base64 = `data:${mimeType};base64,${buffer.toString('base64')}`
+      return { base64, canceled: false }
+    } catch (error) {
+      console.error('Image picker error:', error)
+      return { base64: null, canceled: true }
     }
   })
 }

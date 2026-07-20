@@ -18,6 +18,7 @@
  *           A <noscript> fallback keeps the raw table readable if JS is disabled.
  */
 
+import { db } from '../../db/database'
 import {
   type ReportData,
   type ReportColumn,
@@ -44,7 +45,9 @@ const CSS = `
 * { box-sizing: border-box; }
 html { font-family: 'Tajawal', 'Inter', system-ui, -apple-system, sans-serif; }
 body { margin: 0; padding: 16px; color: var(--body-fg); background: #ffffff; line-height: 1.7; }
-header { margin-block-end: 16px; }
+header { margin-block-end: 16px; display: flex; align-items: center; gap: 16px; }
+.company-logo { max-height: 60px; max-width: 150px; object-fit: contain; }
+.company-name { font-size: 1.1rem; font-weight: bold; color: var(--header-bg); margin-block-end: 4px; }
 h1 { font-size: 1.4rem; margin: 0 0 4px; }
 .subtitle { color: var(--muted); font-size: 0.95rem; margin-block-end: 8px; }
 .toolbar {
@@ -246,6 +249,20 @@ export function buildHtmlDocument(data: ReportData, lang: ExportLanguage): strin
   const title = escapeHtml(resolveLocaleKey(data.titleKey, lang))
   const subtitle = data.subtitleKey ? escapeHtml(resolveLocaleKey(data.subtitleKey, lang)) : ''
 
+  // Query company settings from DB safely (handling missing schema in tests)
+  let settings: { company_name: string | null; company_logo: string | null } | undefined
+  try {
+    settings = db.prepare('SELECT company_name, company_logo FROM settings LIMIT 1').get() as {
+      company_name: string | null
+      company_logo: string | null
+    }
+  } catch {
+    // Fallback if table/columns don't exist in unit test DB
+  }
+
+  const companyName = settings?.company_name ? escapeHtml(settings.company_name) : ''
+  const companyLogo = settings?.company_logo ? settings.company_logo : ''
+
   // Column-visibility toggle panel — populated from the shared column set.
   const toggleItems = data.columns
     .map(
@@ -273,8 +290,12 @@ export function buildHtmlDocument(data: ReportData, lang: ExportLanguage): strin
 </head>
 <body>
 <header>
-  <h1>${title}</h1>
-  ${subtitle ? `<div class="subtitle">${subtitle}</div>` : ''}
+  ${companyLogo ? `<img class="company-logo" src="${companyLogo}" alt="Logo">` : ''}
+  <div>
+    ${companyName ? `<div class="company-name">${companyName}</div>` : ''}
+    <h1>${title}</h1>
+    ${subtitle ? `<div class="subtitle">${subtitle}</div>` : ''}
+  </div>
 </header>
 <noscript><p style="color:var(--muted)">Interactive sorting and filtering require JavaScript.</p></noscript>
 <div class="toolbar">

@@ -47,7 +47,9 @@ const settingsUpdateSchema = z.object({
   backup_time: z
     .string()
     .regex(/^\d{2}:\d{2}$/)
-    .optional()
+    .optional(),
+  company_name: z.string().max(200).nullable().optional(),
+  company_logo: z.string().nullable().optional()
 })
 
 const countryCreateSchema = z.object({

@@ -157,6 +157,8 @@ declare global {
       expenseCategories: {
         list: () => Promise<{ id: number; name_key: string; is_default: number }[]>
         create: (data: unknown) => Promise<{ id: number }>
+        update: (data: unknown) => Promise<{ success: boolean }>
+        delete: (id: number) => Promise<{ success: boolean }>
       }
       ledger: {
         list: (payload: {
@@ -433,6 +435,7 @@ declare global {
       }
       dialog: {
         pickFolder: () => Promise<{ filePath: string | null; canceled: boolean }>
+        pickImage: () => Promise<{ base64: string | null; canceled: boolean }>
       }
       backup: {
         create: () => Promise<{

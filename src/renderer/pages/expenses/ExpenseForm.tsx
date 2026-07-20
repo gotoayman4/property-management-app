@@ -17,6 +17,7 @@ import { useTranslation } from 'react-i18next'
 import { z } from 'zod'
 import { AmountField } from '../../components/AmountField'
 import { CurrencyInput } from '../../components/CurrencyInput'
+import ExpenseCategoryManagerDialog from '../../components/ExpenseCategoryManagerDialog'
 import { FormField } from '../../components/FormField'
 import GlobalSnackbar from '../../components/GlobalSnackbar'
 import { useCurrencyConversion } from '../../hooks/useCurrencyConversion'
@@ -64,7 +65,7 @@ export function ExpenseForm({ onSuccess, onCancel }: ExpenseFormProps): React.Re
 
   const [properties, setProperties] = useState<Property[]>([])
   const [categories, setCategories] = useState<Category[]>([])
-  const [newCategoryKey, setNewCategoryKey] = useState<string>('')
+  const [manageCatsOpen, setManageCatsOpen] = useState<boolean>(false)
 
   const defaultValues: ExpenseFormValues = {
     property_id: null,
@@ -88,17 +89,23 @@ export function ExpenseForm({ onSuccess, onCancel }: ExpenseFormProps): React.Re
     defaultValues
   })
 
+  const loadCategories = async (): Promise<void> => {
+    try {
+      const catsData = await window.api.expenseCategories.list()
+      setCategories(catsData as Category[])
+    } catch (err) {
+      console.error('Failed to load categories:', err)
+    }
+  }
+
   useEffect(() => {
     const load = async (): Promise<void> => {
       try {
-        const [propsData, catsData] = await Promise.all([
-          window.api.properties.list() as Promise<Property[]>,
-          window.api.expenseCategories.list() as Promise<Category[]>
-        ])
-        setProperties(propsData)
-        setCategories(catsData)
+        const propsData = await window.api.properties.list()
+        setProperties(propsData as Property[])
+        loadCategories()
       } catch (err) {
-        console.error('Failed to load properties/categories:', err)
+        console.error('Failed to load properties:', err)
       }
     }
     load()
@@ -118,23 +125,6 @@ export function ExpenseForm({ onSuccess, onCancel }: ExpenseFormProps): React.Re
       if (prop) setValue('currency', prop.currency)
     }
   }, [selectedPropertyId, properties, setValue])
-
-  const handleAddCategory = async (): Promise<void> => {
-    const key = newCategoryKey.trim()
-    if (!key) return
-    try {
-      const result = await window.api.expenseCategories.create({ name_key: key })
-      const fresh = (await window.api.expenseCategories.list()) as Category[]
-      setCategories(fresh)
-      setValue('category_id', result.id)
-      setNewCategoryKey('')
-    } catch (err: unknown) {
-      console.error(err)
-      const msg = err instanceof Error ? err.message : ''
-      if (msg === 'EXPENSE_CATEGORY_DUPLICATE') showError('expense.categoryExists')
-      else showError('common.saveError')
-    }
-  }
 
   const onSubmit = async (data: ExpenseFormValues): Promise<void> => {
     try {
@@ -195,54 +185,44 @@ export function ExpenseForm({ onSuccess, onCancel }: ExpenseFormProps): React.Re
           </Grid>
 
           <Grid size={{ xs: 12, sm: 6 }}>
-            <FormControl fullWidth error={!!errors.category_id}>
-              <InputLabel>{t('common.category')}</InputLabel>
-              <Controller
-                name="category_id"
-                control={control}
-                render={({ field }) => (
-                  <Select
-                    {...field}
-                    label={t('common.category')}
-                    value={field.value || ''}
-                    onChange={(e) => field.onChange(Number(e.target.value))}
-                  >
-                    <MenuItem value="" disabled>
-                      {t('expense.selectCategory')}
-                    </MenuItem>
-                    {categories.map((c) => (
-                      <MenuItem key={c.id} value={c.id}>
-                        {t(c.name_key)}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                )}
-              />
-              {errors.category_id && (
-                <FormHelperText>{t(`expense.${errors.category_id.message}`)}</FormHelperText>
-              )}
-            </FormControl>
-          </Grid>
-
-          {/* Inline new-category creation (FR-EXP-03) */}
-          <Grid size={{ xs: 12 }}>
             <Box sx={{ display: 'flex', gap: 1, alignItems: 'flex-start' }}>
-              <TextField
-                label={t('expense.newCategory')}
-                placeholder={t('common.newCategoryName')}
-                value={newCategoryKey}
-                onChange={(e) => setNewCategoryKey(e.target.value)}
-                size="small"
-                sx={{ flex: 1 }}
-              />
+              <FormControl fullWidth error={!!errors.category_id}>
+                <InputLabel>{t('common.category')}</InputLabel>
+                <Controller
+                  name="category_id"
+                  control={control}
+                  render={({ field }) => (
+                    <Select
+                      {...field}
+                      label={t('common.category')}
+                      value={field.value || ''}
+                      onChange={(e) => field.onChange(Number(e.target.value))}
+                    >
+                      <MenuItem value="" disabled>
+                        {t('expense.selectCategory')}
+                      </MenuItem>
+                      {categories.map((c) => (
+                        <MenuItem key={c.id} value={c.id}>
+                          {c.is_default === 1
+                            ? t(c.name_key)
+                            : c.name_key.startsWith('expense.category.')
+                              ? c.name_key.replace('expense.category.', '')
+                              : c.name_key}
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  )}
+                />
+                {errors.category_id && (
+                  <FormHelperText>{t(`expense.${errors.category_id.message}`)}</FormHelperText>
+                )}
+              </FormControl>
               <Button
                 variant="outlined"
-                size="small"
-                onClick={handleAddCategory}
-                disabled={!newCategoryKey.trim()}
-                sx={{ py: 0.9 }}
+                sx={{ height: 40, minWidth: 80, mt: 1 }}
+                onClick={() => setManageCatsOpen(true)}
               >
-                {t('common.addCategory')}
+                {t('common.manage')}
               </Button>
             </Box>
           </Grid>
@@ -334,6 +314,11 @@ export function ExpenseForm({ onSuccess, onCancel }: ExpenseFormProps): React.Re
           </Button>
         </Box>
       </Box>
+      <ExpenseCategoryManagerDialog
+        open={manageCatsOpen}
+        onClose={() => setManageCatsOpen(false)}
+        onChange={loadCategories}
+      />
       <GlobalSnackbar state={snack} onClose={hideSnackbar} />
     </>
   )

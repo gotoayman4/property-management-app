@@ -95,6 +95,16 @@ export function createPayment(db: Database, input: CreatePaymentInput): CreatedP
       credit: 0,
       currency: input.currency
     })
+    if (input.contract_id) {
+      db.prepare(
+        `UPDATE notifications
+         SET status = 'dismissed', read_at = CURRENT_TIMESTAMP, is_read = 1
+         WHERE status = 'pending'
+           AND notification_type IN ('rent_due', 'overdue')
+           AND entity_type = 'contract'
+           AND entity_id = ?`
+      ).run(input.contract_id)
+    }
 
     return { payment_id: paymentId, ledger_id: ledgerId, receipt_number: receiptNumber }
   })()

@@ -12,6 +12,13 @@ export interface CurrencyFinancialRow {
   netProfit: number
 }
 
+export interface ConsolidatedSummary {
+  reporting_currency: string
+  total_income: number | 'rate_missing'
+  total_expenses: number | 'rate_missing'
+  total_net_profit: number | 'rate_missing'
+}
+
 export interface DashboardSummary {
   totalProperties: number
   rentedProperties: number
@@ -19,6 +26,7 @@ export interface DashboardSummary {
   activeContracts: number
   /** Per-currency income/expense/net for the current calendar month (BR-14). */
   financialSummary: CurrencyFinancialRow[]
+  consolidatedSummary: ConsolidatedSummary
 }
 export interface UpcomingDueRow {
   id: number

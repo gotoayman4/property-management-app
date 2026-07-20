@@ -29,11 +29,13 @@ import {
 } from '@mui/material'
 import React, { useCallback, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import CompanyInfoCard from '../../components/CompanyInfoCard'
 import CountryManagerDialog from '../../components/CountryManagerDialog'
 import GlobalSnackbar from '../../components/GlobalSnackbar'
 import NotificationTemplateManager from '../../components/NotificationTemplateManager'
 import PageHeader from '../../components/PageHeader'
 import ReceiptSettingsCard from '../../components/ReceiptSettingsCard'
+import ReminderSettingsCard from '../../components/ReminderSettingsCard'
 import { useSnackbar } from '../../hooks/useSnackbar'
 import { useUiPreferences } from '../../stores/uiPreferencesStore'
 
@@ -54,6 +56,8 @@ interface SettingsData {
   max_backup_count: number
   receipt_prefix: string
   receipt_starting_sequence: number
+  company_name?: string | null
+  company_logo?: string | null
 }
 
 const CURRENCIES = ['JOD', 'TRY', 'QAR', 'USD', 'EUR', 'SAR']
@@ -101,7 +105,7 @@ export default function Settings(): React.JSX.Element {
     loadSettings()
   }, [t, showError, fetchAllCountries])
 
-  const updateField = async (field: string, value: string | number): Promise<void> => {
+  const updateField = async (field: string, value: string | number | null): Promise<void> => {
     try {
       await window.api.settings.update({ [field]: value })
       setSettings((prev) => (prev ? { ...prev, [field]: value } : prev))
@@ -306,91 +310,12 @@ export default function Settings(): React.JSX.Element {
 
         {/* Reminder Days */}
         <Grid size={{ xs: 12, md: 6 }}>
-          <Card>
-            <CardContent sx={{ p: 3 }}>
-              <Typography variant="h5" sx={{ mb: 2.5 }}>
-                {t('settings.reminders')}
-              </Typography>
+          <ReminderSettingsCard />
+        </Grid>
 
-              <Alert severity="info" sx={{ mb: 2 }}>
-                {t('settings.reminderHelp')}
-              </Alert>
-
-              <TextField
-                fullWidth
-                type="text"
-                inputMode="decimal"
-                label={t('settings.reminderDaysBeforeDue')}
-                value={settings.reminder_days_before_due}
-                onChange={(e) => updateField('reminder_days_before_due', Number(e.target.value))}
-                slotProps={{
-                  htmlInput: {
-                    dir: 'ltr',
-                    min: 0,
-                    max: 90,
-                    sx: SPINNER_LESS
-                  }
-                }}
-                sx={{ mb: 2 }}
-              />
-              <TextField
-                fullWidth
-                type="text"
-                inputMode="decimal"
-                label={t('settings.reminderDaysBeforeContractEnd')}
-                value={settings.reminder_days_before_contract_end}
-                onChange={(e) =>
-                  updateField('reminder_days_before_contract_end', Number(e.target.value))
-                }
-                slotProps={{
-                  htmlInput: {
-                    dir: 'ltr',
-                    min: 0,
-                    max: 365,
-                    sx: SPINNER_LESS
-                  }
-                }}
-                sx={{ mb: 2 }}
-              />
-              <TextField
-                fullWidth
-                type="text"
-                inputMode="decimal"
-                label={t('settings.reminderDaysBeforeDocumentExpiry')}
-                value={settings.reminder_days_before_document_expiry}
-                onChange={(e) =>
-                  updateField('reminder_days_before_document_expiry', Number(e.target.value))
-                }
-                slotProps={{
-                  htmlInput: {
-                    dir: 'ltr',
-                    min: 0,
-                    max: 365,
-                    sx: SPINNER_LESS
-                  }
-                }}
-                sx={{ mb: 2 }}
-              />
-              <TextField
-                fullWidth
-                type="text"
-                inputMode="decimal"
-                label={t('settings.reminderDaysBeforeRecurringExpense')}
-                value={settings.reminder_days_before_recurring_expense}
-                onChange={(e) =>
-                  updateField('reminder_days_before_recurring_expense', Number(e.target.value))
-                }
-                slotProps={{
-                  htmlInput: {
-                    dir: 'ltr',
-                    min: 0,
-                    max: 30,
-                    sx: SPINNER_LESS
-                  }
-                }}
-              />
-            </CardContent>
-          </Card>
+        {/* Company Settings (FR-SET-12) */}
+        <Grid size={{ xs: 12, md: 6 }}>
+          <CompanyInfoCard />
         </Grid>
 
         {/* Country Management */}
@@ -484,13 +409,7 @@ export default function Settings(): React.JSX.Element {
                     dir: 'ltr',
                     min: 1,
                     max: 100,
-                    sx: {
-                      '&::-webkit-outer-spin-button, &::-webkit-inner-spin-button': {
-                        WebkitAppearance: 'none',
-                        margin: 0
-                      },
-                      MozAppearance: 'textfield'
-                    }
+                    sx: SPINNER_LESS
                   }
                 }}
               />

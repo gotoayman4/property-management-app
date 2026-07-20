@@ -5,7 +5,7 @@ import { app } from 'electron'
 import { runMigrations } from './migrations'
 import { resolveNativeBinding } from './resolveNativeBinding'
 
-const isDev = !app.isPackaged
+const isDev = typeof app !== 'undefined' && app ? !app.isPackaged : true
 
 /**
  * INTENT: Canonical absolute path to the SQLite database file.
@@ -15,15 +15,18 @@ const isDev = !app.isPackaged
  *           column (`seq`), not the path — see regression test in backupService.test.ts.
  *           Every caller (backupService, backupIpc) consumes this constant.
  */
-export const dbPath: string = isDev
-  ? join(app.getAppPath(), 'database.db')
-  : (() => {
-      const userDataPath = app.getPath('userData')
-      if (!existsSync(userDataPath)) {
-        mkdirSync(userDataPath, { recursive: true })
-      }
-      return join(userDataPath, 'database.db')
-    })()
+export const dbPath: string =
+  typeof app !== 'undefined' && app
+    ? isDev
+      ? join(app.getAppPath(), 'database.db')
+      : (() => {
+          const userDataPath = app.getPath('userData')
+          if (!existsSync(userDataPath)) {
+            mkdirSync(userDataPath, { recursive: true })
+          }
+          return join(userDataPath, 'database.db')
+        })()
+    : join(process.cwd(), 'database.db')
 
 /**
  * INTENT: In dev, point better-sqlite3 at the prebuilt ABI-148 binary downloaded by
@@ -37,7 +40,8 @@ export const dbPath: string = isDev
  *         missing (e.g. `npm install --ignore-scripts`). A warning is logged so the user knows
  *         the lock-conflict workaround is inactive and the file may need rebuilding manually.
  */
-const nativeBinding = isDev ? resolveNativeBinding(app.getAppPath()) : null
+const nativeBinding =
+  isDev && typeof app !== 'undefined' && app ? resolveNativeBinding(app.getAppPath()) : null
 if (isDev && !nativeBinding) {
   console.warn(
     '[database] better-sqlite3 prebuilt binary not found — falling back to default resolution. ' +

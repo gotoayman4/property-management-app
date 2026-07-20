@@ -55,7 +55,9 @@ const api = {
   },
   expenseCategories: {
     list: () => ipcRenderer.invoke('expenseCategories:list'),
-    create: (data: unknown) => ipcRenderer.invoke('expenseCategories:create', data)
+    create: (data: unknown) => ipcRenderer.invoke('expenseCategories:create', data),
+    update: (data: unknown) => ipcRenderer.invoke('expenseCategories:update', data),
+    delete: (id: number) => ipcRenderer.invoke('expenseCategories:delete', id)
   },
   ledger: {
     list: (payload: { property_id: number; from_date?: string; to_date?: string }) =>
@@ -143,7 +145,8 @@ const api = {
     exportHtml: (data: unknown) => ipcRenderer.invoke('reports:exportHtml', data)
   },
   dialog: {
-    pickFolder: () => ipcRenderer.invoke('dialog:pickFolder')
+    pickFolder: () => ipcRenderer.invoke('dialog:pickFolder'),
+    pickImage: () => ipcRenderer.invoke('dialog:pickImage')
   },
   backup: {
     create: () => ipcRenderer.invoke('backup:create'),

@@ -7,6 +7,8 @@ import {
   listExpenses,
   listExpenseCategories,
   createExpenseCategory,
+  updateExpenseCategory,
+  deleteExpenseCategory,
   ExpenseError,
   type CreateExpenseInput
 } from '../db/expenseRepository'
@@ -53,6 +55,11 @@ const categoryCreateSchema = z.object({
   name_key: z.string().min(2).max(80)
 })
 
+const categoryUpdateSchema = z.object({
+  id: z.number().int().positive(),
+  name_key: z.string().min(2).max(80)
+})
+
 export function registerExpenseIpcHandlers(): void {
   ipcMain.handle('expenseCategories:list', async () => {
     try {
@@ -73,6 +80,30 @@ export function registerExpenseIpcHandlers(): void {
       if (error instanceof ExpenseError) throw new Error(error.message)
       if (error instanceof z.ZodError) throw new Error('INVALID_INPUT')
       throw new Error('FAILED_TO_CREATE_EXPENSE_CATEGORY')
+    }
+  })
+
+  ipcMain.handle('expenseCategories:update', async (_, data: unknown) => {
+    try {
+      const v = categoryUpdateSchema.parse(data)
+      updateExpenseCategory(db, v.id, v.name_key)
+      return { success: true }
+    } catch (error: unknown) {
+      console.error('Error updating expense category:', error)
+      if (error instanceof ExpenseError) throw new Error(error.message)
+      if (error instanceof z.ZodError) throw new Error('INVALID_INPUT')
+      throw new Error('FAILED_TO_UPDATE_EXPENSE_CATEGORY')
+    }
+  })
+
+  ipcMain.handle('expenseCategories:delete', async (_, id: number) => {
+    try {
+      deleteExpenseCategory(db, id)
+      return { success: true }
+    } catch (error: unknown) {
+      console.error('Error deleting expense category:', error)
+      if (error instanceof ExpenseError) throw new Error(error.message)
+      throw new Error('FAILED_TO_DELETE_EXPENSE_CATEGORY')
     }
   })
 

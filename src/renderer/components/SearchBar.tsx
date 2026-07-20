@@ -7,6 +7,7 @@ import BusinessIcon from '@mui/icons-material/Business'
 import DescriptionIcon from '@mui/icons-material/Description'
 import PaymentsIcon from '@mui/icons-material/Payments'
 import PeopleIcon from '@mui/icons-material/People'
+import ReceiptLongIcon from '@mui/icons-material/ReceiptLong'
 import SearchIcon from '@mui/icons-material/Search'
 import {
   Box,
@@ -29,6 +30,8 @@ interface SearchResult {
   entity_id: number
   title: string
   subtitle: string
+  parent_type?: string | null
+  parent_id?: number | null
 }
 
 interface SearchBarProps {
@@ -40,14 +43,17 @@ const ENTITY_ICONS: Record<string, React.ReactNode> = {
   property: <BusinessIcon fontSize="small" />,
   tenant: <PeopleIcon fontSize="small" />,
   contract: <DescriptionIcon fontSize="small" />,
-  payment: <PaymentsIcon fontSize="small" />
+  payment: <PaymentsIcon fontSize="small" />,
+  expense: <ReceiptLongIcon fontSize="small" />,
+  document: <DescriptionIcon fontSize="small" />
 }
 
 const ENTITY_ROUTES: Record<string, (id: number) => string> = {
-  property: () => '/properties',
-  tenant: () => '/tenants',
-  contract: () => '/contracts',
-  payment: () => '/payments'
+  property: (id) => `/properties/${id}`,
+  tenant: (id) => `/tenants/${id}`,
+  contract: (id) => `/contracts/${id}`,
+  payment: () => '/payments',
+  expense: () => '/expenses'
 }
 
 export default function SearchBar({ onInputMount }: SearchBarProps): React.JSX.Element {
@@ -100,6 +106,19 @@ export default function SearchBar({ onInputMount }: SearchBarProps): React.JSX.E
   const handleSelect = (result: SearchResult): void => {
     setOpen(false)
     setQuery('')
+    if (result.entity_type === 'document' && result.parent_type && result.parent_id) {
+      const pId = result.parent_id
+      if (result.parent_type === 'property') {
+        navigate(`/properties/${pId}`)
+      } else if (result.parent_type === 'tenant') {
+        navigate(`/tenants/${pId}`)
+      } else if (result.parent_type === 'contract') {
+        navigate(`/contracts/${pId}`)
+      } else {
+        navigate('/properties')
+      }
+      return
+    }
     const route = ENTITY_ROUTES[result.entity_type]
     if (route) {
       navigate(route(result.entity_id))

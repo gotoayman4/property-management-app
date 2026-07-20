@@ -22,6 +22,7 @@ import { useForm, Controller } from 'react-hook-form'
 import { useTranslation } from 'react-i18next'
 import { z } from 'zod'
 import { CurrencyInput } from '../../components/CurrencyInput'
+import ExpenseCategoryManagerDialog from '../../components/ExpenseCategoryManagerDialog'
 import { FormField } from '../../components/FormField'
 import GlobalSnackbar from '../../components/GlobalSnackbar'
 import { useSnackbar } from '../../hooks/useSnackbar'
@@ -83,6 +84,7 @@ export function RecurringExpenseForm({
 
   const [properties, setProperties] = useState<Property[]>([])
   const [categories, setCategories] = useState<Category[]>([])
+  const [manageCatsOpen, setManageCatsOpen] = useState<boolean>(false)
 
   const defaultValues: TemplateFormValues = {
     name: template?.name ?? '',
@@ -91,7 +93,7 @@ export function RecurringExpenseForm({
     vendor_name: template?.vendor_name ?? '',
     amount: template?.amount ?? 0,
     currency: template?.currency ?? 'JOD',
-    frequency: (template?.frequency as TemplateFormValues['frequency']) ?? 'monthly',
+    frequency: (template?.frequency ?? 'monthly') as TemplateFormValues['frequency'],
     day_of_month: template?.day_of_month ?? 1,
     start_date: template?.start_date ?? new Date().toISOString().split('T')[0],
     end_date: template?.end_date ?? '',
@@ -104,22 +106,28 @@ export function RecurringExpenseForm({
     watch,
     setValue,
     formState: { errors, isSubmitting }
-  } = useForm({
+  } = useForm<TemplateFormValues>({
     resolver: zodResolver(templateSchema),
     defaultValues
   })
 
+  const loadCategories = async (): Promise<void> => {
+    try {
+      const catsData = await window.api.expenseCategories.list()
+      setCategories(catsData as Category[])
+    } catch (err) {
+      console.error('Failed to load categories:', err)
+    }
+  }
+
   useEffect(() => {
     const load = async (): Promise<void> => {
       try {
-        const [propsData, catsData] = await Promise.all([
-          window.api.properties.list() as Promise<Property[]>,
-          window.api.expenseCategories.list() as Promise<Category[]>
-        ])
-        setProperties(propsData)
-        setCategories(catsData)
+        const propsData = await window.api.properties.list()
+        setProperties(propsData as Property[])
+        loadCategories()
       } catch (err) {
-        console.error('Failed to load dropdown data:', err)
+        console.error('Failed to load properties:', err)
       }
     }
     load()
@@ -218,35 +226,48 @@ export function RecurringExpenseForm({
           </Grid>
 
           <Grid size={{ xs: 12, sm: 6 }}>
-            <FormControl fullWidth error={!!errors.category_id}>
-              <InputLabel>{t('common.category')}</InputLabel>
-              <Controller
-                name="category_id"
-                control={control}
-                render={({ field }) => (
-                  <Select
-                    {...field}
-                    label={t('common.category')}
-                    value={field.value || ''}
-                    onChange={(e) => field.onChange(Number(e.target.value))}
-                  >
-                    <MenuItem value="" disabled>
-                      {t('expense.selectCategory')}
-                    </MenuItem>
-                    {categories.map((c) => (
-                      <MenuItem key={c.id} value={c.id}>
-                        {t(c.name_key)}
+            <Box sx={{ display: 'flex', gap: 1, alignItems: 'flex-start' }}>
+              <FormControl fullWidth error={!!errors.category_id}>
+                <InputLabel>{t('common.category')}</InputLabel>
+                <Controller
+                  name="category_id"
+                  control={control}
+                  render={({ field }) => (
+                    <Select
+                      {...field}
+                      label={t('common.category')}
+                      value={field.value || ''}
+                      onChange={(e) => field.onChange(Number(e.target.value))}
+                    >
+                      <MenuItem value="" disabled>
+                        {t('expense.selectCategory')}
                       </MenuItem>
-                    ))}
-                  </Select>
+                      {categories.map((c) => (
+                        <MenuItem key={c.id} value={c.id}>
+                          {c.is_default === 1
+                            ? t(c.name_key)
+                            : c.name_key.startsWith('expense.category.')
+                              ? c.name_key.replace('expense.category.', '')
+                              : c.name_key}
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  )}
+                />
+                {errors.category_id && (
+                  <FormHelperText>
+                    {t(`recurringExpense.${errors.category_id.message}`)}
+                  </FormHelperText>
                 )}
-              />
-              {errors.category_id && (
-                <FormHelperText>
-                  {t(`recurringExpense.${errors.category_id.message}`)}
-                </FormHelperText>
-              )}
-            </FormControl>
+              </FormControl>
+              <Button
+                variant="outlined"
+                sx={{ height: 40, minWidth: 80, mt: 1 }}
+                onClick={() => setManageCatsOpen(true)}
+              >
+                {t('common.manage')}
+              </Button>
+            </Box>
           </Grid>
 
           <Grid size={{ xs: 12, sm: 6 }}>
@@ -380,6 +401,11 @@ export function RecurringExpenseForm({
           </Button>
         </Box>
       </Box>
+      <ExpenseCategoryManagerDialog
+        open={manageCatsOpen}
+        onClose={() => setManageCatsOpen(false)}
+        onChange={loadCategories}
+      />
       <GlobalSnackbar state={snack} onClose={hideSnackbar} />
     </>
   )

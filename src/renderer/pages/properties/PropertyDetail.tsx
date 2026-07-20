@@ -111,7 +111,7 @@ export default function PropertyDetail(): React.JSX.Element {
         } else if (tab === 2) {
           const data = await window.api.ledger.list({ property_id: pid })
           if (!cancelled) setLedgerEntries(data as GridValidRowModel[])
-        } else if (tab === 3) {
+        } else if (tab === 7) {
           try {
             const docData = await window.api.documents.list({
               entity_type: 'property',
@@ -337,42 +337,42 @@ export default function PropertyDetail(): React.JSX.Element {
       {tab === 5 && <PropertyRecurringTab propertyId={Number(id)} currency={property.currency} />}
       {tab === 6 && <PropertyImagesTab propertyId={Number(id)} />}
       {tab === 7 && (
-        <StandardTable
-          columns={docCols}
-          rows={documents}
-          emptyMessage={t('propertyDetail.noDocuments')}
-        />
-      )}
-      {tab === 7 && (
-        <Box sx={{ mt: 2 }}>
-          <Button
-            size="small"
-            startIcon={
-              <ExpandMoreIcon
-                sx={{
-                  transform: showUploadForm ? 'rotate(180deg)' : 'none',
-                  transition: 'transform 0.2s'
-                }}
-              />
-            }
-            onClick={() => setShowUploadForm(!showUploadForm)}
-          >
-            {showUploadForm ? t('common.close') : t('documents.selectFile')}
-          </Button>
-          <Collapse in={showUploadForm}>
-            <Card sx={{ mt: 1 }}>
-              <CardContent>
-                <DocumentUploadForm
-                  entityType="property"
-                  entityId={Number(id)}
-                  onSuccess={() => {
-                    fetchDocuments()
-                    setShowUploadForm(false)
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+          <StandardTable
+            columns={docCols}
+            rows={documents}
+            emptyMessage={t('propertyDetail.noDocuments')}
+          />
+          <Box sx={{ mt: 1 }}>
+            <Button
+              size="small"
+              startIcon={
+                <ExpandMoreIcon
+                  sx={{
+                    transform: showUploadForm ? 'rotate(180deg)' : 'none',
+                    transition: 'transform 0.2s'
                   }}
                 />
-              </CardContent>
-            </Card>
-          </Collapse>
+              }
+              onClick={() => setShowUploadForm(!showUploadForm)}
+            >
+              {showUploadForm ? t('common.close') : t('documents.selectFile')}
+            </Button>
+            <Collapse in={showUploadForm}>
+              <Card sx={{ mt: 1 }}>
+                <CardContent>
+                  <DocumentUploadForm
+                    entityType="property"
+                    entityId={Number(id)}
+                    onSuccess={() => {
+                      fetchDocuments()
+                      setShowUploadForm(false)
+                    }}
+                  />
+                </CardContent>
+              </Card>
+            </Collapse>
+          </Box>
         </Box>
       )}
     </Box>

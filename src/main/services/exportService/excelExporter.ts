@@ -20,12 +20,28 @@
  */
 
 import ExcelJS from 'exceljs'
+import { db } from '../../db/database'
 import {
   type ReportData,
   type ReportColumn,
   type ExportLanguage,
   resolveLocaleKey
 } from './exportUtils'
+
+function parseBase64Image(
+  dataUrl: string
+): { base64: string; extension: 'png' | 'jpeg' | 'gif' } | null {
+  const matches = dataUrl.match(/^data:image\/([a-zA-Z+]+);base64,(.+)$/)
+  if (!matches || matches.length !== 3) return null
+  let ext = matches[1].toLowerCase()
+  if (ext === 'jpg') ext = 'jpeg'
+  if (ext === 'svg+xml') return null
+  if (ext !== 'png' && ext !== 'jpeg' && ext !== 'gif') return null
+  return {
+    extension: ext as 'png' | 'jpeg' | 'gif',
+    base64: matches[2]
+  }
+}
 
 /**
  * Convert a 1-based column index to an Excel column letter (A, B, …, Z, AA, …).
@@ -81,9 +97,24 @@ function addGroupSheet(
   columns: ReportColumn[],
   lang: ExportLanguage
 ): ExcelJS.Worksheet {
+  // Query company settings from DB safely (handling missing schema in tests)
+  let settings: { company_name: string | null; company_logo: string | null } | undefined
+  try {
+    settings = db.prepare('SELECT company_name, company_logo FROM settings LIMIT 1').get() as {
+      company_name: string | null
+      company_logo: string | null
+    }
+  } catch {
+    // Fallback if table/columns don't exist in unit test DB
+  }
+
+  const hasCompanyInfo = !!(settings?.company_name || settings?.company_logo)
+  const headerRowIndex = hasCompanyInfo ? 5 : 1
+  const firstDataRow = headerRowIndex + 1
+
   const sheetName = `${data.titleKey.split('.').pop()} (${group.currency})`.slice(0, 31)
   const sheet = workbook.addWorksheet(sheetName, {
-    views: [{ rightToLeft: lang === 'ar', state: 'frozen', ySplit: 1 }],
+    views: [{ rightToLeft: lang === 'ar', state: 'frozen', ySplit: headerRowIndex }],
     pageSetup: {
       orientation: 'landscape',
       fitToPage: true,
@@ -101,7 +132,45 @@ function addGroupSheet(
   })
 
   // Repeat the header row on every printed page (FR-XLS-05).
-  sheet.pageSetup.printTitlesRow = '1:1'
+  sheet.pageSetup.printTitlesRow = `${headerRowIndex}:${headerRowIndex}`
+
+  if (hasCompanyInfo) {
+    if (settings?.company_logo) {
+      const imgInfo = parseBase64Image(settings.company_logo)
+      if (imgInfo) {
+        try {
+          const imageId = workbook.addImage({
+            base64: imgInfo.base64,
+            extension: imgInfo.extension
+          })
+          // Place logo in top left (A1)
+          sheet.addImage(imageId, {
+            tl: { col: 0, row: 0 },
+            ext: { width: 100, height: 50 },
+            editAs: 'absolute'
+          })
+        } catch (err) {
+          console.error('Error adding company logo to Excel sheet:', err)
+        }
+      }
+    }
+
+    if (settings?.company_name) {
+      const nameRow = sheet.getRow(2)
+      const colIdx = settings.company_logo ? 3 : 1
+      const cell = nameRow.getCell(colIdx)
+      cell.value = settings.company_name
+      cell.font = { name: bodyFont(lang), size: 14, bold: true, color: { argb: 'FF1A237E' } }
+    }
+
+    // Put report title on row 4
+    const titleRow = sheet.getRow(4)
+    const titleCell = titleRow.getCell(1)
+    const titleText = resolveLocaleKey(data.titleKey, lang)
+    const subtitleText = data.subtitleKey ? resolveLocaleKey(data.subtitleKey, lang) : ''
+    titleCell.value = subtitleText ? `${titleText} — ${subtitleText}` : titleText
+    titleCell.font = { name: bodyFont(lang), size: 12, bold: true, italic: true }
+  }
 
   // Build column definitions with auto-width and number formats.
   sheet.columns = columns.map((col) => {
@@ -112,22 +181,17 @@ function addGroupSheet(
       return Math.max(max, len)
     }, header.length)
     return {
-      header,
       key: col.key,
-      width: Math.min(Math.max(widestSample + 2, 10), 40),
-      style:
-        col.type === 'number'
-          ? { numFmt: PLAIN_NUMBER_FORMAT }
-          : col.type === 'currency'
-            ? { numFmt: currencyFormat(group.currency) }
-            : undefined
+      width: Math.min(Math.max(widestSample + 2, 10), 40)
     }
   })
 
   // Header row styling.
-  const headerRow = sheet.getRow(1)
+  const headerRow = sheet.getRow(headerRowIndex)
   headerRow.height = 22
-  headerRow.eachCell((cell) => {
+  columns.forEach((col, colIdx) => {
+    const cell = headerRow.getCell(colIdx + 1)
+    cell.value = resolveLocaleKey(col.headerKey, lang)
     cell.fill = HEADER_FILL
     cell.font = HEADER_FONT
     cell.alignment = { vertical: 'middle', horizontal: 'center', wrapText: true }
@@ -137,7 +201,6 @@ function addGroupSheet(
   })
 
   // Body rows — for each row, write typed values so Excel treats numbers/dates correctly.
-  const firstDataRow = 2
   group.rows.forEach((row, idx) => {
     const excelRow = sheet.getRow(firstDataRow + idx)
     excelRow.font = { name: bodyFont(lang), size: 11 }

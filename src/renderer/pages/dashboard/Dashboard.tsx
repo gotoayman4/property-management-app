@@ -291,6 +291,7 @@ export default function Dashboard(): React.JSX.Element {
         <FinancialSummaryCard
           loading={loading}
           financialSummary={(summary?.financialSummary ?? []) as CurrencyFinancialRow[]}
+          consolidatedSummary={summary?.consolidatedSummary ?? null}
           t={t}
           i18n={i18n}
         />

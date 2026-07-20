@@ -85,7 +85,7 @@ export default function Layout({ children }: LayoutProps): React.JSX.Element {
   // Ctrl+K / Cmd+K global hotkey — focus the search bar (FR-SRCH-01)
   useEffect(() => {
     const handler = (e: KeyboardEvent): void => {
-      if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
         e.preventDefault()
         searchRef.current?.focus()
       }

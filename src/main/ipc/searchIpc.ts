@@ -11,6 +11,8 @@ interface SearchResult {
   entity_id: number
   title: string
   subtitle: string
+  parent_type?: string | null
+  parent_id?: number | null
 }
 
 export function registerSearchIpcHandlers(): void {
@@ -123,6 +125,69 @@ export function registerSearchIpcHandlers(): void {
           entity_id: p.id,
           title: `Payment ${p.receipt_number}`,
           subtitle: `${p.amount} ${p.currency} — ${p.property_name} (${p.payment_date})`
+        })
+      }
+
+      // Expenses (FR-SRCH-00 addition)
+      const expenses = db
+        .prepare(
+          `SELECT e.id, e.amount, e.currency, e.expense_date, e.vendor_name,
+                  ec.name_key as category_key, pr.name as property_name
+           FROM expenses e
+           LEFT JOIN expense_categories ec ON e.category_id = ec.id
+           LEFT JOIN properties pr ON e.property_id = pr.id
+           WHERE e.is_voided = 0
+             AND (e.vendor_name LIKE ? OR e.notes LIKE ? OR ec.name_key LIKE ? OR pr.name LIKE ?)
+           ORDER BY e.expense_date DESC LIMIT 5`
+        )
+        .all(pattern, pattern, pattern, pattern) as Array<{
+        id: number
+        amount: number
+        currency: string
+        expense_date: string
+        vendor_name: string | null
+        category_key: string
+        property_name: string | null
+      }>
+
+      for (const e of expenses) {
+        const categoryLabel = e.category_key.startsWith('expense.category.')
+          ? e.category_key.replace('expense.category.', '')
+          : e.category_key
+        const propName = e.property_name ?? 'General Expense'
+        results.push({
+          entity_type: 'expense',
+          entity_id: e.id,
+          title: `Expense: ${categoryLabel}`,
+          subtitle: `${e.amount} ${e.currency} — ${propName} (${e.expense_date})`
+        })
+      }
+
+      // Documents (FR-SRCH-00 addition)
+      const documents = db
+        .prepare(
+          `SELECT d.id, d.file_name, d.document_type, d.entity_type, d.entity_id
+           FROM documents d
+           WHERE d.is_archived = 0
+             AND (d.file_name LIKE ? OR d.description LIKE ? OR d.document_type LIKE ?)
+           ORDER BY d.uploaded_at DESC LIMIT 5`
+        )
+        .all(pattern, pattern, pattern) as Array<{
+        id: number
+        file_name: string
+        document_type: string | null
+        entity_type: string
+        entity_id: number
+      }>
+
+      for (const d of documents) {
+        results.push({
+          entity_type: 'document',
+          entity_id: d.id,
+          title: d.file_name,
+          subtitle: `Doc: ${d.document_type ?? 'Other'} (${d.entity_type})`,
+          parent_type: d.entity_type,
+          parent_id: d.entity_id
         })
       }
 

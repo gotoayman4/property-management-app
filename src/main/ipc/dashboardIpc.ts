@@ -8,6 +8,7 @@
  */
 import { ipcMain } from 'electron'
 import { db } from '../db/database'
+import { convertAmount } from '../utils/currencyHelper'
 
 interface CurrencyFinancialRow {
   currency: string
@@ -16,13 +17,20 @@ interface CurrencyFinancialRow {
   netProfit: number
 }
 
+interface ConsolidatedSummary {
+  reporting_currency: string
+  total_income: number | 'rate_missing'
+  total_expenses: number | 'rate_missing'
+  total_net_profit: number | 'rate_missing'
+}
+
 interface DashboardSummary {
   totalProperties: number
   rentedProperties: number
   totalTenants: number
   activeContracts: number
-  /** Per-currency income/expense/net for the current calendar month (BR-14). */
   financialSummary: CurrencyFinancialRow[]
+  consolidatedSummary: ConsolidatedSummary
 }
 
 /** Format a Date to YYYY-MM-DD using local timezone. */
@@ -172,12 +180,44 @@ export function registerDashboardIpcHandlers(): void {
         })
       )
 
+      // Fetch target reporting currency from settings
+      const settings = db.prepare('SELECT reporting_currency FROM settings LIMIT 1').get() as
+        | {
+            reporting_currency: string
+          }
+        | undefined
+      const targetCurrency = settings?.reporting_currency ?? 'USD'
+
+      let totalIncome = 0
+      let totalExpenses = 0
+      let hasMissingRate = false
+
+      for (const row of financialSummary) {
+        const inc = convertAmount(db, row.income, row.currency, targetCurrency)
+        const exp = convertAmount(db, row.expenses, row.currency, targetCurrency)
+
+        if (inc === 'rate_missing' || exp === 'rate_missing') {
+          hasMissingRate = true
+        } else {
+          totalIncome += inc
+          totalExpenses += exp
+        }
+      }
+
+      const consolidatedSummary: ConsolidatedSummary = {
+        reporting_currency: targetCurrency,
+        total_income: hasMissingRate ? 'rate_missing' : totalIncome,
+        total_expenses: hasMissingRate ? 'rate_missing' : totalExpenses,
+        total_net_profit: hasMissingRate ? 'rate_missing' : totalIncome - totalExpenses
+      }
+
       return {
         totalProperties,
         rentedProperties,
         totalTenants,
         activeContracts,
-        financialSummary
+        financialSummary,
+        consolidatedSummary
       } satisfies DashboardSummary
     } catch {
       throw new Error('FAILED_TO_LOAD_DASHBOARD')

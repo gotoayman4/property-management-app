@@ -208,6 +208,43 @@ export function createExpenseCategory(db: Database, nameKey: string): number {
   }
 }
 
+/** Update a user-defined expense category name (is_default = 0 only). */
+export function updateExpenseCategory(db: Database, id: number, nameKey: string): void {
+  const trimmed = nameKey.trim()
+  if (trimmed.length === 0) {
+    throw new ExpenseError('EXPENSE_CATEGORY_NAME_REQUIRED')
+  }
+  const namespaced = trimmed.startsWith('expense.category.')
+    ? trimmed
+    : `expense.category.${trimmed}`
+  try {
+    const result = db
+      .prepare('UPDATE expense_categories SET name_key = ? WHERE id = ? AND is_default = 0')
+      .run(namespaced, id)
+    if (result.changes === 0) {
+      throw new ExpenseError('EXPENSE_CATEGORY_NOT_FOUND')
+    }
+  } catch (err: unknown) {
+    if (err instanceof ExpenseError) throw err
+    throw new ExpenseError('EXPENSE_CATEGORY_DUPLICATE')
+  }
+}
+
+/** Delete a user-defined expense category (is_default = 0 only). Throws IN_USE if linked to expenses. */
+export function deleteExpenseCategory(db: Database, id: number): void {
+  const cat = db.prepare('SELECT is_default FROM expense_categories WHERE id = ?').get(id) as
+    { is_default: number } | undefined
+  if (!cat) throw new ExpenseError('EXPENSE_CATEGORY_NOT_FOUND')
+  if (cat.is_default === 1) {
+    throw new ExpenseError('EXPENSE_CATEGORY_CANNOT_DELETE_DEFAULT')
+  }
+  try {
+    db.prepare('DELETE FROM expense_categories WHERE id = ?').run(id)
+  } catch {
+    throw new ExpenseError('EXPENSE_CATEGORY_IN_USE')
+  }
+}
+
 interface ExpenseRow {
   id: number
   property_id: number | null
