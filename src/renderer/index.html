@@ -14,7 +14,7 @@
       // INTENT: Set document direction before first paint to prevent an LTR->RTL flicker
       //          on Arabic launches. Reads the persisted preference from localStorage,
       //          falling back to navigator.language. Mirrors mui-rtl-bidirectional.md.
-      (function () {
+      ;(function () {
         try {
           var saved = localStorage.getItem('app-dir')
           if (saved === 'rtl' || saved === 'ltr') {

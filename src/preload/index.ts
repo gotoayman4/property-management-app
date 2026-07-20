@@ -37,7 +37,9 @@ const api = {
     renew: (data: unknown) => ipcRenderer.invoke('contracts:renew', data),
     terminate: (payload: { id: number; reason?: string }) =>
       ipcRenderer.invoke('contracts:terminate', payload),
-    delete: (id: number) => ipcRenderer.invoke('contracts:delete', id)
+    delete: (id: number) => ipcRenderer.invoke('contracts:delete', id),
+    updateDepositStatus: (data: unknown) =>
+      ipcRenderer.invoke('contracts:updateDepositStatus', data)
   },
   payments: {
     list: (filters?: unknown) => ipcRenderer.invoke('payments:list', filters),

@@ -5,18 +5,16 @@ import BusinessIcon from '@mui/icons-material/Business'
 import DescriptionIcon from '@mui/icons-material/Description'
 import ErrorOutlineIcon from '@mui/icons-material/ErrorOutlineOutlined'
 import EventAvailableIcon from '@mui/icons-material/EventAvailable'
-import PaymentsIcon from '@mui/icons-material/Payments'
 import PeopleIcon from '@mui/icons-material/People'
-import ReceiptLongIcon from '@mui/icons-material/ReceiptLong'
 import WarningAmberIcon from '@mui/icons-material/WarningAmber'
 import {
   Box,
+  Card,
+  CardContent,
   Grid,
   Typography,
   Chip,
   Button,
-  Card,
-  CardContent,
   Stack,
   Tabs,
   Tab
@@ -26,12 +24,14 @@ import React, { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 import { OccupiedDonut, TrendChart } from '../../components/dashboardCharts'
+import FinancialSummaryCard from '../../components/FinancialSummaryCard'
 import PageHeader from '../../components/PageHeader'
 import StandardTable from '../../components/StandardTable'
 import StatCard from '../../components/StatCard'
 import { getLocalizedCountryName } from '../../utils/countryUtils'
 import type {
   DashboardSummary,
+  CurrencyFinancialRow,
   UpcomingDueRow,
   OverdueRow,
   UpcomingRecurringRow,
@@ -76,7 +76,7 @@ export default function Dashboard(): React.JSX.Element {
           window.api.dashboard.recentExpenses(country).catch(() => [])
         ])
         if (cancelled) return
-        setSummary(s as DashboardSummary)
+        setSummary(s as unknown as DashboardSummary)
         setUpcomingDue(due as UpcomingDueRow[])
         setOverdue(ov as OverdueRow[])
         setUpcomingRecurring(rec as UpcomingRecurringRow[])
@@ -204,6 +204,29 @@ export default function Dashboard(): React.JSX.Element {
       )
     }
   ]
+  const recentPaymentCols: GridColDef[] = [
+    { field: 'payment_date', headerName: t('common.date'), flex: 1, minWidth: 100 },
+    { field: 'property_name', headerName: t('common.property'), flex: 1, minWidth: 120 },
+    { field: 'tenant_name', headerName: t('common.tenant'), flex: 1, minWidth: 120 },
+    {
+      field: 'amount',
+      headerName: t('common.amount'),
+      flex: 1,
+      minWidth: 100,
+      type: 'number'
+    }
+  ]
+  const recentExpenseCols: GridColDef[] = [
+    { field: 'expense_date', headerName: t('common.date'), flex: 1, minWidth: 100 },
+    { field: 'property_name', headerName: t('common.property'), flex: 1, minWidth: 120 },
+    {
+      field: 'amount',
+      headerName: t('common.amount'),
+      flex: 1,
+      minWidth: 100,
+      type: 'number'
+    }
+  ]
   /* ------------------------------------------------------------------ */
   /* Main render                                                        */
   /* ------------------------------------------------------------------ */
@@ -263,61 +286,15 @@ export default function Dashboard(): React.JSX.Element {
           />
         </Grid>
       </Grid>
-      {/* Second row: 3-wide stat cards */}
+      {/* Financial Summary — per-currency, current month (BR-14) */}
       <Grid container spacing={3} sx={{ mb: 4 }}>
-        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-          <Card sx={{ cursor: 'pointer' }} onClick={() => navigate('/payments')}>
-            <CardContent>
-              <Stack direction="row" spacing={1} sx={{ mb: 0.5, alignItems: 'center' }}>
-                <PaymentsIcon color="success" fontSize="small" />
-                <Typography variant="body2" color="text.secondary">
-                  {t('dashboard.totalPayments')}
-                </Typography>
-              </Stack>
-              <Typography variant="h5" sx={{ fontWeight: 600 }}>
-                {loading
-                  ? '...'
-                  : (summary?.totalPayments ?? 0).toLocaleString(
-                      i18n.language === 'ar' ? 'ar-u-nu-latn' : 'en'
-                    )}
-              </Typography>
-            </CardContent>
-          </Card>
-        </Grid>
-        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-          <Card sx={{ cursor: 'pointer' }} onClick={() => navigate('/expenses')}>
-            <CardContent>
-              <Stack direction="row" spacing={1} sx={{ mb: 0.5, alignItems: 'center' }}>
-                <ReceiptLongIcon color="error" fontSize="small" />
-                <Typography variant="body2" color="text.secondary">
-                  {t('dashboard.totalExpenses')}
-                </Typography>
-              </Stack>
-              <Typography variant="h5" sx={{ fontWeight: 600 }}>
-                {loading
-                  ? '...'
-                  : (summary?.totalExpenses ?? 0).toLocaleString(
-                      i18n.language === 'ar' ? 'ar-u-nu-latn' : 'en'
-                    )}
-              </Typography>
-            </CardContent>
-          </Card>
-        </Grid>
-        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-          <StatCard
-            icon={<AccountBalanceWalletIcon />}
-            label={t('dashboard.netBalance')}
-            value={
-              loading
-                ? '...'
-                : (summary?.netBalance ?? 0).toLocaleString(
-                    i18n.language === 'ar' ? 'ar-u-nu-latn' : 'en'
-                  )
-            }
-            color={summary && summary.netBalance >= 0 ? 'success' : 'error'}
-          />
-        </Grid>
-        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+        <FinancialSummaryCard
+          loading={loading}
+          financialSummary={(summary?.financialSummary ?? []) as CurrencyFinancialRow[]}
+          t={t}
+          i18n={i18n}
+        />
+        <Grid size={{ xs: 12, sm: 6, md: 4 }}>
           <OccupiedDonut
             total={summary?.totalProperties ?? 0}
             rented={summary?.rentedProperties ?? 0}
@@ -425,18 +402,7 @@ export default function Dashboard(): React.JSX.Element {
             {t('dashboard.recentPayments')}
           </Typography>
           <StandardTable
-            columns={[
-              { field: 'payment_date', headerName: t('common.date'), flex: 1, minWidth: 100 },
-              { field: 'property_name', headerName: t('common.property'), flex: 1, minWidth: 120 },
-              { field: 'tenant_name', headerName: t('common.tenant'), flex: 1, minWidth: 120 },
-              {
-                field: 'amount',
-                headerName: t('common.amount'),
-                flex: 1,
-                minWidth: 100,
-                type: 'number'
-              }
-            ]}
+            columns={recentPaymentCols}
             rows={recentPayments}
             loading={loading}
             emptyMessage={t('dashboard.noPayments')}
@@ -452,17 +418,7 @@ export default function Dashboard(): React.JSX.Element {
             {t('dashboard.recentExpenses')}
           </Typography>
           <StandardTable
-            columns={[
-              { field: 'expense_date', headerName: t('common.date'), flex: 1, minWidth: 100 },
-              { field: 'property_name', headerName: t('common.property'), flex: 1, minWidth: 120 },
-              {
-                field: 'amount',
-                headerName: t('common.amount'),
-                flex: 1,
-                minWidth: 100,
-                type: 'number'
-              }
-            ]}
+            columns={recentExpenseCols}
             rows={recentExpenses}
             loading={loading}
             emptyMessage={t('dashboard.noExpenses')}

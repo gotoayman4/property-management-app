@@ -1,8 +1,10 @@
 /**
  * INTENT: Read-only data tab for contract detail — displays all contract fields in a 2-column
  *         card layout. Extracted from ContractDetail.tsx to keep it under the 500-line limit.
+ * FR-INC-02: Shows deposit status with a chip and action button for held deposits.
  */
-import { Box, Card, CardContent, Chip, Grid, Typography } from '@mui/material'
+import { AccountBalance as DepositIcon } from '@mui/icons-material'
+import { Box, Button, Card, CardContent, Chip, Grid, Typography } from '@mui/material'
 import React from 'react'
 import { useTranslation } from 'react-i18next'
 import type { ContractData } from './ContractDetail'
@@ -15,11 +17,22 @@ const STATUS_COLORS: Record<string, 'success' | 'warning' | 'error' | 'default'>
   terminated: 'default'
 }
 
-interface ContractDataTabProps {
-  contract: ContractData
+const DEPOSIT_STATUS_COLORS: Record<string, 'info' | 'success' | 'warning' | 'error'> = {
+  held: 'info',
+  returned: 'success',
+  partially_forfeited: 'warning',
+  forfeited: 'error'
 }
 
-export function ContractDataTab({ contract }: ContractDataTabProps): React.JSX.Element {
+interface ContractDataTabProps {
+  contract: ContractData
+  onUpdateDepositStatus?: () => void
+}
+
+export function ContractDataTab({
+  contract,
+  onUpdateDepositStatus
+}: ContractDataTabProps): React.JSX.Element {
   const { t } = useTranslation()
   return (
     <Card elevation={1} sx={{ borderRadius: 3 }}>
@@ -89,6 +102,28 @@ export function ContractDataTab({ contract }: ContractDataTabProps): React.JSX.E
                 : '—'}
             </Typography>
           </Grid>
+          {contract.security_deposit != null && contract.security_deposit > 0 && (
+            <Grid size={{ xs: 12, sm: 6 }}>
+              <Typography variant="caption" color="text.secondary">
+                {t('contract.depositStatus')}
+              </Typography>
+              <Box sx={{ mt: 0.5, display: 'flex', alignItems: 'center', gap: 1 }}>
+                <Chip
+                  icon={<DepositIcon />}
+                  label={t(
+                    `contract.depositStatus${(contract.deposit_status ?? 'held').charAt(0).toUpperCase() + (contract.deposit_status ?? 'held').slice(1)}`
+                  )}
+                  color={DEPOSIT_STATUS_COLORS[contract.deposit_status ?? 'held'] ?? 'default'}
+                  size="small"
+                />
+                {contract.deposit_status === 'held' && onUpdateDepositStatus && (
+                  <Button size="small" variant="outlined" onClick={onUpdateDepositStatus}>
+                    {t('contract.updateDepositStatus')}
+                  </Button>
+                )}
+              </Box>
+            </Grid>
+          )}
           <Grid size={{ xs: 12, sm: 6 }}>
             <Typography variant="caption" color="text.secondary">
               {t('contract.frequency')}

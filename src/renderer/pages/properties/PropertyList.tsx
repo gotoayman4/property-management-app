@@ -2,6 +2,7 @@ import AddIcon from '@mui/icons-material/Add'
 import BusinessIcon from '@mui/icons-material/Business'
 import DeleteIcon from '@mui/icons-material/Delete'
 import EditIcon from '@mui/icons-material/Edit'
+import VisibilityIcon from '@mui/icons-material/Visibility'
 import {
   Box,
   Typography,
@@ -20,6 +21,7 @@ import {
 import { GridColDef } from '@mui/x-data-grid'
 import React, { useEffect, useState, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
+import { useNavigate } from 'react-router-dom'
 import ConfirmDialog from '../../components/ConfirmDialog'
 import GlobalSnackbar from '../../components/GlobalSnackbar'
 import PageHeader from '../../components/PageHeader'
@@ -52,6 +54,7 @@ interface Country {
 
 export default function PropertyList(): React.JSX.Element {
   const { t, i18n } = useTranslation()
+  const navigate = useNavigate()
   const { snack, showError, showSuccess, hideSnackbar } = useSnackbar()
 
   // State
@@ -134,9 +137,17 @@ export default function PropertyList(): React.JSX.Element {
       await window.api.properties.delete(id)
       showSuccess('common.deleteSuccess')
       fetchProperties()
-    } catch (err) {
+    } catch (err: unknown) {
       console.error('Failed to delete property:', err)
-      showError('common.deleteError')
+      // FR-PROP-04: surface specific guard errors with localized messages
+      const msg = err instanceof Error ? err.message : ''
+      if (msg === 'PROPERTY_HAS_ACTIVE_CONTRACT') {
+        showError('property.errorHasActiveContract')
+      } else if (msg === 'PROPERTY_HAS_CONTRACTS') {
+        showError('property.errorHasContracts')
+      } else {
+        showError('common.deleteError')
+      }
     }
   }
 
@@ -225,6 +236,16 @@ export default function PropertyList(): React.JSX.Element {
       minWidth: 110,
       renderCell: (params) => (
         <Box sx={{ display: 'flex', gap: 0.5 }}>
+          <Tooltip title={t('common.view')}>
+            <IconButton
+              size="small"
+              color="primary"
+              onClick={() => navigate(`/properties/${params.row.id}`)}
+              aria-label={t('common.view')}
+            >
+              <VisibilityIcon fontSize="small" />
+            </IconButton>
+          </Tooltip>
           <Tooltip title={t('common.edit')}>
             <IconButton
               size="small"

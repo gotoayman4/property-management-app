@@ -221,34 +221,38 @@ export function computeSummary(
 }
 
 /**
- * Generate the next sequential, globally-unique receipt number (BR-10).
- * Format: `RCT-YYYY-NNNNNN` where YYYY is the current year and NNNNNN is a zero-padded sequence
- * that continues from the highest existing sequence number for that year. Gap-free within a year
- * because we parse the numeric tail of the MAX receipt_number rather than relying on row count.
+ * Generate the next sequential, globally-unique receipt number (BR-10, FR-SET-10).
+ * Format: `{prefix}-{year}-{sequence}` where prefix and starting sequence are read from
+ * settings (FR-SET-10). The year component is mandatory per SRS. Sequence continues from
+ * the highest existing receipt number for that year.
  *
- * DECISION: Sequence is per-year to keep numbers short and human-readable; the UNIQUE constraint
- *           on payments.receipt_number is the ultimate guarantee of uniqueness, not this function.
+ * CAVEAT: If settings lack receipt_prefix/receipt_starting_sequence (pre-migration DB),
+ *         falls back to 'RCT' and 1 respectively.
  */
 export function generateReceiptNumber(db: Database): string {
   const year = new Date().getUTCFullYear()
-  const prefix = `RCT-${year}-`
+  const settings = db
+    .prepare('SELECT receipt_prefix, receipt_starting_sequence FROM settings WHERE id = 1')
+    .get() as { receipt_prefix: string; receipt_starting_sequence: number } | undefined
+  const userPrefix = settings?.receipt_prefix ?? 'RCT'
+  const yearPrefix = `${userPrefix}-${year}-`
   const row = db
     .prepare(
       `SELECT receipt_number FROM payments
        WHERE receipt_number LIKE ? ESCAPE '\\'
        ORDER BY receipt_number DESC LIMIT 1`
     )
-    .get(`${prefix}%`) as { receipt_number: string } | undefined
+    .get(`${yearPrefix}%`) as { receipt_number: string } | undefined
 
-  let next = 1
+  let next = settings?.receipt_starting_sequence ?? 1
   if (row?.receipt_number) {
-    const tail = row.receipt_number.slice(prefix.length)
+    const tail = row.receipt_number.slice(yearPrefix.length)
     const parsed = parseInt(tail, 10)
     if (!Number.isNaN(parsed)) {
       next = parsed + 1
     }
   }
-  return `${prefix}${String(next).padStart(6, '0')}`
+  return `${yearPrefix}${String(next).padStart(6, '0')}`
 }
 
 /** Domain error thrown by ledger helpers; carries a machine-readable code for the IPC layer. */

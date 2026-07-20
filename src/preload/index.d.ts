@@ -1,6 +1,28 @@
 import { ElectronAPI } from '@electron-toolkit/preload'
 
 declare global {
+  type ReportRequestParams = {
+    type:
+      | 'income'
+      | 'expense'
+      | 'profit_loss'
+      | 'property_profitability'
+      | 'tenant_payment_history'
+      | 'outstanding_balances'
+      | 'vacancy'
+      | 'contract_expiry'
+      | 'recurring_schedule'
+      | 'document_expiry'
+      | 'ledger'
+    from_date?: string
+    to_date?: string
+    property_id?: number
+    tenant_id?: number
+    ledger_property_id?: number
+    payment_method?: string
+    category_id?: number
+    language?: 'ar' | 'en'
+  }
   interface Window {
     electron: ElectronAPI
     api: {
@@ -95,6 +117,13 @@ declare global {
         }) => Promise<{ success: boolean; id: number }>
         terminate: (payload: { id: number; reason?: string }) => Promise<{ success: boolean }>
         delete: (id: number) => Promise<{ success: boolean }>
+        updateDepositStatus: (data: {
+          contract_id: number
+          new_status: 'returned' | 'partially_forfeited' | 'forfeited'
+          refund_amount?: number
+          forfeit_amount?: number
+          notes?: string
+        }) => Promise<{ success: boolean }>
       }
       payments: {
         list: (filters?: {
@@ -167,6 +196,11 @@ declare global {
           require_auth: number
           default_country: string | null
           max_backup_count: number
+          receipt_prefix?: string
+          receipt_starting_sequence?: number
+          backup_enabled?: number
+          backup_frequency?: 'daily' | 'weekly'
+          backup_time?: string
         }>
         update: (data: unknown) => Promise<{ success: boolean; settings: unknown }>
       }
@@ -376,28 +410,7 @@ declare global {
         >
       }
       reports: {
-        preview: (data: {
-          type:
-            | 'income'
-            | 'expense'
-            | 'profit_loss'
-            | 'property_profitability'
-            | 'tenant_payment_history'
-            | 'outstanding_balances'
-            | 'vacancy'
-            | 'contract_expiry'
-            | 'recurring_schedule'
-            | 'document_expiry'
-            | 'ledger'
-          from_date?: string
-          to_date?: string
-          property_id?: number
-          tenant_id?: number
-          ledger_property_id?: number
-          payment_method?: string
-          category_id?: number
-          language?: 'ar' | 'en'
-        }) => Promise<{
+        preview: (data: ReportRequestParams) => Promise<{
           titleKey: string
           subtitleKey?: string
           columns: Array<{
@@ -415,50 +428,8 @@ declare global {
           }>
           consolidatedNote?: string
         }>
-        exportExcel: (data: {
-          type:
-            | 'income'
-            | 'expense'
-            | 'profit_loss'
-            | 'property_profitability'
-            | 'tenant_payment_history'
-            | 'outstanding_balances'
-            | 'vacancy'
-            | 'contract_expiry'
-            | 'recurring_schedule'
-            | 'document_expiry'
-            | 'ledger'
-          from_date?: string
-          to_date?: string
-          property_id?: number
-          tenant_id?: number
-          ledger_property_id?: number
-          payment_method?: string
-          category_id?: number
-          language?: 'ar' | 'en'
-        }) => Promise<{ filePath: string | null }>
-        exportHtml: (data: {
-          type:
-            | 'income'
-            | 'expense'
-            | 'profit_loss'
-            | 'property_profitability'
-            | 'tenant_payment_history'
-            | 'outstanding_balances'
-            | 'vacancy'
-            | 'contract_expiry'
-            | 'recurring_schedule'
-            | 'document_expiry'
-            | 'ledger'
-          from_date?: string
-          to_date?: string
-          property_id?: number
-          tenant_id?: number
-          ledger_property_id?: number
-          payment_method?: string
-          category_id?: number
-          language?: 'ar' | 'en'
-        }) => Promise<{ filePath: string | null }>
+        exportExcel: (data: ReportRequestParams) => Promise<{ filePath: string | null }>
+        exportHtml: (data: ReportRequestParams) => Promise<{ filePath: string | null }>
       }
       dialog: {
         pickFolder: () => Promise<{ filePath: string | null; canceled: boolean }>

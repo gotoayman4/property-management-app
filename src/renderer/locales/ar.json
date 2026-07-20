@@ -132,7 +132,9 @@
     "currencyRequired": "العملة مطلوبة",
     "rentRequired": "الإيجار الشهري مطلوب ومجب أن يكون أكبر من الصفر",
     "noProperties": "لم يتم إضافة أي عقارات بعد. ابدأ بإضافة عقارك الأول!",
-    "noPropertiesFiltered": "لا توجد عقارات تطابق عوامل التصفية المحددة."
+    "noPropertiesFiltered": "لا توجد عقارات تطابق عوامل التصفية المحددة.",
+    "errorHasActiveContract": "لا يمكن الأرشفة: يوجد عقد إيجار نشط لهذا العقار. يرجى إلغاء العقد أو انتهاؤه أولاً.",
+    "errorHasContracts": "لا يمكن الأرشفة: يوجد سجل عقود تاريخية لهذا العقار. يرجى أرشفة العقود أولاً."
   },
   "settings": {
     "title": "الإعدادات العامة",
@@ -177,7 +179,14 @@
     "templateHelp": "خصّص رسائل الإشعارات المُرسلة للمستأجرين. استخدم {متغيرات} للقيم الديناميكية — يتم استبدالها بقيم فعلية عند إنشاء الإشعار.",
     "templateVariables": "المتغيرات المتاحة (انقر للإدراج)",
     "templatePreview": "معاينة مباشرة ببيانات تجريبية",
-    "langTr": "التركية"
+    "langTr": "التركية",
+    "receiptNumbering": "ترقيم الإيصالات",
+    "receiptNumberingHelp": "تخصيص تنسيق رقم الإيصال",
+    "receiptPrefix": "بادئة الإيصال",
+    "receiptPrefixHelp": "الحروف قبل السنة (مثال: RCT، INV، REC)",
+    "receiptStartingSequence": "الرقم الابتدائي",
+    "receiptStartingSequenceHelp": "أول رقم تسلسلي للإيصالات في هذا العام",
+    "receiptPreview": "معاينة"
   },
   "tenant": {
     "title": "إدارة المستأجرين",
@@ -321,7 +330,22 @@
     "renewalNewRent": "قيمة الإيجار الجديدة",
     "renewSuccess": "تم تجديد العقد بنجاح. تم حفظ الحالة السابقة في سجل التاريخ.",
     "notEligibleForRenewal": "يمكن تجديد العقود النشطة أو المنتهية فقط.",
-    "renewalEndBeforeStart": "تاريخ الانتهاء الجديد يجب أن يكون بعد تاريخ بدء التجديد."
+    "renewalEndBeforeStart": "تاريخ الانتهاء الجديد يجب أن يكون بعد تاريخ بدء التجديد.",
+    "depositStatus": "حالة وديعة التأمين",
+    "depositStatusHeld": "محتجزة",
+    "depositStatusReturned": "مرتجعة",
+    "depositStatusPartially_forfeited": "مصادرة جزئية",
+    "depositStatusForfeited": "مصادرة كاملة",
+    "updateDepositStatus": "تحديث الحالة",
+    "depositDialogTitle": "تحديث حالة وديعة التأمين",
+    "depositDialogDesc": "أنت على وشك معالجة وديعة تأمين بقيمة {{amount}} {{currency}}.",
+    "depositReturn": "إعادة المبلغ الكامل للمستأجر",
+    "depositPartialForfeit": "مصادرة جزئية (حدد المبالغ)",
+    "depositForfeit": "مصادرة المبلغ الكامل",
+    "depositRefundAmount": "مبلغ الإرجاع",
+    "depositForfeitAmount": "مبلغ المصادرة",
+    "depositAmountMismatch": "الإرجاع + المصادرة يجب أن يساوي إجمالي وديعة التأمين.",
+    "depositStatusUpdated": "تم تحديث حالة وديعة التأمين بنجاح."
   },
   "payment": {
     "title": "المدفوعات والإيرادات",
@@ -419,7 +443,9 @@
     "upcomingRecurring": "المصروفات الدورية القادمة (7 أيام)",
     "noUpcomingRecurring": "لا توجد مصروفات دورية قادمة.",
     "expiringDocuments": "المستندات المنتهية (30 يوماً)",
-    "noExpiringDocuments": "لا توجد مستندات تنتهي في الثلاثين يوماً القادمة."
+    "noExpiringDocuments": "لا توجد مستندات تنتهي في الثلاثين يوماً القادمة.",
+    "currentMonth": "هذا الشهر",
+    "noTransactionsThisMonth": "لا توجد مدفوعات أو مصروفات مسجلة لهذا الشهر بعد."
   },
   "ledger": {
     "title": "الدفتر المالي",
@@ -459,11 +485,21 @@
     "contracts": "العقود",
     "payments": "المدفوعات",
     "ledger": "الدفتر المالي",
+    "expenses": "المصروفات",
+    "profitability": "الربحية",
+    "recurring": "المصروفات الدورية",
+    "images": "الصور",
     "documents": "المستندات",
     "noContracts": "لا توجد عقود لهذا العقار.",
     "noPayments": "لا توجد مدفوعات لهذا العقار.",
     "noLedger": "لا توجد قيود في الدفتر لهذا العقار.",
-    "noDocuments": "لم يتم رفع أي مستندات."
+    "noExpenses": "لا توجد مصروفات لهذا العقار.",
+    "noRecurringExpenses": "لا توجد مصروفات دورية لهذا العقار.",
+    "noImages": "لم يتم رفع أي صور لهذا العقار.",
+    "noDocuments": "لم يتم رفع أي مستندات.",
+    "totalIncome": "إجمالي الإيرادات",
+    "totalExpenses": "إجمالي المصروفات",
+    "netProfit": "صافي الربح"
   },
   "tenantDetail": {
     "contracts": "العقود",
@@ -691,7 +727,13 @@
     "restoreRestartBody": "تمت استعادة النسخة الاحتياطية بنجاح. يجب إعادة تشغيل التطبيق لتحميل البيانات المستعادة. إعادة التشغيل الآن؟",
     "restoreRestartButton": "إعادة التشغيل الآن",
     "restoreRestartLater": "لاحقاً",
-    "confirmDeleteMessage": "سيؤدي هذا إلى حذف ملف النسخة الاحتياطية نهائياً وإزالته من السجل. لا يمكن التراجع عن هذا الإجراء."
+    "confirmDeleteMessage": "سيؤدي هذا إلى حذف ملف النسخة الاحتياطية نهائياً وإزالته من السجل. لا يمكن التراجع عن هذا الإجراء.",
+    "enableScheduled": "تفعيل النسخ الاحتياطي المجدول",
+    "frequency": "التكرار",
+    "daily": "يومي",
+    "weekly": "أسبوعي",
+    "scheduledTime": "وقت النسخ (ساعة:دقيقة)",
+    "scheduledTimeHelp": "وقت تشغيل النسخ الاحتياطي (بتنسيق 24 ساعة)"
   },
   "reports": {
     "title": "التقارير والتصدير",

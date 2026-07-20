@@ -5,14 +5,20 @@
  * CONSTRAINT: All interfaces are exported so dashboardCharts.tsx and Dashboard.tsx can share them.
  */
 
+export interface CurrencyFinancialRow {
+  currency: string
+  income: number
+  expenses: number
+  netProfit: number
+}
+
 export interface DashboardSummary {
   totalProperties: number
   rentedProperties: number
   totalTenants: number
   activeContracts: number
-  totalPayments: number
-  totalExpenses: number
-  netBalance: number
+  /** Per-currency income/expense/net for the current calendar month (BR-14). */
+  financialSummary: CurrencyFinancialRow[]
 }
 export interface UpcomingDueRow {
   id: number

@@ -33,6 +33,7 @@ import CountryManagerDialog from '../../components/CountryManagerDialog'
 import GlobalSnackbar from '../../components/GlobalSnackbar'
 import NotificationTemplateManager from '../../components/NotificationTemplateManager'
 import PageHeader from '../../components/PageHeader'
+import ReceiptSettingsCard from '../../components/ReceiptSettingsCard'
 import { useSnackbar } from '../../hooks/useSnackbar'
 import { useUiPreferences } from '../../stores/uiPreferencesStore'
 
@@ -51,6 +52,8 @@ interface SettingsData {
   require_auth: number
   default_country: string | null
   max_backup_count: number
+  receipt_prefix: string
+  receipt_starting_sequence: number
 }
 
 const CURRENCIES = ['JOD', 'TRY', 'QAR', 'USD', 'EUR', 'SAR']
@@ -294,6 +297,11 @@ export default function Settings(): React.JSX.Element {
               </FormControl>
             </CardContent>
           </Card>
+        </Grid>
+
+        {/* Receipt Numbering (FR-SET-10) */}
+        <Grid size={{ xs: 12, md: 6 }}>
+          <ReceiptSettingsCard />
         </Grid>
 
         {/* Reminder Days */}

@@ -4,7 +4,8 @@ import {
   Block as BlockIcon,
   Delete as DeleteIcon,
   Description as DescriptionIcon,
-  Edit as EditIcon
+  Edit as EditIcon,
+  Visibility as ViewIcon
 } from '@mui/icons-material'
 import { Box, Button, Chip, IconButton, Link, Tooltip } from '@mui/material'
 import { GridColDef } from '@mui/x-data-grid'
@@ -226,6 +227,16 @@ export function ContractList(): React.ReactElement {
         const row = params.row as Contract
         return (
           <Box sx={{ display: 'flex', gap: 0.5 }}>
+            <Tooltip title={t('common.view')}>
+              <IconButton
+                size="small"
+                color="primary"
+                onClick={() => navigate(`/contracts/${row.id}`)}
+                aria-label={t('common.view')}
+              >
+                <ViewIcon fontSize="small" />
+              </IconButton>
+            </Tooltip>
             <Tooltip title={t('common.edit')}>
               <IconButton
                 size="small"

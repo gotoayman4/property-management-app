@@ -9,14 +9,20 @@
 import { ipcMain } from 'electron'
 import { db } from '../db/database'
 
+interface CurrencyFinancialRow {
+  currency: string
+  income: number
+  expenses: number
+  netProfit: number
+}
+
 interface DashboardSummary {
   totalProperties: number
   rentedProperties: number
   totalTenants: number
   activeContracts: number
-  totalPayments: number
-  totalExpenses: number
-  netBalance: number
+  /** Per-currency income/expense/net for the current calendar month (BR-14). */
+  financialSummary: CurrencyFinancialRow[]
 }
 
 /** Format a Date to YYYY-MM-DD using local timezone. */
@@ -102,37 +108,76 @@ export function registerDashboardIpcHandlers(): void {
             }
           ).cnt
 
+      // BR-14: financial totals must be broken down per currency, scoped to
+      // the current calendar month only (not all-time aggregates).
       const wc = whereCountry(country)
-      const totalPayments = (
-        db
-          .prepare(
-            `SELECT COALESCE(SUM(p.amount), 0) as total FROM payments p
-             LEFT JOIN properties pr ON p.property_id = pr.id
-             WHERE p.is_voided = 0${wc.clause}`
-          )
-          .get(...wc.params) as { total: number }
-      ).total
+      const currentMonth = (() => {
+        const d = new Date()
+        const y = d.getFullYear()
+        const m = String(d.getMonth() + 1).padStart(2, '0')
+        return `${y}-${m}`
+      })()
 
-      const totalExpenses = (
-        db
-          .prepare(
-            `SELECT COALESCE(SUM(e.amount), 0) as total FROM expenses e
-             LEFT JOIN properties pr ON e.property_id = pr.id
-             WHERE e.is_voided = 0${wc.clause}`
-          )
-          .get(...wc.params) as { total: number }
-      ).total
+      // Income per currency this month
+      const incomeRows = db
+        .prepare(
+          `SELECT pay.currency, COALESCE(SUM(pay.amount), 0) as income
+           FROM payments pay
+           LEFT JOIN properties pr ON pay.property_id = pr.id
+           WHERE pay.is_voided = 0
+             AND strftime('%Y-%m', pay.payment_date) = ?${wc.clause}
+           GROUP BY pay.currency`
+        )
+        .all(currentMonth, ...wc.params) as { currency: string; income: number }[]
 
-      const netBalance = totalPayments - totalExpenses
+      // Expenses per currency this month
+      const expenseRows = db
+        .prepare(
+          `SELECT e.currency, COALESCE(SUM(e.amount), 0) as expenses
+           FROM expenses e
+           LEFT JOIN properties pr ON e.property_id = pr.id
+           WHERE e.is_voided = 0
+             AND strftime('%Y-%m', e.expense_date) = ?${wc.clause}
+           GROUP BY e.currency`
+        )
+        .all(currentMonth, ...wc.params) as { currency: string; expenses: number }[]
+
+      // Merge into a map keyed by currency
+      const currencyMap = new Map<string, CurrencyFinancialRow>()
+      for (const r of incomeRows) {
+        currencyMap.set(r.currency, {
+          currency: r.currency,
+          income: r.income,
+          expenses: 0,
+          netProfit: 0
+        })
+      }
+      for (const r of expenseRows) {
+        const existing = currencyMap.get(r.currency)
+        if (existing) {
+          existing.expenses = r.expenses
+        } else {
+          currencyMap.set(r.currency, {
+            currency: r.currency,
+            income: 0,
+            expenses: r.expenses,
+            netProfit: 0
+          })
+        }
+      }
+      const financialSummary: CurrencyFinancialRow[] = Array.from(currencyMap.values()).map(
+        (row) => ({
+          ...row,
+          netProfit: row.income - row.expenses
+        })
+      )
 
       return {
         totalProperties,
         rentedProperties,
         totalTenants,
         activeContracts,
-        totalPayments,
-        totalExpenses,
-        netBalance
+        financialSummary
       } satisfies DashboardSummary
     } catch {
       throw new Error('FAILED_TO_LOAD_DASHBOARD')

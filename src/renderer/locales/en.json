@@ -132,7 +132,9 @@
     "currencyRequired": "Currency is required",
     "rentRequired": "Monthly rent is required and must be greater than zero",
     "noProperties": "No properties added yet. Start by adding your first property!",
-    "noPropertiesFiltered": "No properties match the selected filters."
+    "noPropertiesFiltered": "No properties match the selected filters.",
+    "errorHasActiveContract": "Cannot archive: this property has an active lease contract. Cancel or expire the contract first.",
+    "errorHasContracts": "Cannot archive: this property has historical contracts on record. Archive the contracts first."
   },
   "settings": {
     "title": "Global Settings",
@@ -177,7 +179,14 @@
     "templateHelp": "Customize the notification messages sent to tenants. Use {variables} for dynamic values — they are replaced with real data when the notification is generated.",
     "templateVariables": "Available variables (click to insert)",
     "templatePreview": "Live preview with sample data",
-    "langTr": "Turkish"
+    "langTr": "Turkish",
+    "receiptNumbering": "Receipt Numbering",
+    "receiptNumberingHelp": "Customize receipt number format",
+    "receiptPrefix": "Receipt Prefix",
+    "receiptPrefixHelp": "Letters before the year (e.g. RCT, INV, REC)",
+    "receiptStartingSequence": "Starting Sequence",
+    "receiptStartingSequenceHelp": "First receipt number sequence for this year",
+    "receiptPreview": "Preview"
   },
   "tenant": {
     "title": "Tenant Management",
@@ -321,7 +330,22 @@
     "renewalNewRent": "New Rent Amount",
     "renewSuccess": "Contract renewed successfully. The prior state was preserved in the history log.",
     "notEligibleForRenewal": "Only active or expired contracts can be renewed.",
-    "renewalEndBeforeStart": "New end date must be after the renewal start date."
+    "renewalEndBeforeStart": "New end date must be after the renewal start date.",
+    "depositStatus": "Deposit Status",
+    "depositStatusHeld": "Held",
+    "depositStatusReturned": "Returned",
+    "depositStatusPartially_forfeited": "Partially Forfeited",
+    "depositStatusForfeited": "Forfeited",
+    "updateDepositStatus": "Update Status",
+    "depositDialogTitle": "Update Deposit Status",
+    "depositDialogDesc": "You are about to process a security deposit of {{amount}} {{currency}}.",
+    "depositReturn": "Return full deposit to tenant",
+    "depositPartialForfeit": "Partially forfeit (specify amounts)",
+    "depositForfeit": "Forfeit full deposit",
+    "depositRefundAmount": "Refund Amount",
+    "depositForfeitAmount": "Forfeit Amount",
+    "depositAmountMismatch": "Refund + Forfeit must equal the total deposit amount.",
+    "depositStatusUpdated": "Deposit status updated successfully."
   },
   "payment": {
     "title": "Payments & Income",
@@ -419,7 +443,9 @@
     "upcomingRecurring": "Upcoming Recurring Expenses (7 days)",
     "noUpcomingRecurring": "No upcoming recurring expenses.",
     "expiringDocuments": "Expiring Documents (30 days)",
-    "noExpiringDocuments": "No documents expiring in the next 30 days."
+    "noExpiringDocuments": "No documents expiring in the next 30 days.",
+    "currentMonth": "This Month",
+    "noTransactionsThisMonth": "No payments or expenses recorded for this month yet."
   },
   "ledger": {
     "title": "Financial Ledger",
@@ -459,11 +485,21 @@
     "contracts": "Contracts",
     "payments": "Payments",
     "ledger": "Ledger",
+    "expenses": "Expenses",
+    "profitability": "Profitability",
+    "recurring": "Recurring Expenses",
+    "images": "Images",
     "documents": "Documents",
     "noContracts": "No contracts for this property.",
     "noPayments": "No payments for this property.",
     "noLedger": "No ledger entries for this property.",
-    "noDocuments": "No documents uploaded."
+    "noExpenses": "No expenses for this property.",
+    "noRecurringExpenses": "No recurring expenses for this property.",
+    "noImages": "No images uploaded for this property.",
+    "noDocuments": "No documents uploaded.",
+    "totalIncome": "Total Income",
+    "totalExpenses": "Total Expenses",
+    "netProfit": "Net Profit"
   },
   "tenantDetail": {
     "contracts": "Contracts",
@@ -691,7 +727,13 @@
     "restoreRestartBody": "The backup was restored successfully. The app must restart to load the restored data. Restart now?",
     "restoreRestartButton": "Restart Now",
     "restoreRestartLater": "Later",
-    "confirmDeleteMessage": "This will permanently delete the backup file and remove it from the history. This action cannot be undone."
+    "confirmDeleteMessage": "This will permanently delete the backup file and remove it from the history. This action cannot be undone.",
+    "enableScheduled": "Enable Scheduled Backups",
+    "frequency": "Frequency",
+    "daily": "Daily",
+    "weekly": "Weekly",
+    "scheduledTime": "Backup Time (HH:mm)",
+    "scheduledTimeHelp": "Time of day to run the backup (24-hour format)"
   },
   "reports": {
     "title": "Reports & Exports",

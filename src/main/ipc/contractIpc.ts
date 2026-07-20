@@ -7,6 +7,8 @@ import {
   EscalationValidationError
 } from '../db/contractEscalation'
 import { db } from '../db/database'
+import { appendLedgerEntry } from '../db/ledgerService'
+import { createPayment } from '../db/paymentRepository'
 
 /**
  * INTENT: IPC handlers for the contracts domain (renamed from leases) + multi-year escalation.
@@ -462,6 +464,108 @@ export function registerContractIpcHandlers(): void {
     } catch (error) {
       console.error('Error deleting contract:', error)
       throw new Error('FAILED_TO_DELETE_CONTRACT')
+    }
+  })
+
+  /**
+   * FR-INC-02: Update deposit status (held → returned | partially_forfeited | forfeited).
+   * CONSTRAINT: Atomic transaction — updates deposit_status + creates payment + ledger entry.
+   * DECISION: Return creates a refund payment (negative amount) for returned/forfeited deposits.
+   *           Partially forfeited allows a custom amount (refund the difference, forfeit the rest).
+   */
+  ipcMain.handle('contracts:updateDepositStatus', async (_, data: unknown) => {
+    try {
+      const { contract_id, new_status, refund_amount, forfeit_amount, notes } = z
+        .object({
+          contract_id: z.number().int().positive(),
+          new_status: z.enum(['returned', 'partially_forfeited', 'forfeited']),
+          refund_amount: z.number().min(0).optional(),
+          forfeit_amount: z.number().min(0).optional(),
+          notes: z.string().optional().nullable()
+        })
+        .parse(data)
+
+      const contract = db
+        .prepare(
+          `SELECT c.*, p.currency AS property_currency
+           FROM contracts c JOIN properties p ON c.property_id = p.id
+           WHERE c.id = ?`
+        )
+        .get(contract_id) as
+        | {
+            id: number
+            security_deposit: number
+            deposit_status: string | null
+            property_id: number
+            property_currency: string
+            tenant_id: number | null
+            status: string
+          }
+        | undefined
+
+      if (!contract) throw new Error('CONTRACT_NOT_FOUND')
+      if (contract.deposit_status !== 'held') {
+        throw new Error('DEPOSIT_NOT_HELD')
+      }
+      if (contract.security_deposit <= 0) {
+        throw new Error('NO_DEPOSIT_TO_PROCESS')
+      }
+
+      // Validate amounts for partial forfeiture
+      if (new_status === 'partially_forfeited') {
+        if (refund_amount == null || forfeit_amount == null) {
+          throw new Error('PARTIAL_FORFEIT_REQUIRES_AMOUNTS')
+        }
+        if (Math.abs(refund_amount + forfeit_amount - contract.security_deposit) > 0.01) {
+          throw new Error('AMOUNTS_MUST_SUM_TO_DEPOSIT')
+        }
+      }
+
+      db.transaction(() => {
+        // Update deposit_status on the contract
+        db.prepare(
+          `UPDATE contracts SET deposit_status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`
+        ).run(new_status, contract_id)
+
+        // Create refund payment(s) via ledger
+        if (new_status === 'returned' || new_status === 'partially_forfeited') {
+          const refundAmt = new_status === 'returned' ? contract.security_deposit : refund_amount!
+          if (refundAmt > 0) {
+            createPayment(db, {
+              contract_id,
+              property_id: contract.property_id,
+              tenant_id: contract.tenant_id,
+              payment_type: 'deposit',
+              payment_date: new Date().toISOString().slice(0, 10),
+              amount: refundAmt,
+              currency: contract.property_currency,
+              property_currency: contract.property_currency,
+              notes: notes ?? `Deposit ${new_status}`
+            })
+          }
+        }
+        if (new_status === 'partially_forfeited' && forfeit_amount! > 0) {
+          // Forfeited portion goes as income
+          appendLedgerEntry(db, {
+            propertyId: contract.property_id,
+            entryType: 'income',
+            referenceType: 'manual',
+            referenceId: contract_id,
+            debit: forfeit_amount!,
+            currency: contract.property_currency,
+            entryDate: new Date().toISOString().slice(0, 10),
+            description: `[deposit_forfeiture] ${notes ?? 'Deposit forfeited'}`
+          })
+        }
+
+        logHistory(contract_id, 'amended', null, `deposit ${new_status}`)
+      })()
+
+      return { success: true }
+    } catch (error: unknown) {
+      console.error('Error updating deposit status:', error)
+      if (error instanceof z.ZodError) throw new Error('INVALID_INPUT')
+      throw error
     }
   })
 }

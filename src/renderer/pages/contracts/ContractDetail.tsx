@@ -26,6 +26,7 @@ import { GridColDef } from '@mui/x-data-grid'
 import React, { useCallback, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate, useParams } from 'react-router-dom'
+import { DepositStatusDialog } from '../../components/DepositStatusDialog'
 import DocumentUploadForm from '../../components/DocumentUploadForm'
 import GlobalSnackbar from '../../components/GlobalSnackbar'
 import StandardDialog from '../../components/StandardDialog'
@@ -45,6 +46,7 @@ export interface ContractData {
   currency: string
   payment_frequency: string
   security_deposit: number | null
+  deposit_status: string | null
   status: string
   contract_term_years: number
   has_variable_escalation: number
@@ -111,6 +113,7 @@ export default function ContractDetail(): React.ReactElement {
   const [loading, setLoading] = useState<boolean>(true)
   const [error, setError] = useState<string | null>(null)
   const [renewalOpen, setRenewalOpen] = useState<boolean>(false)
+  const [depositDialogOpen, setDepositDialogOpen] = useState<boolean>(false)
 
   const fetchDetail = useCallback(async (): Promise<void> => {
     if (!id) return
@@ -308,7 +311,16 @@ export default function ContractDetail(): React.ReactElement {
         <Tab label={`${t('contract.detailTabDocuments')} (${documents.length})`} />
       </Tabs>
 
-      {tab === 0 && <ContractDataTab contract={contract} />}
+      {tab === 0 && (
+        <ContractDataTab
+          contract={contract}
+          onUpdateDepositStatus={
+            contract.deposit_status === 'held' && (contract.security_deposit ?? 0) > 0
+              ? () => setDepositDialogOpen(true)
+              : undefined
+          }
+        />
+      )}
       {tab === 1 && (
         <StandardTable
           columns={scheduleColumns}
@@ -385,6 +397,21 @@ export default function ContractDetail(): React.ReactElement {
             onCancel={() => setRenewalOpen(false)}
           />
         </StandardDialog>
+      )}
+
+      {/* FR-INC-02: Deposit status update dialog */}
+      {depositDialogOpen && contract && (
+        <DepositStatusDialog
+          open
+          onClose={() => setDepositDialogOpen(false)}
+          onSuccess={() => {
+            setDepositDialogOpen(false)
+            fetchDetail()
+          }}
+          contractId={contract.id}
+          securityDeposit={contract.security_deposit ?? 0}
+          currency={contract.currency}
+        />
       )}
 
       <GlobalSnackbar state={snack} onClose={hideSnackbar} />

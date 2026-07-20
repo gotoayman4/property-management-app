@@ -22,7 +22,9 @@ import {
 import { registerReportsIpcHandlers } from './ipc/reportsIpc'
 import { registerSearchIpcHandlers } from './ipc/searchIpc'
 import { registerTenantIpcHandlers } from './ipc/tenantIpc'
+import { startBackupScheduler, stopBackupScheduler } from './services/backupScheduler'
 import { createBackup, pruneOldBackups } from './services/backupService'
+import { applyDueEscalations } from './services/escalationService'
 
 function createWindow(): void {
   // Create the browser window.
@@ -85,11 +87,19 @@ app.whenReady().then(() => {
   // Backup & Restore (SRS Module 11): manual + automatic backup, restore, verify
   registerBackupIpcHandlers()
 
-  // Evaluate notifications on startup — check for rent due, contract expiry, etc.
+  // Evaluate notifications on startup - check for rent due, contract expiry, etc.
   evaluateNotifications()
 
-  // Evaluate recurring expense templates — generates expenses for any due dates since last run
+  // FR-CON-11: Apply any overdue rent escalation steps before the window opens.
+  // CONSTRAINT: runs after DB init but before the window shows so contracts.rent_amount
+  //             is always current when the renderer first loads dashboard data.
+  applyDueEscalations(db)
+
+  // Evaluate recurring expense templates - generates expenses for any due dates since last run
   evaluateRecurringExpenses()
+
+  // FR-BAK-02: Start the scheduled backup interval (checks every 60s if a backup is due)
+  startBackupScheduler(db)
 
   // Set app user model id for windows
   electronApp.setAppUserModelId('com.electron')
@@ -117,6 +127,7 @@ app.whenReady().then(() => {
 
   // FR-BAK-02: auto-backup on quit (before-quit is cancellable; this runs before close begins).
   app.on('before-quit', () => {
+    stopBackupScheduler()
     try {
       const settings = db.prepare('SELECT backup_path FROM settings WHERE id = 1').get() as
         { backup_path: string | null } | undefined

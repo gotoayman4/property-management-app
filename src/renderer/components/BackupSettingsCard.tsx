@@ -23,10 +23,16 @@ import {
   Box,
   Card,
   CardContent,
+  FormControl,
+  FormControlLabel,
   Grid,
   IconButton,
   InputAdornment,
+  InputLabel,
+  MenuItem,
+  Select,
   Stack,
+  Switch,
   TextField,
   Typography
 } from '@mui/material'
@@ -38,6 +44,9 @@ import { useSnackbar } from '../hooks/useSnackbar'
 interface BackupSettings {
   backup_path: string | null
   max_backup_count: number | null
+  backup_enabled?: number
+  backup_frequency?: 'daily' | 'weekly'
+  backup_time?: string
 }
 
 // Spinner-less numeric input styling (AGENTS bans <TextField type="number"> native spinners).
@@ -169,6 +178,65 @@ export default function BackupSettingsCard(): React.ReactElement {
             />
           </Grid>
         </Grid>
+
+        {/* FR-BAK-02: Scheduled Backup Configuration */}
+        <Stack spacing={2} sx={{ mt: 3 }}>
+          <FormControlLabel
+            control={
+              <Switch
+                checked={settings.backup_enabled === 1}
+                onChange={(e) => updateBackupSetting('backup_enabled', e.target.checked ? 1 : 0)}
+              />
+            }
+            label={t('backup.enableScheduled')}
+          />
+
+          {settings.backup_enabled === 1 && (
+            <Grid container spacing={2}>
+              <Grid size={{ xs: 12, md: 6 }}>
+                <FormControl fullWidth>
+                  <InputLabel>{t('backup.frequency')}</InputLabel>
+                  <Select
+                    value={settings.backup_frequency}
+                    label={t('backup.frequency')}
+                    onChange={(e) =>
+                      updateBackupSetting('backup_frequency', e.target.value as 'daily' | 'weekly')
+                    }
+                  >
+                    <MenuItem value="daily">{t('backup.daily')}</MenuItem>
+                    <MenuItem value="weekly">{t('backup.weekly')}</MenuItem>
+                  </Select>
+                </FormControl>
+              </Grid>
+              <Grid size={{ xs: 12, md: 6 }}>
+                <TextField
+                  fullWidth
+                  type="text"
+                  inputMode="numeric"
+                  label={t('backup.scheduledTime')}
+                  value={settings.backup_time}
+                  onChange={(e) => {
+                    const val = e.target.value
+                    if (/^\d{0,2}:?\d{0,2}$/.test(val)) {
+                      updateBackupSetting('backup_time', val)
+                    }
+                  }}
+                  onBlur={() => {
+                    const val = settings.backup_time ?? '23:00'
+                    const parts = val.split(':')
+                    if (parts.length === 2) {
+                      const h = parts[0].padStart(2, '0')
+                      const m = parts[1].padStart(2, '0')
+                      updateBackupSetting('backup_time', `${h}:${m}`)
+                    }
+                  }}
+                  helperText={t('backup.scheduledTimeHelp')}
+                  slotProps={{ htmlInput: { dir: 'ltr', maxLength: 5 } }}
+                />
+              </Grid>
+            </Grid>
+          )}
+        </Stack>
       </CardContent>
     </Card>
   )

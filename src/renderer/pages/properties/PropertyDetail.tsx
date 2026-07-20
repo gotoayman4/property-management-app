@@ -26,6 +26,10 @@ import DocumentUploadForm from '../../components/DocumentUploadForm'
 import PageHeader from '../../components/PageHeader'
 import StandardTable from '../../components/StandardTable'
 import { getLocalizedCountryName } from '../../utils/countryUtils'
+import PropertyExpensesTab from './PropertyExpensesTab'
+import PropertyImagesTab from './PropertyImagesTab'
+import PropertyProfitabilityTab from './PropertyProfitabilityTab'
+import PropertyRecurringTab from './PropertyRecurringTab'
 
 interface PropertyData {
   id: number
@@ -135,19 +139,72 @@ export default function PropertyDetail(): React.JSX.Element {
     { field: 'tenant_name', headerName: t('common.tenant'), flex: 1 },
     { field: 'start_date', headerName: t('contract.startDate'), flex: 1 },
     { field: 'end_date', headerName: t('contract.endDate'), flex: 1 },
-    { field: 'status', headerName: t('contract.status'), flex: 1 }
+    {
+      field: 'status',
+      headerName: t('contract.status'),
+      flex: 1,
+      renderCell: (params) => {
+        const status = params.value as string
+        const color =
+          status === 'active'
+            ? 'success'
+            : status === 'draft'
+              ? 'warning'
+              : status === 'expired' || status === 'cancelled'
+                ? 'error'
+                : 'default'
+        return (
+          <Chip label={t(`contract.${status}`)} color={color} size="small" variant="outlined" />
+        )
+      }
+    }
   ]
 
   const paymentCols: GridColDef[] = [
     { field: 'payment_date', headerName: t('common.date'), flex: 1 },
     { field: 'tenant_name', headerName: t('common.tenant'), flex: 1 },
     { field: 'amount', headerName: t('common.amount'), flex: 1, type: 'number' },
-    { field: 'payment_type', headerName: t('payment.paymentType'), flex: 1 },
+    {
+      field: 'payment_type',
+      headerName: t('payment.paymentType'),
+      flex: 1,
+      renderCell: (params) =>
+        t(`payment.${(params.row as GridValidRowModel).payment_type as string}`)
+    },
     { field: 'receipt_number', headerName: t('common.receipt'), flex: 1 }
   ]
 
   const ledgerCols: GridColDef[] = [
     { field: 'entry_date', headerName: t('ledger.entryDate'), flex: 1 },
+    {
+      field: 'entry_type',
+      headerName: t('ledger.entryType'),
+      flex: 1.2,
+      renderCell: (params) => {
+        const entryType = params.value as string
+        const ENTRY_TYPE_LABEL: Record<string, string> = {
+          income: 'typeIncome',
+          expense: 'typeExpense',
+          income_void: 'typeIncomeVoid',
+          expense_void: 'typeExpenseVoid',
+          manual_adjustment: 'typeManual'
+        }
+        const tone =
+          entryType === 'income' || entryType === 'expense_void'
+            ? 'success'
+            : entryType === 'manual_adjustment'
+              ? 'default'
+              : 'error'
+        return (
+          <Chip
+            label={t(`ledger.${ENTRY_TYPE_LABEL[entryType] ?? entryType}`)}
+            color={tone}
+            size="small"
+            variant="outlined"
+          />
+        )
+      }
+    },
     { field: 'description', headerName: t('ledger.description'), flex: 2 },
     { field: 'debit', headerName: t('ledger.debit'), flex: 1, type: 'number' },
     { field: 'credit', headerName: t('ledger.credit'), flex: 1, type: 'number' }
@@ -245,6 +302,10 @@ export default function PropertyDetail(): React.JSX.Element {
         <Tab label={t('propertyDetail.contracts')} />
         <Tab label={t('propertyDetail.payments')} />
         <Tab label={t('propertyDetail.ledger')} />
+        <Tab label={t('propertyDetail.expenses')} />
+        <Tab label={t('propertyDetail.profitability')} />
+        <Tab label={t('propertyDetail.recurring')} />
+        <Tab label={t('propertyDetail.images')} />
         <Tab label={t('propertyDetail.documents')} />
       </Tabs>
 
@@ -269,14 +330,20 @@ export default function PropertyDetail(): React.JSX.Element {
           emptyMessage={t('propertyDetail.noLedger')}
         />
       )}
-      {tab === 3 && (
+      {tab === 3 && <PropertyExpensesTab propertyId={Number(id)} currency={property.currency} />}
+      {tab === 4 && (
+        <PropertyProfitabilityTab propertyId={Number(id)} currency={property.currency} />
+      )}
+      {tab === 5 && <PropertyRecurringTab propertyId={Number(id)} currency={property.currency} />}
+      {tab === 6 && <PropertyImagesTab propertyId={Number(id)} />}
+      {tab === 7 && (
         <StandardTable
           columns={docCols}
           rows={documents}
           emptyMessage={t('propertyDetail.noDocuments')}
         />
       )}
-      {tab === 3 && (
+      {tab === 7 && (
         <Box sx={{ mt: 2 }}>
           <Button
             size="small"

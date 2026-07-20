@@ -39,7 +39,15 @@ const settingsUpdateSchema = z.object({
   reminder_days_before_recurring_expense: z.number().int().min(0).max(30).optional(),
   require_auth: z.number().int().min(0).max(1).optional(),
   default_country: z.string().length(2).nullable().optional(),
-  max_backup_count: z.number().int().min(1).max(100).optional()
+  max_backup_count: z.number().int().min(1).max(100).optional(),
+  receipt_prefix: z.string().min(1).max(20).optional(),
+  receipt_starting_sequence: z.number().int().min(1).max(999999).optional(),
+  backup_enabled: z.number().int().min(0).max(1).optional(),
+  backup_frequency: z.enum(['daily', 'weekly']).optional(),
+  backup_time: z
+    .string()
+    .regex(/^\d{2}:\d{2}$/)
+    .optional()
 })
 
 const countryCreateSchema = z.object({
@@ -262,15 +270,38 @@ export function registerPropertyIpcHandlers(): void {
   // Archive (soft delete) a property
   ipcMain.handle('properties:delete', async (_, id: number) => {
     try {
-      // Check if there are active contracts or transactions (we will implement checks as we build contracts)
-      // For now, allow soft archiving.
-      const stmt = db.prepare(
+      // FR-PROP-04 / §8.3: Block archive if the property still has an active contract.
+      const activeContract = db
+        .prepare(
+          `SELECT 1 FROM contracts
+           WHERE property_id = ? AND status = 'active' AND is_archived = 0`
+        )
+        .get(id)
+      if (activeContract) {
+        throw new Error('PROPERTY_HAS_ACTIVE_CONTRACT')
+      }
+
+      // Secondary guard: block if any non-archived contract exists at all (§8.3 audit trail).
+      const anyContract = db
+        .prepare(`SELECT 1 FROM contracts WHERE property_id = ? AND is_archived = 0`)
+        .get(id)
+      if (anyContract) {
+        throw new Error('PROPERTY_HAS_CONTRACTS')
+      }
+
+      db.prepare(
         'UPDATE properties SET is_archived = 1, updated_at = CURRENT_TIMESTAMP WHERE id = ?'
-      )
-      stmt.run(id)
+      ).run(id)
       return { success: true }
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Error deleting property:', error)
+      if (
+        error instanceof Error &&
+        (error.message === 'PROPERTY_HAS_ACTIVE_CONTRACT' ||
+          error.message === 'PROPERTY_HAS_CONTRACTS')
+      ) {
+        throw error
+      }
       throw new Error('FAILED_TO_DELETE_PROPERTY')
     }
   })
