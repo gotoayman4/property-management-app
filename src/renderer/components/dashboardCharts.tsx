@@ -1,5 +1,5 @@
 /**
- * @file dashboardCharts — standalone SVG chart components for the Dashboard.
+ * @file dashboardCharts — standalone SVG chart components and helpers for the Dashboard.
  *
  * INTENT: Extracted from Dashboard.tsx to stay under the 500-line file limit.
  *         Charts are pure inline SVG — no external chart library needed.
@@ -170,4 +170,60 @@ export function TrendChart({ trends, t }: TrendChartProps): React.JSX.Element | 
       </Stack>
     </Box>
   )
+}
+
+interface ActivityRow {
+  entity_type: string
+  amount?: number
+  currency?: string
+  property_name?: string
+  contract_number?: string
+  entity_name?: string
+  entity_code?: string
+}
+
+interface ActivityDescriptionProps {
+  row: ActivityRow
+  t: (key: string, params?: Record<string, string | number>) => string
+}
+
+/** Build a localized description string for a recent-activity row. */
+export function ActivityDescription({ row, t }: ActivityDescriptionProps): React.JSX.Element {
+  const { entity_type: type } = row
+  let text = ''
+  switch (type) {
+    case 'payment':
+      text = t('dashboard.activityDesc.payment', {
+        amount: Number(row.amount ?? 0).toLocaleString(),
+        currency: String(row.currency ?? ''),
+        property: String(row.property_name ?? '')
+      })
+      break
+    case 'expense':
+      text = t('dashboard.activityDesc.expense', {
+        amount: Number(row.amount ?? 0).toLocaleString(),
+        currency: String(row.currency ?? ''),
+        property: String(row.property_name ?? '')
+      })
+      break
+    case 'contract':
+      text = t('dashboard.activityDesc.contract', {
+        number: String(row.contract_number ?? ''),
+        property: String(row.property_name ?? '')
+      })
+      break
+    case 'property':
+      text = t('dashboard.activityDesc.propertyAdded', {
+        name: String(row.entity_name ?? ''),
+        code: String(row.entity_code ?? '')
+      })
+      break
+    case 'tenant':
+      text = t('dashboard.activityDesc.tenantAdded', {
+        name: String(row.entity_name ?? ''),
+        code: String(row.entity_code ?? '')
+      })
+      break
+  }
+  return <>{text}</>
 }

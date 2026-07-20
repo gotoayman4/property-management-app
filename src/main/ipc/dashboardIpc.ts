@@ -272,30 +272,35 @@ export function registerDashboardIpcHandlers(): void {
       const query = `
         SELECT * FROM (
           SELECT p.id, 'payment' as entity_type, p.payment_date as activity_date,
-                 ('Payment: ' || p.amount || ' ' || p.currency || ' — ' || pr.name) as description, p.created_at
+                 p.amount, p.currency, pr.name as property_name,
+                 NULL as contract_number, NULL as entity_name, NULL as entity_code, p.created_at
           FROM payments p
           JOIN properties pr ON p.property_id = pr.id
           ${country ? 'WHERE pr.country = ? AND p.is_voided = 0' : 'WHERE p.is_voided = 0'}
           UNION ALL
           SELECT e.id, 'expense' as entity_type, e.expense_date as activity_date,
-                 ('Expense: ' || e.amount || ' ' || e.currency || ' — ' || COALESCE(pr.name, 'General')) as description, e.created_at
+                 e.amount, e.currency, COALESCE(pr.name, '') as property_name,
+                 NULL as contract_number, NULL as entity_name, NULL as entity_code, e.created_at
           FROM expenses e
           LEFT JOIN properties pr ON e.property_id = pr.id
           ${country ? 'WHERE (pr.country = ? OR e.property_id IS NULL) AND e.is_voided = 0' : 'WHERE e.is_voided = 0'}
           UNION ALL
           SELECT c.id, 'contract' as entity_type, c.start_date as activity_date,
-                 ('Contract: ' || c.contract_number || ' — ' || pr.name) as description, c.created_at
+                 NULL as amount, NULL as currency, pr.name as property_name,
+                 c.contract_number, NULL as entity_name, NULL as entity_code, c.created_at
           FROM contracts c
           JOIN properties pr ON c.property_id = pr.id
           ${prClause}
           UNION ALL
           SELECT id, 'property' as entity_type, substr(created_at, 1, 10) as activity_date,
-                 ('Property Added: ' || name || ' (' || code || ')') as description, created_at
+                 NULL as amount, NULL as currency, NULL as property_name,
+                 NULL as contract_number, name as entity_name, code as entity_code, created_at
           FROM properties
           ${propClause}
           UNION ALL
           SELECT id, 'tenant' as entity_type, substr(created_at, 1, 10) as activity_date,
-                 ('Tenant Added: ' || fullname || ' (' || code || ')') as description, created_at
+                 NULL as amount, NULL as currency, NULL as property_name,
+                 NULL as contract_number, fullname as entity_name, code as entity_code, created_at
           FROM tenants
         ) ORDER BY created_at DESC LIMIT 10
       `

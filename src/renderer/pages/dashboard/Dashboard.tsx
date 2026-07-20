@@ -23,7 +23,7 @@ import type { GridColDef } from '@mui/x-data-grid'
 import React, { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
-import { OccupiedDonut, TrendChart } from '../../components/dashboardCharts'
+import { ActivityDescription, OccupiedDonut, TrendChart } from '../../components/dashboardCharts'
 import FinancialSummaryCard from '../../components/FinancialSummaryCard'
 import PageHeader from '../../components/PageHeader'
 import StandardTable from '../../components/StandardTable'
@@ -249,7 +249,7 @@ export default function Dashboard(): React.JSX.Element {
         return (
           <Chip
             size="small"
-            label={t(`dashboard.activity.${val}`, val.toUpperCase())}
+            label={t(`dashboard.activity.${val}`)}
             color={
               val === 'payment'
                 ? 'success'
@@ -266,9 +266,10 @@ export default function Dashboard(): React.JSX.Element {
     },
     {
       field: 'description',
-      headerName: t('common.description', 'Description'),
+      headerName: t('common.description'),
       flex: 2,
-      minWidth: 180
+      minWidth: 180,
+      renderCell: (params) => <ActivityDescription row={params.row} t={t} />
     }
   ]
   /* ------------------------------------------------------------------ */
@@ -473,13 +474,13 @@ export default function Dashboard(): React.JSX.Element {
         </Grid>
         <Grid size={{ xs: 12, md: 6 }}>
           <Typography variant="h5" sx={{ mb: 1, fontWeight: 600 }}>
-            {t('dashboard.recentActivities', 'Recent Activities')}
+            {t('dashboard.recentActivities')}
           </Typography>
           <StandardTable
             columns={recentActivityCols}
             rows={recentActivities}
             loading={loading}
-            emptyMessage={t('common.noData', 'No recent activities')}
+            emptyMessage={t('dashboard.noRecentActivities')}
             pageSize={5}
             pageSizeOptions={[5]}
           />

@@ -77,17 +77,17 @@ export function ReceiptDialog({
 
   const paymentTypeLabel =
     payment.payment_type === 'rent'
-      ? t('payments.typeRent', 'Rent')
+      ? t('payment.rent')
       : payment.payment_type === 'deposit'
-        ? t('payments.typeDeposit', 'Deposit')
-        : t('payments.typeOther', 'Other Income')
+        ? t('payment.deposit')
+        : t('payment.otherIncome')
 
   return (
     <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth dir={isRtl ? 'rtl' : 'ltr'}>
       <DialogTitle
         sx={{ m: 0, p: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
       >
-        <Typography variant="h6">{t('receipt.title', 'Payment Receipt')}</Typography>
+        <Typography variant="h6">{t('receipt.title')}</Typography>
       </DialogTitle>
       <DialogContent dividers>
         {/* Printable Area Wrapper */}
@@ -125,13 +125,12 @@ export function ReceiptDialog({
                 />
               ) : null}
               <Typography variant="h6" color="primary" sx={{ fontWeight: 'bold' }}>
-                {companySettings?.company_name ||
-                  t('receipt.defaultCompany', 'Property Management System')}
+                {companySettings?.company_name || t('receipt.defaultCompany')}
               </Typography>
             </Box>
             <Box sx={{ textAlign: isRtl ? 'left' : 'right' }}>
               <Typography variant="subtitle2" color="text.secondary">
-                {t('receipt.receiptNumber', 'Receipt No')}
+                {t('receipt.receiptNumber')}
               </Typography>
               <Typography variant="h6" color="primary.main" sx={{ fontWeight: 'bold' }}>
                 {payment.receipt_number || `#${payment.id}`}
@@ -146,15 +145,15 @@ export function ReceiptDialog({
           <Grid container spacing={2} sx={{ mb: 3 }}>
             <Grid size={{ xs: 6 }}>
               <Typography variant="caption" color="text.secondary">
-                {t('payments.tenant', 'Tenant')}
+                {t('common.tenant')}
               </Typography>
               <Typography variant="body1" sx={{ fontWeight: 500 }}>
-                {payment.tenant_fullname || t('common.none', 'N/A')}
+                {payment.tenant_fullname || t('common.none')}
               </Typography>
             </Grid>
             <Grid size={{ xs: 6 }}>
               <Typography variant="caption" color="text.secondary">
-                {t('payments.property', 'Property')}
+                {t('common.property')}
               </Typography>
               <Typography variant="body1" sx={{ fontWeight: 500 }}>
                 {payment.property_name}
@@ -162,7 +161,7 @@ export function ReceiptDialog({
             </Grid>
             <Grid size={{ xs: 6 }}>
               <Typography variant="caption" color="text.secondary">
-                {t('payments.type', 'Payment Type')}
+                {t('payment.paymentType')}
               </Typography>
               <Typography variant="body1" sx={{ fontWeight: 500 }}>
                 {paymentTypeLabel}
@@ -170,17 +169,17 @@ export function ReceiptDialog({
             </Grid>
             <Grid size={{ xs: 6 }}>
               <Typography variant="caption" color="text.secondary">
-                {t('payments.method', 'Payment Method')}
+                {t('payment.paymentMethod')}
               </Typography>
               <Typography variant="body1" sx={{ fontWeight: 500 }}>
-                {payment.payment_method || t('common.none', 'N/A')}
+                {payment.payment_method || t('common.none')}
               </Typography>
             </Grid>
 
             {payment.contract_number ? (
               <Grid size={{ xs: 12 }}>
                 <Typography variant="caption" color="text.secondary">
-                  {t('contracts.contractNumber', 'Contract Number')}
+                  {t('contract.contractNumber')}
                 </Typography>
                 <Typography variant="body2">{payment.contract_number}</Typography>
               </Grid>
@@ -189,7 +188,7 @@ export function ReceiptDialog({
             {payment.notes ? (
               <Grid size={{ xs: 12 }}>
                 <Typography variant="caption" color="text.secondary">
-                  {t('common.notes', 'Notes')}
+                  {t('common.notes')}
                 </Typography>
                 <Typography variant="body2" sx={{ fontStyle: 'italic' }}>
                   {payment.notes}
@@ -212,7 +211,7 @@ export function ReceiptDialog({
             }}
           >
             <Typography variant="subtitle1" sx={{ fontWeight: 'bold' }}>
-              {t('receipt.totalPaid', 'Total Amount Paid')}
+              {t('receipt.totalPaid')}
             </Typography>
             <Typography variant="h5" color="success.main" sx={{ fontWeight: 'bold' }}>
               {payment.amount.toLocaleString()} {payment.currency}
@@ -224,13 +223,13 @@ export function ReceiptDialog({
             <Box sx={{ width: 160, textAlign: 'center' }}>
               <Divider sx={{ mb: 1, borderColor: 'text.secondary' }} />
               <Typography variant="caption" color="text.secondary">
-                {t('receipt.payerSignature', 'Payer Signature')}
+                {t('receipt.payerSignature')}
               </Typography>
             </Box>
             <Box sx={{ width: 160, textAlign: 'center' }}>
               <Divider sx={{ mb: 1, borderColor: 'text.secondary' }} />
               <Typography variant="caption" color="text.secondary">
-                {t('receipt.authorizedSignature', 'Authorized Receiver')}
+                {t('receipt.authorizedSignature')}
               </Typography>
             </Box>
           </Box>
@@ -238,10 +237,10 @@ export function ReceiptDialog({
       </DialogContent>
       <DialogActions sx={{ px: 3, py: 2 }}>
         <Button onClick={onClose} color="inherit">
-          {t('common.close', 'Close')}
+          {t('common.close')}
         </Button>
         <Button onClick={handlePrint} variant="contained" startIcon={<PrintIcon />}>
-          {t('receipt.print', 'Print Receipt')}
+          {t('receipt.print')}
         </Button>
       </DialogActions>
 
