@@ -88,6 +88,23 @@ export function registerPropertyIpcHandlers(): void {
     }
   })
 
+  // List only countries that have at least one non-archived property (dashboard tabs)
+  ipcMain.handle('countries:listWithProperties', async () => {
+    try {
+      return db
+        .prepare(
+          `SELECT DISTINCT c.* FROM countries c
+           INNER JOIN properties p ON p.country = c.code
+           WHERE c.is_active = 1 AND p.is_archived = 0
+           ORDER BY c.name`
+        )
+        .all()
+    } catch (error) {
+      console.error('Error fetching countries with properties:', error)
+      throw new Error('FAILED_TO_FETCH_COUNTRIES')
+    }
+  })
+
   // List all countries (including inactive) — used by CountryManagerDialog
   ipcMain.handle('countries:listAll', async () => {
     try {

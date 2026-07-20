@@ -1,8 +1,18 @@
 import { ErrorOutlined, InboxOutlined } from '@mui/icons-material'
 import { Box, Typography, Button, CircularProgress, Paper } from '@mui/material'
-import { DataGrid, GridColDef, GridValidRowModel, GridRowId } from '@mui/x-data-grid'
-import React from 'react'
+import {
+  DataGrid,
+  GridColDef,
+  GridValidRowModel,
+  GridRowId,
+  GridColumnVisibilityModel
+} from '@mui/x-data-grid'
+import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
+import { getGridLocaleText } from '../utils/dataGridLocale'
+
+const STORAGE_PREFIX = 'table-state:'
+const DEBOUNCE_MS = 500
 
 interface StandardTableProps {
   columns: GridColDef[]
@@ -16,6 +26,30 @@ interface StandardTableProps {
   getRowId?: (row: GridValidRowModel) => GridRowId
   pageSize?: number
   pageSizeOptions?: number[]
+  /** Unique identifier — when provided, column visibility is persisted to localStorage. */
+  tableId?: string
+}
+
+function readPersistedVisibility(tableId: string): GridColumnVisibilityModel {
+  try {
+    const raw = localStorage.getItem(STORAGE_PREFIX + tableId)
+    if (!raw) return {}
+    const parsed = JSON.parse(raw) as Record<string, unknown>
+    if (parsed && typeof parsed === 'object' && 'columnVisibility' in parsed) {
+      return parsed.columnVisibility as GridColumnVisibilityModel
+    }
+  } catch {
+    /* corrupted data — ignore */
+  }
+  return {}
+}
+
+function writePersistedVisibility(tableId: string, model: GridColumnVisibilityModel): void {
+  try {
+    localStorage.setItem(STORAGE_PREFIX + tableId, JSON.stringify({ columnVisibility: model }))
+  } catch {
+    /* localStorage may be full or unavailable */
+  }
 }
 
 export default function StandardTable({
@@ -29,26 +63,54 @@ export default function StandardTable({
   emptyActionText,
   getRowId,
   pageSize = 10,
-  pageSizeOptions = [10, 25, 50]
+  pageSizeOptions = [10, 25, 50],
+  tableId
 }: StandardTableProps): React.JSX.Element {
   const { t, i18n } = useTranslation()
   const isRtl = i18n.language === 'ar'
+  const localeText = getGridLocaleText(t)
+
+  // --- Column visibility persistence ---
+  const [columnVisibility, setColumnVisibility] = useState<GridColumnVisibilityModel>(() =>
+    tableId ? readPersistedVisibility(tableId) : {}
+  )
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  const handleColumnVisibilityChange = useCallback(
+    (model: GridColumnVisibilityModel) => {
+      setColumnVisibility(model)
+      if (tableId) {
+        if (debounceRef.current) clearTimeout(debounceRef.current)
+        debounceRef.current = setTimeout(
+          () => writePersistedVisibility(tableId, model),
+          DEBOUNCE_MS
+        )
+      }
+    },
+    [tableId]
+  )
+
+  useEffect(() => {
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current)
+    }
+  }, [])
 
   // 1. Loading State
   if (loading) {
     return (
       <Paper
-        elevation={1}
+        elevation={0}
         sx={{
           p: 6,
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
           justifyContent: 'center',
-          minHeight: 300,
+          minHeight: 400,
           border: '1px solid',
           borderColor: 'divider',
-          borderRadius: 4
+          borderRadius: 0
         }}
       >
         <CircularProgress size={40} sx={{ mb: 2 }} />
@@ -63,17 +125,17 @@ export default function StandardTable({
   if (error) {
     return (
       <Paper
-        elevation={1}
+        elevation={0}
         sx={{
           p: 6,
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
           justifyContent: 'center',
-          minHeight: 300,
+          minHeight: 400,
           border: '1px solid',
           borderColor: 'divider',
-          borderRadius: 4,
+          borderRadius: 0,
           bgcolor: 'error.lighter'
         }}
       >
@@ -97,17 +159,17 @@ export default function StandardTable({
   if (rows.length === 0) {
     return (
       <Paper
-        elevation={1}
+        elevation={0}
         sx={{
           p: 6,
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
           justifyContent: 'center',
-          minHeight: 300,
+          minHeight: 400,
           border: '1px solid',
           borderColor: 'divider',
-          borderRadius: 4
+          borderRadius: 0
         }}
       >
         <InboxOutlined color="action" sx={{ fontSize: 48, mb: 2 }} />
@@ -126,10 +188,10 @@ export default function StandardTable({
   // 4. Success Grid State
   return (
     <Paper
-      elevation={1}
+      elevation={0}
       sx={{
         width: '100%',
-        borderRadius: 4,
+        borderRadius: 0,
         overflow: 'hidden',
         border: '1px solid',
         borderColor: 'divider'
@@ -139,6 +201,9 @@ export default function StandardTable({
         <DataGrid
           rows={rows}
           columns={columns}
+          localeText={localeText}
+          columnVisibilityModel={columnVisibility}
+          onColumnVisibilityModelChange={handleColumnVisibilityChange}
           initialState={{
             pagination: {
               paginationModel: { pageSize }
@@ -151,22 +216,41 @@ export default function StandardTable({
             border: 'none',
             '& .MuiDataGrid-columnHeaders': {
               bgcolor: 'background.default',
-              borderBottom: '1px solid',
+              borderBottom: '2px solid',
               borderColor: 'divider',
+              position: 'sticky',
+              top: 0,
+              zIndex: 1,
               '& .MuiDataGrid-columnHeaderTitle': {
                 fontWeight: 700,
-                color: 'text.primary'
+                fontSize: '0.8125rem',
+                color: 'text.primary',
+                letterSpacing: isRtl ? 0 : 0.5
               }
             },
             '& .MuiDataGrid-cell': {
               borderBottom: '1px solid',
               borderColor: 'divider',
               display: 'flex',
-              alignItems: 'center'
+              alignItems: 'center',
+              fontSize: '0.875rem',
+              py: 1
+            },
+            '& .MuiDataGrid-row:hover': {
+              bgcolor: 'action.hover'
+            },
+            '& .MuiDataGrid-row.Mui-selected': {
+              bgcolor: 'primary.main',
+              opacity: 0.12,
+              '&:hover': {
+                bgcolor: 'primary.main',
+                opacity: 0.16
+              }
             },
             '& .MuiDataGrid-footerContainer': {
               borderTop: '1px solid',
-              borderColor: 'divider'
+              borderColor: 'divider',
+              bgcolor: 'background.default'
             }
           }}
         />

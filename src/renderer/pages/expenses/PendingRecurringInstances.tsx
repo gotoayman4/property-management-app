@@ -194,6 +194,7 @@ export default function PendingRecurringInstances({
         error={error ?? undefined}
         onRetry={fetch}
         emptyMessage={t('recurringExpense.noPendingInstances')}
+        tableId="pending-recurring"
       />
 
       {/* Skip-reason dialog (FR-REC-06: required reason before skipping) */}

@@ -226,6 +226,7 @@ export default function TenantDetail(): React.JSX.Element {
           columns={contractCols}
           rows={contracts}
           emptyMessage={t('tenantDetail.noContracts')}
+          tableId="tenant-detail-contracts"
         />
       )}
       {tab === 1 && (
@@ -233,6 +234,7 @@ export default function TenantDetail(): React.JSX.Element {
           columns={paymentCols}
           rows={payments}
           emptyMessage={t('tenantDetail.noPayments')}
+          tableId="tenant-detail-payments"
         />
       )}
       {tab === 2 && id && <EntityDocumentsTab entityType="tenant" entityId={Number(id)} />}

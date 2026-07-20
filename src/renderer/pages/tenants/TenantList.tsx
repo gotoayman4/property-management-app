@@ -277,6 +277,7 @@ export function TenantList(): React.ReactElement {
         error={error ?? undefined}
         onRetry={fetchTenants}
         emptyMessage={search ? t('tenant.noTenantsFiltered') : t('tenant.noTenants')}
+        tableId="tenant-list"
       />
 
       <StandardDialog

@@ -36,6 +36,15 @@ declare global {
             is_active: number
           }[]
         >
+        listWithProperties: () => Promise<
+          {
+            id: number
+            code: string
+            name: string
+            default_currency: string
+            is_active: number
+          }[]
+        >
         create: (data: {
           code: string
           name: string

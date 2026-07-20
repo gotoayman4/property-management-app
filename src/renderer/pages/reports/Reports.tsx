@@ -487,6 +487,7 @@ export default function Reports(): React.ReactElement {
                 getRowId={makeRowId(`consolidated-${data.consolidatedGroup.currency}`)}
                 pageSize={25}
                 pageSizeOptions={[10, 25, 50, 100]}
+                tableId="reports-consolidated"
               />
             </Box>
           )}
@@ -502,6 +503,7 @@ export default function Reports(): React.ReactElement {
                 getRowId={makeRowId(g.currency)}
                 pageSize={25}
                 pageSizeOptions={[10, 25, 50, 100]}
+                tableId="reports-currency"
               />
             </Box>
           ))}

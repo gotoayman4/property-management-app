@@ -343,6 +343,7 @@ export default function BackupPage(): React.ReactElement {
         emptyMessage={t('backup.noBackups')}
         pageSize={15}
         pageSizeOptions={[10, 15, 25]}
+        tableId="backup-list"
       />
 
       {/* Restore confirmation dialog — FR-BAK-05 double confirmation */}

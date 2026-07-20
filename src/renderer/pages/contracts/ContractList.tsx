@@ -312,6 +312,7 @@ export function ContractList(): React.ReactElement {
         error={error ?? undefined}
         onRetry={fetchContracts}
         emptyMessage={t('contract.noContracts')}
+        tableId="contract-list"
       />
 
       <StandardDialog

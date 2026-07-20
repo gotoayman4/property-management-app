@@ -249,6 +249,7 @@ export default function NotificationCenter(): React.ReactElement {
         error={error ?? undefined}
         onRetry={() => fetchNotifications(tab === 1)}
         emptyMessage={t('notifications.empty')}
+        tableId="notifications"
       />
 
       <GlobalSnackbar state={snack} onClose={hideSnackbar} />

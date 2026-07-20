@@ -5,6 +5,7 @@ import { contextBridge, ipcRenderer } from 'electron'
 const api = {
   countries: {
     list: () => ipcRenderer.invoke('countries:list'),
+    listWithProperties: () => ipcRenderer.invoke('countries:listWithProperties'),
     create: (data: unknown) => ipcRenderer.invoke('countries:create', data),
     update: (data: unknown) => ipcRenderer.invoke('countries:update', data),
     delete: (code: string) => ipcRenderer.invoke('countries:delete', code),

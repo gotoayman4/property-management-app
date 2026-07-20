@@ -225,6 +225,7 @@ export function PaymentList(): React.ReactElement {
         error={error ?? undefined}
         onRetry={fetchPayments}
         emptyMessage={t('payment.noPayments')}
+        tableId="payment-list"
       />
 
       <StandardDialog

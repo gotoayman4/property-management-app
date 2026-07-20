@@ -380,6 +380,7 @@ export default function PropertyList(): React.JSX.Element {
         onEmptyAction={handleAddClick}
         emptyActionText={t('property.add')}
         getRowId={(row) => row.id}
+        tableId="property-list"
       />
 
       {/* Property Create/Edit Dialog */}

@@ -327,6 +327,7 @@ export default function ContractDetail(): React.ReactElement {
           rows={schedule}
           loading={false}
           emptyMessage={t('contract.detailNoSchedule')}
+          tableId="contract-detail-schedule"
         />
       )}
       {tab === 2 && (
@@ -335,6 +336,7 @@ export default function ContractDetail(): React.ReactElement {
           rows={history}
           loading={false}
           emptyMessage={t('contract.detailNoHistory')}
+          tableId="contract-detail-history"
         />
       )}
       {tab === 3 && (
@@ -343,6 +345,7 @@ export default function ContractDetail(): React.ReactElement {
           rows={documents}
           loading={false}
           emptyMessage={t('contract.detailNoDocuments')}
+          tableId="contract-detail-documents"
         />
       )}
       {tab === 3 && (

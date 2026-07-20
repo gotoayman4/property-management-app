@@ -420,6 +420,7 @@ export default function Ledger(): React.ReactElement {
         error={error ?? undefined}
         onRetry={fetchLedger}
         emptyMessage={selectedPropertyId ? t('ledger.noEntries') : t('ledger.propertyRequired')}
+        tableId="ledger"
       />
 
       {/* Reconstruct balance + manual adjustment actions */}

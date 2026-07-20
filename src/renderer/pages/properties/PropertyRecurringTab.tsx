@@ -121,6 +121,7 @@ export default function PropertyRecurringTab({
         rows={templates}
         loading={loading}
         emptyMessage={t('propertyDetail.noRecurringExpenses')}
+        tableId="property-recurring"
       />
     </Box>
   )

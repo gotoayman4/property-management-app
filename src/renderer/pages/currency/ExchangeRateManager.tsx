@@ -264,6 +264,7 @@ export default function ExchangeRateManager(): React.JSX.Element {
             loading={loading}
             emptyMessage={t('currency.noRates')}
             pageSize={10}
+            tableId="exchange-rates"
           />
         </Grid>
       </Grid>

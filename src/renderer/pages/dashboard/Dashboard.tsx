@@ -79,7 +79,7 @@ export default function Dashboard(): React.JSX.Element {
           window.api.dashboard.upcomingRecurring(country).catch(() => []),
           window.api.dashboard.expiringDocuments(country).catch(() => []),
           window.api.dashboard.trends(country).catch(() => null),
-          window.api.countries.list().catch(() => []),
+          window.api.countries.listWithProperties().catch(() => []),
           window.api.dashboard.recentPayments(country).catch(() => []),
           window.api.dashboard.recentExpenses(country).catch(() => []),
           window.api.dashboard.recentActivities(country).catch(() => [])
@@ -365,6 +365,7 @@ export default function Dashboard(): React.JSX.Element {
             emptyMessage={t('dashboard.noUpcomingDue')}
             pageSize={5}
             pageSizeOptions={[5]}
+            tableId="dashboard-upcoming-due"
           />
         </Grid>
         {/* Overdue Payments (FR-DASH-05) */}
@@ -382,6 +383,7 @@ export default function Dashboard(): React.JSX.Element {
             emptyMessage={t('dashboard.noOverdue')}
             pageSize={5}
             pageSizeOptions={[5]}
+            tableId="dashboard-overdue"
           />
         </Grid>
       </Grid>
@@ -401,6 +403,7 @@ export default function Dashboard(): React.JSX.Element {
             emptyMessage={t('dashboard.noUpcomingRecurring')}
             pageSize={5}
             pageSizeOptions={[5]}
+            tableId="dashboard-upcoming-recurring"
           />
         </Grid>
         {/* Expiring Documents (FR-DASH-13) */}
@@ -418,6 +421,7 @@ export default function Dashboard(): React.JSX.Element {
             emptyMessage={t('dashboard.noExpiringDocuments')}
             pageSize={5}
             pageSizeOptions={[5]}
+            tableId="dashboard-expiring-docs"
           />
         </Grid>
       </Grid>
@@ -454,6 +458,7 @@ export default function Dashboard(): React.JSX.Element {
             emptyMessage={t('dashboard.noPayments')}
             pageSize={5}
             pageSizeOptions={[5]}
+            tableId="dashboard-recent-payments"
           />
         </Grid>
       </Grid>
@@ -470,6 +475,7 @@ export default function Dashboard(): React.JSX.Element {
             emptyMessage={t('dashboard.noExpenses')}
             pageSize={5}
             pageSizeOptions={[5]}
+            tableId="dashboard-recent-expenses"
           />
         </Grid>
         <Grid size={{ xs: 12, md: 6 }}>
@@ -483,6 +489,7 @@ export default function Dashboard(): React.JSX.Element {
             emptyMessage={t('dashboard.noRecentActivities')}
             pageSize={5}
             pageSizeOptions={[5]}
+            tableId="dashboard-recent-activities"
           />
         </Grid>
       </Grid>

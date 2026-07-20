@@ -98,6 +98,7 @@ export default function PropertyExpensesTab({
         rows={expenses}
         loading={loading}
         emptyMessage={t('propertyDetail.noExpenses')}
+        tableId="property-expenses"
       />
     </Box>
   )

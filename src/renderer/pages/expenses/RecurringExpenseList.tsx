@@ -321,6 +321,7 @@ export function RecurringExpenseList(): React.ReactElement {
           error={error ?? undefined}
           onRetry={fetchTemplates}
           emptyMessage={t('recurringExpense.noTemplates')}
+          tableId="recurring-expense-list"
         />
       )}
 

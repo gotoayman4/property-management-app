@@ -217,6 +217,7 @@ export default function EntityDocumentsTab({
         rows={documents}
         loading={loading}
         emptyMessage={t('propertyDetail.noDocuments')}
+        tableId="entity-documents"
       />
       <DocumentUploadForm entityType={entityType} entityId={entityId} onSuccess={fetchDocuments} />
       <GlobalSnackbar state={snack} onClose={hideSnackbar} />

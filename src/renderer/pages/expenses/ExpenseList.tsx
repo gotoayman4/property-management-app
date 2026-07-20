@@ -198,6 +198,7 @@ export function ExpenseList(): React.ReactElement {
         error={error ?? undefined}
         onRetry={fetchExpenses}
         emptyMessage={t('expense.noExpenses')}
+        tableId="expense-list"
       />
 
       <StandardDialog

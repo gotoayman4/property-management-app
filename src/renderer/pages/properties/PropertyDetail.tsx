@@ -314,6 +314,7 @@ export default function PropertyDetail(): React.JSX.Element {
           columns={contractCols}
           rows={contracts}
           emptyMessage={t('propertyDetail.noContracts')}
+          tableId="property-detail-contracts"
         />
       )}
       {tab === 1 && (
@@ -321,6 +322,7 @@ export default function PropertyDetail(): React.JSX.Element {
           columns={paymentCols}
           rows={payments}
           emptyMessage={t('propertyDetail.noPayments')}
+          tableId="property-detail-payments"
         />
       )}
       {tab === 2 && (
@@ -328,6 +330,7 @@ export default function PropertyDetail(): React.JSX.Element {
           columns={ledgerCols}
           rows={ledgerEntries}
           emptyMessage={t('propertyDetail.noLedger')}
+          tableId="property-detail-ledger"
         />
       )}
       {tab === 3 && <PropertyExpensesTab propertyId={Number(id)} currency={property.currency} />}
@@ -342,6 +345,7 @@ export default function PropertyDetail(): React.JSX.Element {
             columns={docCols}
             rows={documents}
             emptyMessage={t('propertyDetail.noDocuments')}
+            tableId="property-detail-documents"
           />
           <Box sx={{ mt: 1 }}>
             <Button
