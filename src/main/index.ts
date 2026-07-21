@@ -7,6 +7,7 @@ import { registerAuthIpcHandlers } from './ipc/authIpc'
 import { registerBackupIpcHandlers } from './ipc/backupIpc'
 import { registerContractIpcHandlers } from './ipc/contractIpc'
 import { registerDashboardIpcHandlers } from './ipc/dashboardIpc'
+import { registerDataIpcHandlers } from './ipc/dataIpc'
 import { registerDialogIpcHandlers } from './ipc/dialogIpc'
 import { registerDocumentIpcHandlers } from './ipc/documentIpc'
 import { registerExchangeRateIpcHandlers } from './ipc/exchangeRateIpc'
@@ -86,6 +87,9 @@ app.whenReady().then(() => {
 
   // Backup & Restore (SRS Module 11): manual + automatic backup, restore, verify
   registerBackupIpcHandlers()
+
+  // Data management: wipe all user data (destructive, token-protected)
+  registerDataIpcHandlers()
 
   // Evaluate notifications on startup - check for rent due, contract expiry, etc.
   evaluateNotifications()

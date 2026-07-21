@@ -151,6 +151,9 @@ const api = {
     pickFolder: () => ipcRenderer.invoke('dialog:pickFolder'),
     pickImage: () => ipcRenderer.invoke('dialog:pickImage')
   },
+  data: {
+    wipeAll: (token: string) => ipcRenderer.invoke('data:wipeAll', token)
+  },
   backup: {
     create: () => ipcRenderer.invoke('backup:create'),
     list: () => ipcRenderer.invoke('backup:list'),

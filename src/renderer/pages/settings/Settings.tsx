@@ -1,18 +1,27 @@
 /**
- * INTENT: Full settings page — language, theme, font size, reporting currency,
- *         default payment method, reminder days, backup path. All fields map to
- *         the settings singleton table (001_initial_schema.sql §settings).
+ * INTENT: Full settings page — sidebar navigation + section content layout following
+ *         best practices from Windows Settings, VS Code, and macOS System Preferences.
+ *         Sections: Appearance, Company, Financial, Receipts, Notifications, Backup, Danger Zone.
  * CONSTRAINT (AGENTS.md): i18n keys only, logical CSS, theme.palette tokens.
+ * DECISION: Sidebar nav (desktop) / scrollable tabs (mobile) on the left, section content
+ *           on the right with max-width for readability. Extracted card components use
+ *           compact mode (no Card wrapper) since SettingsSection provides structure.
  */
+import AttachMoneyIcon from '@mui/icons-material/AttachMoney'
+import BusinessIcon from '@mui/icons-material/Business'
 import FolderOpenIcon from '@mui/icons-material/FolderOpen'
+import NotificationsIcon from '@mui/icons-material/Notifications'
+import PaletteIcon from '@mui/icons-material/Palette'
+import ReceiptIcon from '@mui/icons-material/Receipt'
 import SettingsIcon from '@mui/icons-material/Settings'
+import StorageIcon from '@mui/icons-material/Storage'
+import WarningAmberIcon from '@mui/icons-material/WarningAmber'
 import {
   Box,
   Button,
   Card,
   CardContent,
   Typography,
-  Grid,
   FormControl,
   FormLabel,
   RadioGroup,
@@ -25,7 +34,11 @@ import {
   InputLabel,
   Alert,
   IconButton,
-  InputAdornment
+  InputAdornment,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions
 } from '@mui/material'
 import React, { useCallback, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -36,6 +49,8 @@ import NotificationTemplateManager from '../../components/NotificationTemplateMa
 import PageHeader from '../../components/PageHeader'
 import ReceiptSettingsCard from '../../components/ReceiptSettingsCard'
 import ReminderSettingsCard from '../../components/ReminderSettingsCard'
+import SettingsNav, { type SettingsSectionId } from '../../components/SettingsNav'
+import SettingsSection from '../../components/SettingsSection'
 import { useSnackbar } from '../../hooks/useSnackbar'
 import { useUiPreferences } from '../../stores/uiPreferencesStore'
 
@@ -62,7 +77,6 @@ interface SettingsData {
 
 const CURRENCIES = ['JOD', 'TRY', 'QAR', 'USD', 'EUR', 'SAR']
 
-// Spinner-less numeric input styling (AGENTS bans <TextField type="number"> native spinners).
 const SPINNER_LESS = {
   '&::-webkit-outer-spin-button, &::-webkit-inner-spin-button': {
     WebkitAppearance: 'none',
@@ -76,8 +90,12 @@ export default function Settings(): React.JSX.Element {
   const isRtl = i18n.language === 'ar'
   const { snack, showSuccess, showError, hideSnackbar } = useSnackbar()
   const [settings, setSettings] = useState<SettingsData | null>(null)
+  const [activeSection, setActiveSection] = useState<SettingsSectionId>('appearance')
   const [countryDialogOpen, setCountryDialogOpen] = useState(false)
   const [templateDialogOpen, setTemplateDialogOpen] = useState(false)
+  const [wipeDialogOpen, setWipeDialogOpen] = useState(false)
+  const [wipeConfirmText, setWipeConfirmText] = useState('')
+  const [wiping, setWiping] = useState(false)
   const [allCountries, setAllCountries] = useState<
     { code: string; name: string; is_active: number }[]
   >([])
@@ -114,8 +132,6 @@ export default function Settings(): React.JSX.Element {
         await i18n.changeLanguage(value as string)
       }
 
-      // FR-SET-04/05: notify the Zustand store so App.tsx re-renders with the new
-      // theme / font_size immediately (no restart needed).
       if (field === 'theme' || field === 'font_size' || field === 'app_language') {
         refreshPrefs()
       }
@@ -126,11 +142,6 @@ export default function Settings(): React.JSX.Element {
     }
   }
 
-  /**
-   * INTENT: Open the native OS folder picker and persist the chosen directory as backup_path.
-   * DECISION: Mirrors the Browse button on BackupPage.tsx so both entry points stay consistent.
-   * CAVEAT: On cancel or error this is a silent no-op — dismissal is not an error condition.
-   */
   const handleBrowse = async (): Promise<void> => {
     try {
       const result = await window.api.dialog.pickFolder()
@@ -138,6 +149,21 @@ export default function Settings(): React.JSX.Element {
       await updateField('backup_path', result.filePath)
     } catch {
       showError('backup.browseError')
+    }
+  }
+
+  const handleWipeConfirm = async (): Promise<void> => {
+    if (wipeConfirmText !== 'DELETE') return
+    setWiping(true)
+    try {
+      await window.api.data.wipeAll('DELETE')
+      showSuccess('settings.wipeAllDataSuccess')
+      setWipeDialogOpen(false)
+      setWipeConfirmText('')
+    } catch {
+      showError('common.error')
+    } finally {
+      setWiping(false)
     }
   }
 
@@ -151,16 +177,33 @@ export default function Settings(): React.JSX.Element {
         subtitle={t('settings.subtitle')}
       />
 
-      <Grid container spacing={3}>
-        {/* Language & Appearance */}
-        <Grid size={{ xs: 12, md: 6 }}>
-          <Card>
-            <CardContent sx={{ p: 3 }}>
-              <Typography variant="h5" sx={{ mb: 2.5 }}>
-                {t('settings.appearance')}
-              </Typography>
+      {/* Tabs for mobile (renders above flex container) */}
+      <Box sx={{ display: { sm: 'none' } }}>
+        <SettingsNav activeSection={activeSection} onNavigate={setActiveSection} />
+      </Box>
 
-              <FormControl component="fieldset" sx={{ mb: 2.5 }}>
+      <Box
+        sx={{
+          display: 'flex',
+          gap: 4,
+          alignItems: 'flex-start'
+        }}
+      >
+        {/* Sidebar nav for desktop */}
+        <Box sx={{ display: { xs: 'none', sm: 'block' } }}>
+          <SettingsNav activeSection={activeSection} onNavigate={setActiveSection} />
+        </Box>
+
+        {/* Section content */}
+        <Box sx={{ flex: 1, minWidth: 0, maxWidth: 800 }}>
+          {/* ── Appearance ── */}
+          {activeSection === 'appearance' && (
+            <SettingsSection
+              icon={<PaletteIcon />}
+              title={t('settings.appearance')}
+              description={t('settings.appearanceDesc')}
+            >
+              <FormControl component="fieldset" sx={{ mb: 3 }}>
                 <FormLabel
                   component="legend"
                   sx={{ fontWeight: 600, mb: 1, color: 'text.primary' }}
@@ -177,7 +220,7 @@ export default function Settings(): React.JSX.Element {
                 </RadioGroup>
               </FormControl>
 
-              <FormControl component="fieldset" sx={{ mb: 2.5 }}>
+              <FormControl component="fieldset" sx={{ mb: 3 }}>
                 <FormLabel
                   component="legend"
                   sx={{ fontWeight: 600, mb: 1, color: 'text.primary' }}
@@ -231,45 +274,66 @@ export default function Settings(): React.JSX.Element {
                   />
                 </RadioGroup>
               </FormControl>
-            </CardContent>
-          </Card>
-        </Grid>
 
-        {/* Security */}
-        <Grid size={{ xs: 12, md: 6 }}>
-          <Card>
-            <CardContent sx={{ p: 3 }}>
-              <Typography variant="h5" sx={{ mb: 2.5 }}>
-                {t('settings.security')}
-              </Typography>
+              {/* Security — grouped under Appearance for proximity */}
+              <Box sx={{ mt: 4, pt: 3, borderTop: 1, borderColor: 'divider' }}>
+                <Typography variant="h6" sx={{ mb: 1.5 }}>
+                  {t('settings.security')}
+                </Typography>
+                <Alert severity="info" sx={{ mb: 2 }}>
+                  {t('settings.requireAuthHelp')}
+                </Alert>
+                <FormControlLabel
+                  control={
+                    <Switch
+                      checked={!!settings.require_auth}
+                      onChange={(e) => updateField('require_auth', e.target.checked ? 1 : 0)}
+                      color="primary"
+                    />
+                  }
+                  label={t('settings.requireAuth')}
+                />
+              </Box>
+            </SettingsSection>
+          )}
 
-              <Alert severity="info" sx={{ mb: 2 }}>
-                {t('settings.requireAuthHelp')}
-              </Alert>
+          {/* ── Company ── */}
+          {activeSection === 'company' && (
+            <SettingsSection
+              icon={<BusinessIcon />}
+              title={t('settings.companyInfo')}
+              description={t('settings.companyInfoDesc')}
+            >
+              <CompanyInfoCard compact />
 
-              <FormControlLabel
-                control={
-                  <Switch
-                    checked={!!settings.require_auth}
-                    onChange={(e) => updateField('require_auth', e.target.checked ? 1 : 0)}
-                    color="primary"
-                  />
-                }
-                label={t('settings.requireAuth')}
-              />
-            </CardContent>
-          </Card>
-        </Grid>
+              <Box sx={{ mt: 3, pt: 3, borderTop: 1, borderColor: 'divider' }}>
+                <Typography variant="h6" sx={{ mb: 1 }}>
+                  {t('settings.countryManagement')}
+                </Typography>
+                <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                  {t('settings.defaultCountry')}
+                </Typography>
+                <Typography variant="body1" sx={{ mb: 2, fontWeight: 600 }}>
+                  {settings.default_country
+                    ? (allCountries.find((c) => c.code === settings.default_country)?.name ??
+                      settings.default_country)
+                    : t('common.none')}
+                </Typography>
+                <Button variant="outlined" onClick={() => setCountryDialogOpen(true)}>
+                  {t('settings.manageCountries')}
+                </Button>
+              </Box>
+            </SettingsSection>
+          )}
 
-        {/* Financial Defaults */}
-        <Grid size={{ xs: 12, md: 6 }}>
-          <Card>
-            <CardContent sx={{ p: 3 }}>
-              <Typography variant="h5" sx={{ mb: 2.5 }}>
-                {t('settings.financialDefaults')}
-              </Typography>
-
-              <FormControl fullWidth sx={{ mb: 2.5 }}>
+          {/* ── Financial ── */}
+          {activeSection === 'financial' && (
+            <SettingsSection
+              icon={<AttachMoneyIcon />}
+              title={t('settings.financialDefaults')}
+              description={t('settings.financialDefaultsDesc')}
+            >
+              <FormControl fullWidth sx={{ mb: 3 }}>
                 <InputLabel>{t('settings.reportingCurrency')}</InputLabel>
                 <Select
                   value={settings.reporting_currency}
@@ -299,77 +363,44 @@ export default function Settings(): React.JSX.Element {
                   <MenuItem value="other">{t('payment.methodOther')}</MenuItem>
                 </Select>
               </FormControl>
-            </CardContent>
-          </Card>
-        </Grid>
+            </SettingsSection>
+          )}
 
-        {/* Receipt Numbering (FR-SET-10) */}
-        <Grid size={{ xs: 12, md: 6 }}>
-          <ReceiptSettingsCard />
-        </Grid>
+          {/* ── Receipts ── */}
+          {activeSection === 'receipts' && (
+            <SettingsSection
+              icon={<ReceiptIcon />}
+              title={t('settings.receiptNumbering')}
+              description={t('settings.receiptNumberingHelp')}
+            >
+              <ReceiptSettingsCard compact />
+            </SettingsSection>
+          )}
 
-        {/* Reminder Days */}
-        <Grid size={{ xs: 12, md: 6 }}>
-          <ReminderSettingsCard />
-        </Grid>
+          {/* ── Notifications ── */}
+          {activeSection === 'notifications' && (
+            <SettingsSection
+              icon={<NotificationsIcon />}
+              title={t('settings.notificationTemplates')}
+              description={t('settings.templateHelp')}
+            >
+              <ReminderSettingsCard compact />
 
-        {/* Company Settings (FR-SET-12) */}
-        <Grid size={{ xs: 12, md: 6 }}>
-          <CompanyInfoCard />
-        </Grid>
+              <Box sx={{ mt: 3, pt: 3, borderTop: 1, borderColor: 'divider' }}>
+                <Button variant="outlined" onClick={() => setTemplateDialogOpen(true)}>
+                  {t('settings.manageTemplates')}
+                </Button>
+              </Box>
+            </SettingsSection>
+          )}
 
-        {/* Country Management */}
-        <Grid size={{ xs: 12, md: 6 }}>
-          <Card>
-            <CardContent sx={{ p: 3 }}>
-              <Typography variant="h5" sx={{ mb: 2.5 }}>
-                {t('settings.countryManagement')}
-              </Typography>
-
-              <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-                {t('settings.defaultCountry')}
-              </Typography>
-              <Typography variant="body1" sx={{ mb: 2, fontWeight: 600 }}>
-                {settings.default_country
-                  ? (allCountries.find((c) => c.code === settings.default_country)?.name ??
-                    settings.default_country)
-                  : t('common.none')}
-              </Typography>
-
-              <Button variant="outlined" onClick={() => setCountryDialogOpen(true)}>
-                {t('settings.manageCountries')}
-              </Button>
-            </CardContent>
-          </Card>
-        </Grid>
-
-        {/* Notification Templates (FR-SET-08) */}
-        <Grid size={{ xs: 12, md: 6 }}>
-          <Card>
-            <CardContent sx={{ p: 3 }}>
-              <Typography variant="h5" sx={{ mb: 2.5 }}>
-                {t('settings.notificationTemplates')}
-              </Typography>
-
-              <Alert severity="info" sx={{ mb: 2 }}>
-                {t('settings.templateHelp')}
-              </Alert>
-
-              <Button variant="outlined" onClick={() => setTemplateDialogOpen(true)}>
-                {t('settings.manageTemplates')}
-              </Button>
-            </CardContent>
-          </Card>
-        </Grid>
-
-        {/* Backup & Data */}
-        <Grid size={{ xs: 12, md: 6 }}>
-          <Card>
-            <CardContent sx={{ p: 3 }}>
-              <Typography variant="h5" sx={{ mb: 2.5 }}>
-                {t('settings.backupAndData')}
-              </Typography>
-
+          {/* ── Backup & Data ── */}
+          {activeSection === 'backup' && (
+            <SettingsSection
+              icon={<StorageIcon />}
+              title={t('settings.backupAndData')}
+              description={t('settings.backupAndDataDesc')}
+            >
               <TextField
                 fullWidth
                 label={t('settings.backupPath')}
@@ -393,7 +424,7 @@ export default function Settings(): React.JSX.Element {
                     )
                   }
                 }}
-                sx={{ mb: 2.5 }}
+                sx={{ mb: 3 }}
               />
 
               <TextField
@@ -413,10 +444,37 @@ export default function Settings(): React.JSX.Element {
                   }
                 }}
               />
-            </CardContent>
-          </Card>
-        </Grid>
-      </Grid>
+            </SettingsSection>
+          )}
+
+          {/* ── Danger Zone ── */}
+          {activeSection === 'danger' && (
+            <SettingsSection
+              icon={<WarningAmberIcon />}
+              title={t('settings.dangerZone')}
+              description={t('settings.wipeAllDataDescription')}
+            >
+              <Card sx={{ border: 1, borderColor: 'error.main' }}>
+                <CardContent sx={{ p: 3 }}>
+                  <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                    {t('settings.wipeAllDataWarning')}
+                  </Typography>
+                  <Button
+                    variant="outlined"
+                    color="error"
+                    onClick={() => {
+                      setWipeConfirmText('')
+                      setWipeDialogOpen(true)
+                    }}
+                  >
+                    {t('settings.wipeAllData')}
+                  </Button>
+                </CardContent>
+              </Card>
+            </SettingsSection>
+          )}
+        </Box>
+      </Box>
 
       <CountryManagerDialog
         open={countryDialogOpen}
@@ -431,6 +489,45 @@ export default function Settings(): React.JSX.Element {
         open={templateDialogOpen}
         onClose={() => setTemplateDialogOpen(false)}
       />
+
+      <Dialog
+        open={wipeDialogOpen}
+        onClose={() => !wiping && setWipeDialogOpen(false)}
+        dir={isRtl ? 'rtl' : 'ltr'}
+        maxWidth="xs"
+        fullWidth
+      >
+        <DialogTitle sx={{ color: 'error.main' }}>{t('settings.wipeAllData')}</DialogTitle>
+        <DialogContent>
+          <Alert severity="error" sx={{ mb: 2 }}>
+            {t('settings.wipeAllDataWarning')}
+          </Alert>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+            {t('settings.wipeAllDataDescription')}
+          </Typography>
+          <TextField
+            autoFocus
+            fullWidth
+            label={t('settings.wipeAllDataTypeConfirm')}
+            value={wipeConfirmText}
+            onChange={(e) => setWipeConfirmText(e.target.value)}
+            slotProps={{ htmlInput: { dir: 'ltr' } }}
+          />
+        </DialogContent>
+        <DialogActions sx={{ p: 2, gap: 1 }}>
+          <Button variant="outlined" onClick={() => setWipeDialogOpen(false)} disabled={wiping}>
+            {t('common.cancel')}
+          </Button>
+          <Button
+            variant="contained"
+            color="error"
+            onClick={handleWipeConfirm}
+            disabled={wipeConfirmText !== 'DELETE' || wiping}
+          >
+            {t('settings.wipeAllData')}
+          </Button>
+        </DialogActions>
+      </Dialog>
 
       <GlobalSnackbar state={snack} onClose={hideSnackbar} />
     </Box>

@@ -191,14 +191,27 @@ export function registerTenantIpcHandlers(): void {
   // Deactivate (soft delete) tenant
   ipcMain.handle('tenants:delete', async (_, id: number) => {
     try {
+      // Guard: block deactivation if tenant has any active non-archived contract.
+      const activeContract = db
+        .prepare(
+          `SELECT 1 FROM contracts WHERE tenant_id = ? AND status = 'active' AND is_archived = 0`
+        )
+        .get(id)
+      if (activeContract) {
+        throw new Error('TENANT_HAS_ACTIVE_CONTRACT')
+      }
+
       // Soft deactivation
       const stmt = db.prepare(
         'UPDATE tenants SET is_active = 0, updated_at = CURRENT_TIMESTAMP WHERE id = ?'
       )
       stmt.run(id)
       return { success: true }
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Error deleting tenant:', error)
+      if (error instanceof Error && error.message === 'TENANT_HAS_ACTIVE_CONTRACT') {
+        throw error
+      }
       throw new Error('FAILED_TO_DELETE_TENANT')
     }
   })

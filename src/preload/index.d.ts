@@ -459,6 +459,9 @@ declare global {
         pickFolder: () => Promise<{ filePath: string | null; canceled: boolean }>
         pickImage: () => Promise<{ base64: string | null; canceled: boolean }>
       }
+      data: {
+        wipeAll: (token: string) => Promise<{ success: boolean }>
+      }
       backup: {
         create: () => Promise<{
           success: boolean

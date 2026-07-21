@@ -15,6 +15,11 @@ interface ReceiptSettings {
   receipt_starting_sequence?: number
 }
 
+interface ReceiptSettingsCardProps {
+  /** When true, renders content without Card/CardContent wrapper (for embedding in SettingsSection). */
+  compact?: boolean
+}
+
 const SPINNER_LESS = {
   '&::-webkit-outer-spin-button, &::-webkit-inner-spin-button': {
     WebkitAppearance: 'none',
@@ -23,7 +28,9 @@ const SPINNER_LESS = {
   MozAppearance: 'textfield'
 } as const
 
-export default function ReceiptSettingsCard(): React.ReactElement {
+export default function ReceiptSettingsCard({
+  compact = false
+}: ReceiptSettingsCardProps): React.ReactElement {
   const { t } = useTranslation()
   const { showSuccess, showError } = useSnackbar()
   const [settings, setSettings] = useState<ReceiptSettings | null>(null)
@@ -62,6 +69,45 @@ export default function ReceiptSettingsCard(): React.ReactElement {
   const year = new Date().getUTCFullYear()
   const preview = `${settings.receipt_prefix || 'RCT'}-${year}-000001`
 
+  const content = (
+    <>
+      <TextField
+        fullWidth
+        label={t('settings.receiptPrefix')}
+        value={settings.receipt_prefix ?? ''}
+        onChange={(e) => updateField('receipt_prefix', e.target.value)}
+        helperText={t('settings.receiptPrefixHelp')}
+        slotProps={{ htmlInput: { dir: 'ltr', maxLength: 20 } }}
+        sx={{ mb: 2.5 }}
+      />
+
+      <TextField
+        fullWidth
+        type="text"
+        inputMode="decimal"
+        label={t('settings.receiptStartingSequence')}
+        value={settings.receipt_starting_sequence ?? 1}
+        onChange={(e) => {
+          const n = Number(e.target.value)
+          if (Number.isFinite(n) && n >= 1) {
+            updateField('receipt_starting_sequence', Math.min(n, 999999))
+          }
+        }}
+        helperText={t('settings.receiptStartingSequenceHelp')}
+        slotProps={{
+          htmlInput: { dir: 'ltr', min: 1, max: 999999, sx: SPINNER_LESS }
+        }}
+        sx={{ mb: 2.5 }}
+      />
+
+      <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic' }}>
+        {t('settings.receiptPreview')}: {preview}
+      </Typography>
+    </>
+  )
+
+  if (compact) return content
+
   return (
     <Card>
       <CardContent sx={{ p: 3 }}>
@@ -74,39 +120,7 @@ export default function ReceiptSettingsCard(): React.ReactElement {
             </Typography>
           </Box>
         </Stack>
-
-        <TextField
-          fullWidth
-          label={t('settings.receiptPrefix')}
-          value={settings.receipt_prefix ?? ''}
-          onChange={(e) => updateField('receipt_prefix', e.target.value)}
-          helperText={t('settings.receiptPrefixHelp')}
-          slotProps={{ htmlInput: { dir: 'ltr', maxLength: 20 } }}
-          sx={{ mb: 2.5 }}
-        />
-
-        <TextField
-          fullWidth
-          type="text"
-          inputMode="decimal"
-          label={t('settings.receiptStartingSequence')}
-          value={settings.receipt_starting_sequence ?? 1}
-          onChange={(e) => {
-            const n = Number(e.target.value)
-            if (Number.isFinite(n) && n >= 1) {
-              updateField('receipt_starting_sequence', Math.min(n, 999999))
-            }
-          }}
-          helperText={t('settings.receiptStartingSequenceHelp')}
-          slotProps={{
-            htmlInput: { dir: 'ltr', min: 1, max: 999999, sx: SPINNER_LESS }
-          }}
-          sx={{ mb: 2.5 }}
-        />
-
-        <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic' }}>
-          {t('settings.receiptPreview')}: {preview}
-        </Typography>
+        {content}
       </CardContent>
     </Card>
   )

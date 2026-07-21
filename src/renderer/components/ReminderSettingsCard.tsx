@@ -17,6 +17,11 @@ interface ReminderSettings {
   reminder_days_before_recurring_expense: number
 }
 
+interface ReminderSettingsCardProps {
+  /** When true, renders content without Card/CardContent wrapper (for embedding in SettingsSection). */
+  compact?: boolean
+}
+
 const SPINNER_LESS = {
   '&::-webkit-outer-spin-button, &::-webkit-inner-spin-button': {
     WebkitAppearance: 'none',
@@ -25,7 +30,9 @@ const SPINNER_LESS = {
   MozAppearance: 'textfield'
 } as const
 
-export default function ReminderSettingsCard(): React.ReactElement {
+export default function ReminderSettingsCard({
+  compact = false
+}: ReminderSettingsCardProps): React.ReactElement {
   const { t } = useTranslation()
   const { showSuccess, showError } = useSnackbar()
   const [settings, setSettings] = useState<ReminderSettings | null>(null)
@@ -58,88 +65,95 @@ export default function ReminderSettingsCard(): React.ReactElement {
 
   if (!settings) return <></>
 
+  const content = (
+    <>
+      <Alert severity="info" sx={{ mb: 2 }}>
+        {t('settings.reminderHelp')}
+      </Alert>
+
+      <TextField
+        fullWidth
+        type="text"
+        inputMode="decimal"
+        label={t('settings.reminderDaysBeforeDue')}
+        value={settings.reminder_days_before_due}
+        onChange={(e) => updateField('reminder_days_before_due', Number(e.target.value))}
+        slotProps={{
+          htmlInput: {
+            dir: 'ltr',
+            min: 0,
+            max: 90,
+            sx: SPINNER_LESS
+          }
+        }}
+        sx={{ mb: 2 }}
+      />
+      <TextField
+        fullWidth
+        type="text"
+        inputMode="decimal"
+        label={t('settings.reminderDaysBeforeContractEnd')}
+        value={settings.reminder_days_before_contract_end}
+        onChange={(e) => updateField('reminder_days_before_contract_end', Number(e.target.value))}
+        slotProps={{
+          htmlInput: {
+            dir: 'ltr',
+            min: 0,
+            max: 365,
+            sx: SPINNER_LESS
+          }
+        }}
+        sx={{ mb: 2 }}
+      />
+      <TextField
+        fullWidth
+        type="text"
+        inputMode="decimal"
+        label={t('settings.reminderDaysBeforeDocumentExpiry')}
+        value={settings.reminder_days_before_document_expiry}
+        onChange={(e) =>
+          updateField('reminder_days_before_document_expiry', Number(e.target.value))
+        }
+        slotProps={{
+          htmlInput: {
+            dir: 'ltr',
+            min: 0,
+            max: 365,
+            sx: SPINNER_LESS
+          }
+        }}
+        sx={{ mb: 2 }}
+      />
+      <TextField
+        fullWidth
+        type="text"
+        inputMode="decimal"
+        label={t('settings.reminderDaysBeforeRecurringExpense')}
+        value={settings.reminder_days_before_recurring_expense}
+        onChange={(e) =>
+          updateField('reminder_days_before_recurring_expense', Number(e.target.value))
+        }
+        slotProps={{
+          htmlInput: {
+            dir: 'ltr',
+            min: 0,
+            max: 30,
+            sx: SPINNER_LESS
+          }
+        }}
+      />
+    </>
+  )
+
+  if (compact) return content
+
   return (
     <Card>
       <CardContent sx={{ p: 3 }}>
         <Typography variant="h5" sx={{ mb: 2.5 }}>
           {t('settings.reminders')}
         </Typography>
-
-        <Alert severity="info" sx={{ mb: 2 }}>
-          {t('settings.reminderHelp')}
-        </Alert>
-
-        <TextField
-          fullWidth
-          type="text"
-          inputMode="decimal"
-          label={t('settings.reminderDaysBeforeDue')}
-          value={settings.reminder_days_before_due}
-          onChange={(e) => updateField('reminder_days_before_due', Number(e.target.value))}
-          slotProps={{
-            htmlInput: {
-              dir: 'ltr',
-              min: 0,
-              max: 90,
-              sx: SPINNER_LESS
-            }
-          }}
-          sx={{ mb: 2 }}
-        />
-        <TextField
-          fullWidth
-          type="text"
-          inputMode="decimal"
-          label={t('settings.reminderDaysBeforeContractEnd')}
-          value={settings.reminder_days_before_contract_end}
-          onChange={(e) => updateField('reminder_days_before_contract_end', Number(e.target.value))}
-          slotProps={{
-            htmlInput: {
-              dir: 'ltr',
-              min: 0,
-              max: 365,
-              sx: SPINNER_LESS
-            }
-          }}
-          sx={{ mb: 2 }}
-        />
-        <TextField
-          fullWidth
-          type="text"
-          inputMode="decimal"
-          label={t('settings.reminderDaysBeforeDocumentExpiry')}
-          value={settings.reminder_days_before_document_expiry}
-          onChange={(e) =>
-            updateField('reminder_days_before_document_expiry', Number(e.target.value))
-          }
-          slotProps={{
-            htmlInput: {
-              dir: 'ltr',
-              min: 0,
-              max: 365,
-              sx: SPINNER_LESS
-            }
-          }}
-          sx={{ mb: 2 }}
-        />
-        <TextField
-          fullWidth
-          type="text"
-          inputMode="decimal"
-          label={t('settings.reminderDaysBeforeRecurringExpense')}
-          value={settings.reminder_days_before_recurring_expense}
-          onChange={(e) =>
-            updateField('reminder_days_before_recurring_expense', Number(e.target.value))
-          }
-          slotProps={{
-            htmlInput: {
-              dir: 'ltr',
-              min: 0,
-              max: 30,
-              sx: SPINNER_LESS
-            }
-          }}
-        />
+        {content}
       </CardContent>
     </Card>
   )

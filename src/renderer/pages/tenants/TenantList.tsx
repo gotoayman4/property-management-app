@@ -101,7 +101,12 @@ export function TenantList(): React.ReactElement {
       fetchTenants()
     } catch (err) {
       console.error(err)
-      showError('common.deleteError')
+      const msg = err instanceof Error ? err.message : ''
+      if (msg === 'TENANT_HAS_ACTIVE_CONTRACT') {
+        showError('tenant.errorHasActiveContract')
+      } else {
+        showError('common.deleteError')
+      }
     }
   }
 

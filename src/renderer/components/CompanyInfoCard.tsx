@@ -14,7 +14,14 @@ interface CompanyData {
   company_logo?: string | null
 }
 
-export default function CompanyInfoCard(): React.ReactElement {
+interface CompanyInfoCardProps {
+  /** When true, renders content without Card/CardContent wrapper (for embedding in SettingsSection). */
+  compact?: boolean
+}
+
+export default function CompanyInfoCard({
+  compact = false
+}: CompanyInfoCardProps): React.ReactElement {
   const { t } = useTranslation()
   const { showSuccess, showError } = useSnackbar()
   const [data, setData] = useState<CompanyData | null>(null)
@@ -61,75 +68,83 @@ export default function CompanyInfoCard(): React.ReactElement {
 
   if (!data) return <></>
 
+  const content = (
+    <>
+      <TextField
+        fullWidth
+        label={t('settings.companyName')}
+        value={data.company_name ?? ''}
+        onChange={(e) => updateField('company_name', e.target.value || null)}
+        sx={{ mb: 3 }}
+      />
+      <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 600 }}>
+        {t('settings.companyLogo')}
+      </Typography>
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+        {data.company_logo ? (
+          <Box
+            component="img"
+            src={data.company_logo}
+            alt="Company Logo"
+            sx={{
+              width: 80,
+              height: 80,
+              objectFit: 'contain',
+              borderRadius: 1,
+              border: '1px solid',
+              borderColor: 'divider',
+              p: 0.5,
+              bgcolor: 'background.paper'
+            }}
+          />
+        ) : (
+          <Box
+            sx={{
+              width: 80,
+              height: 80,
+              borderRadius: 1,
+              border: '1px dashed',
+              borderColor: 'text.secondary',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: 'text.secondary',
+              fontSize: '0.8rem',
+              textAlign: 'center',
+              p: 1
+            }}
+          >
+            {t('settings.noLogo')}
+          </Box>
+        )}
+        <Stack spacing={1}>
+          <Button variant="outlined" size="small" onClick={handlePickLogo}>
+            {t('settings.changeLogo')}
+          </Button>
+          {data.company_logo && (
+            <Button
+              variant="outlined"
+              color="error"
+              size="small"
+              onClick={() => updateField('company_logo', null)}
+            >
+              {t('common.remove')}
+            </Button>
+          )}
+        </Stack>
+      </Box>
+    </>
+  )
+
+  if (compact) return content
+
   return (
     <Card>
       <CardContent sx={{ p: 3 }}>
         <Typography variant="h5" sx={{ mb: 2.5 }}>
           {t('settings.companyInfo')}
         </Typography>
-        <TextField
-          fullWidth
-          label={t('settings.companyName')}
-          value={data.company_name ?? ''}
-          onChange={(e) => updateField('company_name', e.target.value || null)}
-          sx={{ mb: 3 }}
-        />
-        <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 600 }}>
-          {t('settings.companyLogo')}
-        </Typography>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-          {data.company_logo ? (
-            <Box
-              component="img"
-              src={data.company_logo}
-              alt="Company Logo"
-              sx={{
-                width: 80,
-                height: 80,
-                objectFit: 'contain',
-                borderRadius: 1,
-                border: '1px solid',
-                borderColor: 'divider',
-                p: 0.5,
-                bgcolor: 'background.paper'
-              }}
-            />
-          ) : (
-            <Box
-              sx={{
-                width: 80,
-                height: 80,
-                borderRadius: 1,
-                border: '1px dashed',
-                borderColor: 'text.secondary',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                color: 'text.secondary',
-                fontSize: '0.8rem',
-                textAlign: 'center',
-                p: 1
-              }}
-            >
-              {t('settings.noLogo')}
-            </Box>
-          )}
-          <Stack spacing={1}>
-            <Button variant="outlined" size="small" onClick={handlePickLogo}>
-              {t('settings.changeLogo')}
-            </Button>
-            {data.company_logo && (
-              <Button
-                variant="outlined"
-                color="error"
-                size="small"
-                onClick={() => updateField('company_logo', null)}
-              >
-                {t('common.remove')}
-              </Button>
-            )}
-          </Stack>
-        </Box>
+        {content}
       </CardContent>
     </Card>
   )

@@ -256,6 +256,17 @@
   "settings": {
     "title": "Global Settings",
     "subtitle": "Manage application preferences",
+    "navAppearance": "Appearance",
+    "navCompany": "Company",
+    "navFinancial": "Financial",
+    "navReceipts": "Receipts",
+    "navNotifications": "Notifications",
+    "navBackup": "Backup & Data",
+    "navDangerZone": "Danger Zone",
+    "appearanceDesc": "Customize language, theme, font size, and security settings",
+    "companyInfoDesc": "Set your company name, logo, and default country",
+    "financialDefaultsDesc": "Configure default currency and payment method",
+    "backupAndDataDesc": "Manage backup location and data retention",
     "companyInfo": "Company Information",
     "companyName": "Company Name",
     "companyLogo": "Company Logo",
@@ -308,7 +319,13 @@
     "receiptPrefixHelp": "Letters before the year (e.g. RCT, INV, REC)",
     "receiptStartingSequence": "Starting Sequence",
     "receiptStartingSequenceHelp": "First receipt number sequence for this year",
-    "receiptPreview": "Preview"
+    "receiptPreview": "Preview",
+    "dangerZone": "Danger Zone",
+    "wipeAllData": "Wipe All Data",
+    "wipeAllDataDescription": "This will permanently delete all properties, tenants, contracts, payments, expenses, ledger entries, documents, exchange rates, and notifications. System configuration (settings, countries, expense categories, notification templates, and user accounts) will be preserved.",
+    "wipeAllDataWarning": "This action is IRREVERSIBLE. All your entered data will be permanently deleted. Make sure you have a backup before proceeding.",
+    "wipeAllDataTypeConfirm": "Type DELETE to confirm",
+    "wipeAllDataSuccess": "All data has been wiped successfully. The application now contains only system configuration."
   },
   "tenant": {
     "title": "Tenant Management",
@@ -343,7 +360,8 @@
     "fullnameRequired": "Full name is required",
     "phoneRequired": "Phone number is required",
     "noTenants": "No tenants added yet. Start by adding your first tenant!",
-    "noTenantsFiltered": "No tenants match the search filter."
+    "noTenantsFiltered": "No tenants match the search filter.",
+    "errorHasActiveContract": "Cannot deactivate: this tenant has an active lease contract. Cancel or expire the contract first."
   },
   "lease": {
     "title": "Rental Contracts (Leases)",
