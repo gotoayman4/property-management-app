@@ -48,7 +48,7 @@ function buildPropertyProfitabilityReport(db: Database, filters: ReportFilters):
   const incomeCond = dateRangeClause('p.payment_date', filters, params)
   const expenseCond = dateRangeClause('e.expense_date', filters, params)
   if (filters.property_id) params.property_id = filters.property_id
-  const propertyFilter = filters.property_id ? 'WHERE pr.id = @property_id' : ''
+  const propertyFilter = filters.property_id ? 'AND pr.id = @property_id' : ''
 
   const rows = db
     .prepare(
@@ -67,8 +67,7 @@ function buildPropertyProfitabilityReport(db: Database, filters: ReportFilters):
              FROM expenses e WHERE e.is_voided = 0 AND ${expenseCond}
              GROUP BY property_id
          ) expense ON expense.property_id = pr.id
-         ${propertyFilter}
-        WHERE pr.is_archived = 0
+        WHERE pr.is_archived = 0 ${propertyFilter}
         ORDER BY pr.currency, net_profit DESC
         LIMIT ${REPORT_ROW_LIMIT + 1}`
     )
@@ -103,8 +102,7 @@ function buildPropertyProfitabilityReport(db: Database, filters: ReportFilters):
              FROM expenses e WHERE e.is_voided = 0 AND ${expenseCond}
              GROUP BY property_id
          ) expense ON expense.property_id = pr.id
-         ${propertyFilter}
-        WHERE pr.is_archived = 0
+         WHERE pr.is_archived = 0 ${propertyFilter}
         ORDER BY net_profit DESC
         LIMIT ${REPORT_ROW_LIMIT + 1}`
     )
@@ -160,7 +158,7 @@ function buildTenantPaymentHistoryReport(db: Database, filters: ReportFilters): 
     .prepare(
       `SELECT t.fullname AS tenant_name, pr.name AS property_name, pr.currency,
               COALESCE(payments.total_paid, 0) AS total_paid,
-              COALESCE(c.monthly_rent, 0) AS monthly_rent,
+              COALESCE(c.rent_amount, 0) AS monthly_rent,
               (SELECT MAX(p2.payment_date) FROM payments p2
                 WHERE p2.tenant_id = t.id AND p2.is_voided = 0) AS last_payment_date
          FROM tenants t
@@ -219,7 +217,7 @@ function buildOutstandingBalancesReport(db: Database, filters: ReportFilters): R
   const rows = db
     .prepare(
       `SELECT t.fullname AS tenant_name, pr.name AS property_name, pr.currency,
-              c.monthly_rent AS amount_due,
+              c.rent_amount AS amount_due,
               julianday(@today) - julianday(c.end_date) AS days_overdue
          FROM contracts c
          JOIN tenants t ON c.tenant_id = t.id

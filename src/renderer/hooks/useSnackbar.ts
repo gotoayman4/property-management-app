@@ -11,12 +11,21 @@ import { useCallback, useState } from 'react'
 
 export type SnackbarSeverity = 'success' | 'error' | 'warning' | 'info'
 
+export interface SnackbarAction {
+  /** i18n key for the action button label. */
+  label: string
+  /** Callback when the action button is clicked. */
+  onClick: () => void
+}
+
 export interface SnackbarState {
   open: boolean
   messageKey: string
   severity: SnackbarSeverity
   /** Optional i18n interpolation params forwarded to t(). */
   params?: Record<string, unknown>
+  /** Optional action button (e.g. Undo). Rendered as a Button inside the Alert. */
+  action?: SnackbarAction
 }
 
 const CLOSED: SnackbarState = { open: false, messageKey: '', severity: 'info' }
@@ -27,6 +36,11 @@ export interface UseSnackbarReturn {
   showError: (messageKey: string, params?: Record<string, unknown>) => void
   showWarning: (messageKey: string, params?: Record<string, unknown>) => void
   showInfo: (messageKey: string, params?: Record<string, unknown>) => void
+  showInfoWithAction: (
+    messageKey: string,
+    action: SnackbarAction,
+    params?: Record<string, unknown>
+  ) => void
   hideSnackbar: () => void
 }
 
@@ -38,8 +52,13 @@ export function useSnackbar(): UseSnackbarReturn {
   const [snack, setSnack] = useState<SnackbarState>(CLOSED)
 
   const show = useCallback(
-    (severity: SnackbarSeverity, messageKey: string, params?: Record<string, unknown>): void => {
-      setSnack({ open: true, messageKey, severity, params })
+    (
+      severity: SnackbarSeverity,
+      messageKey: string,
+      params?: Record<string, unknown>,
+      action?: SnackbarAction
+    ): void => {
+      setSnack({ open: true, messageKey, severity, params, action })
     },
     []
   )
@@ -60,11 +79,24 @@ export function useSnackbar(): UseSnackbarReturn {
     (messageKey: string, params?: Record<string, unknown>) => show('info', messageKey, params),
     [show]
   )
+  const showInfoWithAction = useCallback(
+    (messageKey: string, action: SnackbarAction, params?: Record<string, unknown>) =>
+      show('info', messageKey, params, action),
+    [show]
+  )
 
   const hideSnackbar = useCallback((): void => {
     // Keep the last message so the exit animation reads correct text; just close.
     setSnack((prev) => ({ ...prev, open: false }))
   }, [])
 
-  return { snack, showSuccess, showError, showWarning, showInfo, hideSnackbar }
+  return {
+    snack,
+    showSuccess,
+    showError,
+    showWarning,
+    showInfo,
+    showInfoWithAction,
+    hideSnackbar
+  }
 }

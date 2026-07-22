@@ -26,24 +26,34 @@ export const getTheme = (
     palette: {
       mode,
       primary: {
-        main: primaryColor,
+        main: mode === 'dark' ? '#3b82f6' : primaryColor,
         light: '#3b82f6',
         dark: '#172554'
       },
       secondary: {
-        main: secondaryColor,
+        main: mode === 'dark' ? '#f59e0b' : secondaryColor,
         light: '#f59e0b',
         dark: '#78350f'
       },
       success: {
-        main: successColor,
+        main: mode === 'dark' ? '#2dd4bf' : successColor,
         light: '#14b8a6',
         dark: '#115e59'
       },
       error: {
-        main: errorColor,
+        main: mode === 'dark' ? '#fb7185' : errorColor,
         light: '#f43f5e',
         dark: '#881337'
+      },
+      warning: {
+        main: mode === 'dark' ? '#fbbf24' : '#d97706',
+        light: '#fbbf24',
+        dark: '#92400e'
+      },
+      info: {
+        main: mode === 'dark' ? '#38bdf8' : '#0284c7',
+        light: '#38bdf8',
+        dark: '#075985'
       },
       background: {
         default: mode === 'dark' ? '#0f172a' : '#f8fafc',
@@ -97,11 +107,14 @@ export const getTheme = (
       },
       MuiCard: {
         styleOverrides: {
-          root: {
+          root: ({ theme }) => ({
             borderRadius: 16,
-            boxShadow: '0px 4px 8px rgba(15, 23, 42, 0.05)',
-            border: '1px solid #e2e8f0'
-          }
+            boxShadow:
+              theme.palette.mode === 'dark'
+                ? '0px 4px 8px rgba(0, 0, 0, 0.3)'
+                : '0px 4px 8px rgba(15, 23, 42, 0.05)',
+            border: `1px solid ${theme.palette.divider}`
+          })
         }
       },
       MuiFormLabel: {

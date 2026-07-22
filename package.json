@@ -1,7 +1,7 @@
 {
-  "name": "property-management-app",
+  "name": "propmanager",
   "version": "1.0.0",
-  "description": "An Arabic-first local property management desktop application built with Electron, React, and MUI",
+  "description": "مدير العقار (PropManager) - An Arabic-first local property management desktop application built with Electron, React, and MUI",
   "main": "./out/main/index.js",
   "author": "Antigravity",
   "homepage": "https://electron-vite.org",

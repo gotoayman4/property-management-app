@@ -1,7 +1,7 @@
 {
   "app": {
-    "brand": "أثـيـر العقاري",
-    "title": "أثـيـر العقاري"
+    "brand": "مدير العقار",
+    "title": "مدير العقار"
   },
   "countries": {
     "JO": "الأردن",
@@ -30,7 +30,7 @@
     "noMatch": "لا توجد دول تطابق بحثك."
   },
   "sidebar": {
-    "dashboard": "لوحة التحكم",
+    "dashboard": "لوحة المعلومات",
     "properties": "العقارات والوحدات",
     "tenants": "المستأجرين والملّاك",
     "contracts": "عقود الإيجار",
@@ -42,7 +42,9 @@
     "backup": "النسخ الاحتياطي",
     "settings": "الإعدادات",
     "recurringExpenses": "المصروفات الدورية",
-    "notifications": "الإشعارات"
+    "notifications": "الإشعارات",
+    "toggleTheme": "تبديل المظهر",
+    "toggleLanguage": "تبديل اللغة"
   },
   "common": {
     "save": "حفظ",
@@ -77,6 +79,7 @@
     "yes": "نعم",
     "no": "لا",
     "ok": "موافق",
+    "undo": "تراجع",
     "amount": "المبلغ",
     "date": "التاريخ",
     "description": "الوصف",
@@ -257,6 +260,7 @@
     "title": "الإعدادات العامة",
     "subtitle": "إدارة تفضيلات التطبيق",
     "navAppearance": "المظهر",
+    "navDashboard": "لوحة التحكم",
     "navCompany": "الشركة",
     "navFinancial": "المالية",
     "navReceipts": "الإيصالات",
@@ -264,6 +268,8 @@
     "navBackup": "النسخ الاحتياطي والبيانات",
     "navDangerZone": "منطقة الخطر",
     "appearanceDesc": "تخصيص اللغة والمظهر وحجم الخط وإعدادات الأمان",
+    "dashboardWidgets": "عناصر لوحة التحكم",
+    "dashboardWidgetsHelp": "اختر العناصر المرئية في لوحة التحكم.",
     "companyInfoDesc": "تحديد اسم الشركة والشعار والبلد الافتراضي",
     "financialDefaultsDesc": "تكوين عملة الدفع وطريقة الدفع الافتراضية",
     "backupAndDataDesc": "إدارة موقع النسخ الاحتياطي واحتفاظ البيانات",
@@ -582,12 +588,27 @@
     "activeContracts": "العقود النشطة",
     "totalPayments": "إجمالي المدفوعات",
     "totalExpenses": "إجمالي المصروفات",
+    "hideWidget": "إخفاء هذا العنصر",
+    "widgetHidden": "تم إخفاء العنصر. يمكنك إعادة تفعيله من الإعدادات > لوحة التحكم.",
+    "widgetStatProperties": "بطاقة العقارات",
+    "widgetStatTenants": "بطاقة المستأجرين",
+    "widgetStatContracts": "بطاقة العقود",
+    "widgetFinancialSummary": "الملخص المالي",
+    "widgetOccupiedDonut": "مخطط الإشغال",
+    "widgetUpcomingDue": "الإيجار المستحق قريباً",
+    "widgetOverduePayments": "المدفوعات المتأخرة",
+    "widgetUpcomingRecurring": "المصروفات الدورية القادمة",
+    "widgetExpiringDocuments": "الوثائق المنتهية الصلاحية",
+    "widgetIncomeExpenseTrend": "اتجاه الإيرادات والمصروفات",
+    "widgetRecentPayments": "المدفوعات الأخيرة",
+    "widgetRecentExpenses": "المصروفات الأخيرة",
+    "widgetRecentActivities": "النشاطات الأخيرة",
     "netBalance": "صافي الرصيد",
     "recentPayments": "أحدث المدفوعات",
     "recentExpenses": "أحدث المصروفات",
     "noPayments": "لا توجد مدفوعات مسجلة بعد.",
     "noExpenses": "لا توجد مصروفات مسجلة بعد.",
-    "welcomeTitle": "مرحباً بك في أثير العقارية",
+    "welcomeTitle": "مرحباً بك في تطبيق مدير العقار",
     "welcomeBody": "ابدأ بإدارة عقاراتك بإضافة أول وحدة لك. تابع الإيجارات والمصروفات وعقود المستأجرين في مكان واحد.",
     "addFirstProperty": "أضف عقارك الأول",
     "incomeLabel": "الإيرادات",

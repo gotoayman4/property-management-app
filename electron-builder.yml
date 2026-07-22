@@ -1,5 +1,5 @@
-appId: com.electron.app
-productName: temp-scaffold
+appId: com.antigravity.propmanager
+productName: PropManager
 directories:
   buildResources: build
 files:
@@ -12,11 +12,12 @@ files:
 asarUnpack:
   - resources/**
 win:
-  executableName: temp-scaffold
+  executableName: PropManager
+  icon: resources/icon.png
 nsis:
   artifactName: ${name}-${version}-setup.${ext}
-  shortcutName: ${productName}
-  uninstallDisplayName: ${productName}
+  shortcutName: مدير العقار - PropManager
+  uninstallDisplayName: مدير العقار - PropManager
   createDesktopShortcut: always
 mac:
   entitlementsInherit: build/entitlements.mac.plist

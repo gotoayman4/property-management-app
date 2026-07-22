@@ -242,7 +242,7 @@ function buildProfitLossReport(db: Database, filters: ReportFilters): ReportData
   const incomeCond = dateRangeClause('p.payment_date', filters, params)
   const expenseCond = dateRangeClause('e.expense_date', filters, params)
   if (filters.property_id) params.property_id = filters.property_id
-  const propertyFilter = filters.property_id ? 'WHERE pr.id = @property_id' : ''
+  const propertyFilter = filters.property_id ? 'AND pr.id = @property_id' : ''
 
   const rows = db
     .prepare(
@@ -263,8 +263,7 @@ function buildProfitLossReport(db: Database, filters: ReportFilters): ReportData
             WHERE e.is_voided = 0 AND ${expenseCond}
             GROUP BY property_id
          ) expense ON expense.property_id = pr.id
-         ${propertyFilter}
-        WHERE pr.is_archived = 0
+        WHERE pr.is_archived = 0 ${propertyFilter}
         ORDER BY pr.currency, pr.name
         LIMIT ${REPORT_ROW_LIMIT + 1}`
     )
@@ -332,8 +331,7 @@ function buildProfitLossReport(db: Database, filters: ReportFilters): ReportData
             WHERE e.is_voided = 0 AND ${expenseCond}
             GROUP BY property_id
          ) expense ON expense.property_id = pr.id
-         ${propertyFilter}
-        WHERE pr.is_archived = 0
+         WHERE pr.is_archived = 0 ${propertyFilter}
         ORDER BY net_profit DESC
         LIMIT ${REPORT_ROW_LIMIT + 1}`
     )

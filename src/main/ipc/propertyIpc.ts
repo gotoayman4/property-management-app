@@ -49,7 +49,8 @@ const settingsUpdateSchema = z.object({
     .regex(/^\d{2}:\d{2}$/)
     .optional(),
   company_name: z.string().max(200).nullable().optional(),
-  company_logo: z.string().nullable().optional()
+  company_logo: z.string().nullable().optional(),
+  dashboard_hidden_widgets: z.string().optional()
 })
 
 const countryCreateSchema = z.object({
@@ -354,4 +355,57 @@ export function registerPropertyIpcHandlers(): void {
       throw new Error('FAILED_TO_UPDATE_SETTINGS')
     }
   })
+
+  // Property profitability — pre-calculated income/expense/net in the main process
+  // (architectural mandate: no business logic in renderer components).
+  ipcMain.handle(
+    'properties:profitability',
+    async (
+      _,
+      payload: unknown
+    ): Promise<{
+      totalIncome: number
+      totalExpenses: number
+      netProfit: number
+      paymentCount: number
+      expenseCount: number
+    }> => {
+      const { property_id } = payload as { property_id: number }
+      if (!property_id || typeof property_id !== 'number') {
+        throw new Error('INVALID_INPUT')
+      }
+
+      try {
+        const incomeRow = db
+          .prepare(
+            `SELECT COALESCE(SUM(amount), 0) AS total, COUNT(*) AS cnt
+               FROM payments
+              WHERE property_id = ? AND is_voided = 0`
+          )
+          .get(property_id) as { total: number; cnt: number }
+
+        const expenseRow = db
+          .prepare(
+            `SELECT COALESCE(SUM(amount), 0) AS total, COUNT(*) AS cnt
+               FROM expenses
+              WHERE property_id = ? AND is_voided = 0`
+          )
+          .get(property_id) as { total: number; cnt: number }
+
+        const totalIncome = incomeRow.total
+        const totalExpenses = expenseRow.total
+
+        return {
+          totalIncome,
+          totalExpenses,
+          netProfit: totalIncome - totalExpenses,
+          paymentCount: incomeRow.cnt,
+          expenseCount: expenseRow.cnt
+        }
+      } catch (err) {
+        console.error('[propertyIpc] profitability error:', err)
+        throw new Error('FAILED_TO_LOAD_PROFITABILITY')
+      }
+    }
+  )
 }

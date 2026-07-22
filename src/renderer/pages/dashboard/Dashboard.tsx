@@ -1,35 +1,37 @@
 import AccountBalanceWalletIcon from '@mui/icons-material/AccountBalanceWallet'
 import AddIcon from '@mui/icons-material/Add'
+import ApartmentRoundedIcon from '@mui/icons-material/ApartmentRounded'
+import AssignmentRoundedIcon from '@mui/icons-material/AssignmentRounded'
 import AutorenewIcon from '@mui/icons-material/Autorenew'
 import BusinessIcon from '@mui/icons-material/Business'
-import DescriptionIcon from '@mui/icons-material/Description'
 import ErrorOutlineIcon from '@mui/icons-material/ErrorOutlineOutlined'
 import EventAvailableIcon from '@mui/icons-material/EventAvailable'
-import PeopleIcon from '@mui/icons-material/People'
+import GroupsRoundedIcon from '@mui/icons-material/GroupsRounded'
 import WarningAmberIcon from '@mui/icons-material/WarningAmber'
-import {
-  Box,
-  Card,
-  CardContent,
-  Grid,
-  Typography,
-  Chip,
-  Button,
-  Stack,
-  Tabs,
-  Tab
-} from '@mui/material'
-import type { GridColDef } from '@mui/x-data-grid'
+import { Box, Card, CardContent, Grid, Typography, Button, Stack, Tabs, Tab } from '@mui/material'
 import React, { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
-import { ActivityDescription, OccupiedDonut, TrendChart } from '../../components/dashboardCharts'
+import { OccupiedDonut, TrendChart } from '../../components/dashboardCharts'
+import DashboardWidget from '../../components/DashboardWidget'
 import FinancialSummaryCard from '../../components/FinancialSummaryCard'
+import GlobalSnackbar from '../../components/GlobalSnackbar'
 import PageHeader from '../../components/PageHeader'
 import StandardTable from '../../components/StandardTable'
 import StatCard from '../../components/StatCard'
+import { useSnackbar } from '../../hooks/useSnackbar'
+import { useUiPreferences } from '../../stores/uiPreferencesStore'
 import { getLocalizedCountryName } from '../../utils/countryUtils'
 import { useDataChangedListener } from '../../utils/eventBus'
+import {
+  upcomingDueCols,
+  overdueCols,
+  recurringCols,
+  docCols,
+  recentPaymentCols,
+  recentExpenseCols,
+  recentActivityCols
+} from './dashboardColumns'
 import type {
   DashboardSummary,
   CurrencyFinancialRow,
@@ -46,7 +48,8 @@ import type {
 export default function Dashboard(): React.JSX.Element {
   const { t, i18n } = useTranslation()
   const navigate = useNavigate()
-  // All-state loading pattern
+  const hiddenWidgets = useUiPreferences((s) => s.hiddenWidgets)
+  const { snack, showInfoWithAction, hideSnackbar } = useSnackbar()
   const [loading, setLoading] = useState(true)
   const [summary, setSummary] = useState<DashboardSummary | null>(null)
   const [upcomingDue, setUpcomingDue] = useState<UpcomingDueRow[]>([])
@@ -66,7 +69,7 @@ export default function Dashboard(): React.JSX.Element {
   })
 
   const isNewApp = !loading && summary && summary.totalProperties === 0
-  // Load all data, filtered by selected country (FR-DASH-00) and refreshed on data mutation (FR-DASH-11)
+
   useEffect(() => {
     let cancelled = false
     async function loadAll(): Promise<void> {
@@ -106,9 +109,7 @@ export default function Dashboard(): React.JSX.Element {
       cancelled = true
     }
   }, [activeCountry, refreshCount])
-  /* ------------------------------------------------------------------ */
-  /* Welcome empty state for new apps                                   */
-  /* ------------------------------------------------------------------ */
+
   if (isNewApp) {
     return (
       <Box sx={{ textAlign: 'center', py: 8 }}>
@@ -134,147 +135,9 @@ export default function Dashboard(): React.JSX.Element {
       </Box>
     )
   }
-  /* ------------------------------------------------------------------ */
-  /* Column definitions for StandardTables                              */
-  /* ------------------------------------------------------------------ */
-  const upcomingDueCols: GridColDef[] = [
-    { field: 'property_name', headerName: t('common.property'), flex: 1, minWidth: 110 },
-    { field: 'tenant_name', headerName: t('common.tenant'), flex: 1, minWidth: 100 },
-    {
-      field: 'rent_amount',
-      headerName: t('common.amount'),
-      flex: 1,
-      minWidth: 90,
-      type: 'number',
-      valueFormatter: (value: number, row: UpcomingDueRow) =>
-        `${Number(value).toLocaleString()} ${row.currency}`
-    },
-    { field: 'end_date', headerName: t('contract.endDate'), flex: 1, minWidth: 100 }
-  ]
-  const overdueCols: GridColDef[] = [
-    { field: 'tenant_name', headerName: t('common.tenant'), flex: 1, minWidth: 100 },
-    { field: 'property_name', headerName: t('common.property'), flex: 1, minWidth: 110 },
-    {
-      field: 'amount',
-      headerName: t('common.amount'),
-      flex: 1,
-      minWidth: 90,
-      type: 'number',
-      valueFormatter: (value: number, row: OverdueRow) =>
-        `${Number(value).toLocaleString()} ${row.currency}`
-    },
-    {
-      field: 'payment_date',
-      headerName: t('common.date'),
-      flex: 1,
-      minWidth: 100,
-      renderCell: (params: { row: OverdueRow }) => (
-        <Chip size="small" label={params.row.payment_date} color="error" variant="outlined" />
-      )
-    }
-  ]
-  const recurringCols: GridColDef[] = [
-    { field: 'name', headerName: t('expense.name'), flex: 1, minWidth: 110 },
-    { field: 'property_name', headerName: t('common.property'), flex: 1, minWidth: 100 },
-    {
-      field: 'amount',
-      headerName: t('common.amount'),
-      flex: 1,
-      minWidth: 90,
-      type: 'number',
-      valueFormatter: (value: number, row: UpcomingRecurringRow) =>
-        `${Number(value).toLocaleString()} ${row.currency}`
-    },
-    { field: 'next_due_date', headerName: t('common.date'), flex: 1, minWidth: 100 }
-  ]
-  const docCols: GridColDef[] = [
-    { field: 'property_name', headerName: t('common.property'), flex: 1, minWidth: 110 },
-    {
-      field: 'document_type',
-      headerName: t('documents.documentType'),
-      flex: 1,
-      minWidth: 100,
-      valueFormatter: (value: string | null) => {
-        if (!value) return '—'
-        try {
-          return t(`documents.types.${value}`, value)
-        } catch {
-          return value
-        }
-      }
-    },
-    { field: 'file_name', headerName: t('documents.fileName'), flex: 1, minWidth: 110 },
-    {
-      field: 'expiry_date',
-      headerName: t('documents.expiryDate'),
-      flex: 1,
-      minWidth: 100,
-      renderCell: (params: { row: ExpiringDocumentRow }) => (
-        <Chip size="small" label={params.row.expiry_date} color="warning" variant="outlined" />
-      )
-    }
-  ]
-  const recentPaymentCols: GridColDef[] = [
-    { field: 'payment_date', headerName: t('common.date'), flex: 1, minWidth: 100 },
-    { field: 'property_name', headerName: t('common.property'), flex: 1, minWidth: 120 },
-    { field: 'tenant_name', headerName: t('common.tenant'), flex: 1, minWidth: 120 },
-    {
-      field: 'amount',
-      headerName: t('common.amount'),
-      flex: 1,
-      minWidth: 100,
-      type: 'number'
-    }
-  ]
-  const recentExpenseCols: GridColDef[] = [
-    { field: 'expense_date', headerName: t('common.date'), flex: 1, minWidth: 100 },
-    { field: 'property_name', headerName: t('common.property'), flex: 1, minWidth: 120 },
-    {
-      field: 'amount',
-      headerName: t('common.amount'),
-      flex: 1,
-      minWidth: 100,
-      type: 'number'
-    }
-  ]
-  const recentActivityCols: GridColDef[] = [
-    { field: 'activity_date', headerName: t('common.date'), flex: 1, minWidth: 100 },
-    {
-      field: 'entity_type',
-      headerName: t('common.type'),
-      flex: 1,
-      minWidth: 100,
-      renderCell: (params) => {
-        const val = String(params.value ?? '')
-        return (
-          <Chip
-            size="small"
-            label={t(`dashboard.activity.${val}`)}
-            color={
-              val === 'payment'
-                ? 'success'
-                : val === 'expense'
-                  ? 'error'
-                  : val === 'contract'
-                    ? 'info'
-                    : 'default'
-            }
-            variant="outlined"
-          />
-        )
-      }
-    },
-    {
-      field: 'description',
-      headerName: t('common.description'),
-      flex: 2,
-      minWidth: 180,
-      renderCell: (params) => <ActivityDescription row={params.row} t={t} />
-    }
-  ]
-  /* ------------------------------------------------------------------ */
-  /* Main render                                                        */
-  /* ------------------------------------------------------------------ */
+
+  const isHidden = (id: string): boolean => hiddenWidgets.includes(id)
+
   return (
     <Box>
       <PageHeader
@@ -282,7 +145,6 @@ export default function Dashboard(): React.JSX.Element {
         title={t('sidebar.dashboard')}
         subtitle={t('dashboard.subtitle')}
       />
-      {/* Country filter (FR-DASH-00) */}
       {countries.length > 1 && (
         <Tabs
           value={activeCountry}
@@ -301,198 +163,240 @@ export default function Dashboard(): React.JSX.Element {
           ))}
         </Tabs>
       )}
-      {/* Stat Cards — clickable per FR-DASH-10 */}
       <Grid container spacing={3} sx={{ mb: 3 }}>
-        <Grid size={{ xs: 12, sm: 6, md: 4 }}>
-          <StatCard
-            icon={<BusinessIcon />}
-            label={t('dashboard.totalProperties')}
-            value={loading ? '...' : (summary?.totalProperties ?? 0)}
-            color="primary"
-            onClick={() => navigate('/properties')}
-          />
-        </Grid>
-        <Grid size={{ xs: 12, sm: 6, md: 4 }}>
-          <StatCard
-            icon={<PeopleIcon />}
-            label={t('dashboard.activeTenants')}
-            value={loading ? '...' : (summary?.totalTenants ?? 0)}
-            color="secondary"
-            onClick={() => navigate('/tenants')}
-          />
-        </Grid>
-        <Grid size={{ xs: 12, sm: 6, md: 4 }}>
-          <StatCard
-            icon={<DescriptionIcon />}
-            label={t('dashboard.activeContracts')}
-            value={loading ? '...' : (summary?.activeContracts ?? 0)}
-            color="info"
-            onClick={() => navigate('/contracts')}
-          />
-        </Grid>
+        {!isHidden('stat-properties') && (
+          <Grid size={{ xs: 12, sm: 6, md: 4 }}>
+            <DashboardWidget widgetId="stat-properties" showUndoSnackbar={showInfoWithAction}>
+              <StatCard
+                icon={<ApartmentRoundedIcon />}
+                label={t('dashboard.totalProperties')}
+                value={loading ? '...' : (summary?.totalProperties ?? 0)}
+                color="primary"
+                onClick={() => navigate('/properties')}
+              />
+            </DashboardWidget>
+          </Grid>
+        )}
+        {!isHidden('stat-tenants') && (
+          <Grid size={{ xs: 12, sm: 6, md: 4 }}>
+            <DashboardWidget widgetId="stat-tenants" showUndoSnackbar={showInfoWithAction}>
+              <StatCard
+                icon={<GroupsRoundedIcon />}
+                label={t('dashboard.activeTenants')}
+                value={loading ? '...' : (summary?.totalTenants ?? 0)}
+                color="warning"
+                onClick={() => navigate('/tenants')}
+              />
+            </DashboardWidget>
+          </Grid>
+        )}
+        {!isHidden('stat-contracts') && (
+          <Grid size={{ xs: 12, sm: 6, md: 4 }}>
+            <DashboardWidget widgetId="stat-contracts" showUndoSnackbar={showInfoWithAction}>
+              <StatCard
+                icon={<AssignmentRoundedIcon />}
+                label={t('dashboard.activeContracts')}
+                value={loading ? '...' : (summary?.activeContracts ?? 0)}
+                color="info"
+                onClick={() => navigate('/contracts')}
+              />
+            </DashboardWidget>
+          </Grid>
+        )}
       </Grid>
-      {/* Financial Summary — per-currency, current month (BR-14) */}
       <Grid container spacing={3} sx={{ mb: 4 }}>
-        <FinancialSummaryCard
-          loading={loading}
-          financialSummary={(summary?.financialSummary ?? []) as CurrencyFinancialRow[]}
-          consolidatedSummary={summary?.consolidatedSummary ?? null}
-          t={t}
-          i18n={i18n}
-        />
-        <Grid size={{ xs: 12, sm: 6, md: 4 }}>
-          <OccupiedDonut
-            total={summary?.totalProperties ?? 0}
-            rented={summary?.rentedProperties ?? 0}
+        {!isHidden('financial-summary') && (
+          <FinancialSummaryCard
+            loading={loading}
+            financialSummary={(summary?.financialSummary ?? []) as CurrencyFinancialRow[]}
+            consolidatedSummary={summary?.consolidatedSummary ?? null}
             t={t}
+            i18n={i18n}
           />
-        </Grid>
-      </Grid>
-      {/* Actionable Lists — FR-DASH-04/05/12/13 */}
-      <Grid container spacing={3} sx={{ mb: 3 }}>
-        {/* Upcoming Due (FR-DASH-04) */}
-        <Grid size={{ xs: 12, md: 6 }}>
-          <Stack direction="row" spacing={1} sx={{ mb: 1.5, alignItems: 'center' }}>
-            <EventAvailableIcon color="primary" fontSize="small" />
-            <Typography variant="h5" sx={{ fontWeight: 600 }}>
-              {t('dashboard.upcomingDue')}
-            </Typography>
-          </Stack>
-          <StandardTable
-            columns={upcomingDueCols}
-            rows={upcomingDue}
-            loading={loading}
-            emptyMessage={t('dashboard.noUpcomingDue')}
-            pageSize={5}
-            pageSizeOptions={[5]}
-            tableId="dashboard-upcoming-due"
-          />
-        </Grid>
-        {/* Overdue Payments (FR-DASH-05) */}
-        <Grid size={{ xs: 12, md: 6 }}>
-          <Stack direction="row" spacing={1} sx={{ mb: 1.5, alignItems: 'center' }}>
-            <ErrorOutlineIcon color="error" fontSize="small" />
-            <Typography variant="h5" sx={{ fontWeight: 600 }}>
-              {t('dashboard.overdue')}
-            </Typography>
-          </Stack>
-          <StandardTable
-            columns={overdueCols}
-            rows={overdue}
-            loading={loading}
-            emptyMessage={t('dashboard.noOverdue')}
-            pageSize={5}
-            pageSizeOptions={[5]}
-            tableId="dashboard-overdue"
-          />
-        </Grid>
+        )}
+        {!isHidden('occupied-donut') && (
+          <Grid size={{ xs: 12, sm: 6, md: 4 }}>
+            <DashboardWidget widgetId="occupied-donut" showUndoSnackbar={showInfoWithAction}>
+              <OccupiedDonut
+                total={summary?.totalProperties ?? 0}
+                rented={summary?.rentedProperties ?? 0}
+                t={t}
+              />
+            </DashboardWidget>
+          </Grid>
+        )}
       </Grid>
       <Grid container spacing={3} sx={{ mb: 3 }}>
-        {/* Upcoming Recurring (FR-DASH-12) */}
-        <Grid size={{ xs: 12, md: 6 }}>
-          <Stack direction="row" spacing={1} sx={{ mb: 1.5, alignItems: 'center' }}>
-            <AutorenewIcon color="warning" fontSize="small" />
-            <Typography variant="h5" sx={{ fontWeight: 600 }}>
-              {t('dashboard.upcomingRecurring')}
-            </Typography>
-          </Stack>
-          <StandardTable
-            columns={recurringCols}
-            rows={upcomingRecurring}
-            loading={loading}
-            emptyMessage={t('dashboard.noUpcomingRecurring')}
-            pageSize={5}
-            pageSizeOptions={[5]}
-            tableId="dashboard-upcoming-recurring"
-          />
-        </Grid>
-        {/* Expiring Documents (FR-DASH-13) */}
-        <Grid size={{ xs: 12, md: 6 }}>
-          <Stack direction="row" spacing={1} sx={{ mb: 1.5, alignItems: 'center' }}>
-            <WarningAmberIcon color="warning" fontSize="small" />
-            <Typography variant="h5" sx={{ fontWeight: 600 }}>
-              {t('dashboard.expiringDocuments')}
-            </Typography>
-          </Stack>
-          <StandardTable
-            columns={docCols}
-            rows={expiringDocs}
-            loading={loading}
-            emptyMessage={t('dashboard.noExpiringDocuments')}
-            pageSize={5}
-            pageSizeOptions={[5]}
-            tableId="dashboard-expiring-docs"
-          />
-        </Grid>
+        {!isHidden('upcoming-due') && (
+          <Grid size={{ xs: 12, md: 6 }}>
+            <DashboardWidget widgetId="upcoming-due" showUndoSnackbar={showInfoWithAction}>
+              <Stack direction="row" spacing={1} sx={{ mb: 1.5, alignItems: 'center' }}>
+                <EventAvailableIcon color="primary" fontSize="small" />
+                <Typography variant="h5" sx={{ fontWeight: 600 }}>
+                  {t('dashboard.upcomingDue')}
+                </Typography>
+              </Stack>
+              <StandardTable
+                columns={upcomingDueCols(t)}
+                rows={upcomingDue}
+                loading={loading}
+                emptyMessage={t('dashboard.noUpcomingDue')}
+                pageSize={5}
+                pageSizeOptions={[5]}
+                tableId="dashboard-upcoming-due"
+              />
+            </DashboardWidget>
+          </Grid>
+        )}
+        {!isHidden('overdue-payments') && (
+          <Grid size={{ xs: 12, md: 6 }}>
+            <DashboardWidget widgetId="overdue-payments" showUndoSnackbar={showInfoWithAction}>
+              <Stack direction="row" spacing={1} sx={{ mb: 1.5, alignItems: 'center' }}>
+                <ErrorOutlineIcon color="error" fontSize="small" />
+                <Typography variant="h5" sx={{ fontWeight: 600 }}>
+                  {t('dashboard.overdue')}
+                </Typography>
+              </Stack>
+              <StandardTable
+                columns={overdueCols(t)}
+                rows={overdue}
+                loading={loading}
+                emptyMessage={t('dashboard.noOverdue')}
+                pageSize={5}
+                pageSizeOptions={[5]}
+                tableId="dashboard-overdue"
+              />
+            </DashboardWidget>
+          </Grid>
+        )}
       </Grid>
-      {/* 12-Month Trend Chart (FR-DASH-07/08) + Recent tables */}
+      <Grid container spacing={3} sx={{ mb: 3 }}>
+        {!isHidden('upcoming-recurring') && (
+          <Grid size={{ xs: 12, md: 6 }}>
+            <DashboardWidget widgetId="upcoming-recurring" showUndoSnackbar={showInfoWithAction}>
+              <Stack direction="row" spacing={1} sx={{ mb: 1.5, alignItems: 'center' }}>
+                <AutorenewIcon color="warning" fontSize="small" />
+                <Typography variant="h5" sx={{ fontWeight: 600 }}>
+                  {t('dashboard.upcomingRecurring')}
+                </Typography>
+              </Stack>
+              <StandardTable
+                columns={recurringCols(t)}
+                rows={upcomingRecurring}
+                loading={loading}
+                emptyMessage={t('dashboard.noUpcomingRecurring')}
+                pageSize={5}
+                pageSizeOptions={[5]}
+                tableId="dashboard-upcoming-recurring"
+              />
+            </DashboardWidget>
+          </Grid>
+        )}
+        {!isHidden('expiring-documents') && (
+          <Grid size={{ xs: 12, md: 6 }}>
+            <DashboardWidget widgetId="expiring-documents" showUndoSnackbar={showInfoWithAction}>
+              <Stack direction="row" spacing={1} sx={{ mb: 1.5, alignItems: 'center' }}>
+                <WarningAmberIcon color="warning" fontSize="small" />
+                <Typography variant="h5" sx={{ fontWeight: 600 }}>
+                  {t('dashboard.expiringDocuments')}
+                </Typography>
+              </Stack>
+              <StandardTable
+                columns={docCols(t)}
+                rows={expiringDocs}
+                loading={loading}
+                emptyMessage={t('dashboard.noExpiringDocuments')}
+                pageSize={5}
+                pageSizeOptions={[5]}
+                tableId="dashboard-expiring-docs"
+              />
+            </DashboardWidget>
+          </Grid>
+        )}
+      </Grid>
       <Grid container spacing={3}>
-        <Grid size={{ xs: 12, md: 6 }}>
-          <Typography variant="h5" sx={{ mb: 1, fontWeight: 600 }}>
-            {t('dashboard.incomeExpenseTrend')}
-          </Typography>
-          <Card>
-            <CardContent>
-              {loading ? (
-                <Typography variant="body2" color="text.secondary">
-                  {t('common.loading')}
-                </Typography>
-              ) : trends ? (
-                <TrendChart trends={trends} t={t} />
-              ) : (
-                <Typography variant="body2" color="text.secondary">
-                  {t('common.noData')}
-                </Typography>
-              )}
-            </CardContent>
-          </Card>
-        </Grid>
-        <Grid size={{ xs: 12, md: 6 }}>
-          <Typography variant="h5" sx={{ mb: 1, fontWeight: 600 }}>
-            {t('dashboard.recentPayments')}
-          </Typography>
-          <StandardTable
-            columns={recentPaymentCols}
-            rows={recentPayments}
-            loading={loading}
-            emptyMessage={t('dashboard.noPayments')}
-            pageSize={5}
-            pageSizeOptions={[5]}
-            tableId="dashboard-recent-payments"
-          />
-        </Grid>
+        {!isHidden('income-expense-trend') && (
+          <Grid size={{ xs: 12, md: 6 }}>
+            <DashboardWidget widgetId="income-expense-trend" showUndoSnackbar={showInfoWithAction}>
+              <Typography variant="h5" sx={{ mb: 1, fontWeight: 600 }}>
+                {t('dashboard.incomeExpenseTrend')}
+              </Typography>
+              <Card>
+                <CardContent>
+                  {loading ? (
+                    <Typography variant="body2" color="text.secondary">
+                      {t('common.loading')}
+                    </Typography>
+                  ) : trends ? (
+                    <TrendChart trends={trends} t={t} />
+                  ) : (
+                    <Typography variant="body2" color="text.secondary">
+                      {t('common.noData')}
+                    </Typography>
+                  )}
+                </CardContent>
+              </Card>
+            </DashboardWidget>
+          </Grid>
+        )}
+        {!isHidden('recent-payments') && (
+          <Grid size={{ xs: 12, md: 6 }}>
+            <DashboardWidget widgetId="recent-payments" showUndoSnackbar={showInfoWithAction}>
+              <Typography variant="h5" sx={{ mb: 1, fontWeight: 600 }}>
+                {t('dashboard.recentPayments')}
+              </Typography>
+              <StandardTable
+                columns={recentPaymentCols(t)}
+                rows={recentPayments}
+                loading={loading}
+                emptyMessage={t('dashboard.noPayments')}
+                pageSize={5}
+                pageSizeOptions={[5]}
+                tableId="dashboard-recent-payments"
+              />
+            </DashboardWidget>
+          </Grid>
+        )}
       </Grid>
-      {/* Bottom row: recent expenses and recent activities */}
       <Grid container spacing={3} sx={{ mt: 0 }}>
-        <Grid size={{ xs: 12, md: 6 }}>
-          <Typography variant="h5" sx={{ mb: 1, fontWeight: 600 }}>
-            {t('dashboard.recentExpenses')}
-          </Typography>
-          <StandardTable
-            columns={recentExpenseCols}
-            rows={recentExpenses}
-            loading={loading}
-            emptyMessage={t('dashboard.noExpenses')}
-            pageSize={5}
-            pageSizeOptions={[5]}
-            tableId="dashboard-recent-expenses"
-          />
-        </Grid>
-        <Grid size={{ xs: 12, md: 6 }}>
-          <Typography variant="h5" sx={{ mb: 1, fontWeight: 600 }}>
-            {t('dashboard.recentActivities')}
-          </Typography>
-          <StandardTable
-            columns={recentActivityCols}
-            rows={recentActivities}
-            loading={loading}
-            emptyMessage={t('dashboard.noRecentActivities')}
-            pageSize={5}
-            pageSizeOptions={[5]}
-            tableId="dashboard-recent-activities"
-          />
-        </Grid>
+        {!isHidden('recent-expenses') && (
+          <Grid size={{ xs: 12, md: 6 }}>
+            <DashboardWidget widgetId="recent-expenses" showUndoSnackbar={showInfoWithAction}>
+              <Typography variant="h5" sx={{ mb: 1, fontWeight: 600 }}>
+                {t('dashboard.recentExpenses')}
+              </Typography>
+              <StandardTable
+                columns={recentExpenseCols(t)}
+                rows={recentExpenses}
+                loading={loading}
+                emptyMessage={t('dashboard.noExpenses')}
+                pageSize={5}
+                pageSizeOptions={[5]}
+                tableId="dashboard-recent-expenses"
+              />
+            </DashboardWidget>
+          </Grid>
+        )}
+        {!isHidden('recent-activities') && (
+          <Grid size={{ xs: 12, md: 6 }}>
+            <DashboardWidget widgetId="recent-activities" showUndoSnackbar={showInfoWithAction}>
+              <Typography variant="h5" sx={{ mb: 1, fontWeight: 600 }}>
+                {t('dashboard.recentActivities')}
+              </Typography>
+              <StandardTable
+                columns={recentActivityCols(t)}
+                rows={recentActivities}
+                loading={loading}
+                emptyMessage={t('dashboard.noRecentActivities')}
+                pageSize={5}
+                pageSizeOptions={[5]}
+                tableId="dashboard-recent-activities"
+              />
+            </DashboardWidget>
+          </Grid>
+        )}
       </Grid>
+      <GlobalSnackbar state={snack} onClose={hideSnackbar} />
     </Box>
   )
 }

@@ -18,7 +18,9 @@ const api = {
     update: (data: unknown) => ipcRenderer.invoke('properties:update', data),
     delete: (id: number) => ipcRenderer.invoke('properties:delete', id),
     generateCode: (params: { country: string; type: string }) =>
-      ipcRenderer.invoke('properties:generateCode', params)
+      ipcRenderer.invoke('properties:generateCode', params),
+    profitability: (data: { property_id: number }) =>
+      ipcRenderer.invoke('properties:profitability', data)
   },
   tenants: {
     list: (filters?: unknown) => ipcRenderer.invoke('tenants:list', filters),

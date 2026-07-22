@@ -1,21 +1,11 @@
 /**
  * INTENT: Property profitability tab — shows income vs expense summary for the property.
- *         Computes total income (payments), total expenses, and net profit.
+ *         All financial calculations are delegated to the main process via properties:profitability.
  * CONSTRAINT: i18n keys only, MUI components, theme tokens, logical CSS.
  */
 import { Box, Card, CardContent, Grid, Typography } from '@mui/material'
 import React, { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-
-interface Payment {
-  amount: number
-  is_voided: number
-}
-
-interface Expense {
-  amount: number
-  is_voided: number
-}
 
 interface ProfitabilityData {
   totalIncome: number
@@ -42,24 +32,9 @@ export default function PropertyProfitabilityTab({
     let cancelled = false
     async function load(): Promise<void> {
       try {
-        const [payments, expenses] = await Promise.all([
-          window.api.payments.list({ property_id: propertyId }),
-          window.api.expenses.list({ property_id: propertyId })
-        ])
+        const result = await window.api.properties.profitability({ property_id: propertyId })
         if (cancelled) return
-
-        const validPayments = (payments as Payment[]).filter((p) => !p.is_voided)
-        const validExpenses = (expenses as Expense[]).filter((e) => !e.is_voided)
-        const totalIncome = validPayments.reduce((s, p) => s + p.amount, 0)
-        const totalExpenses = validExpenses.reduce((s, e) => s + e.amount, 0)
-
-        setData({
-          totalIncome,
-          totalExpenses,
-          netProfit: totalIncome - totalExpenses,
-          paymentCount: validPayments.length,
-          expenseCount: validExpenses.length
-        })
+        setData(result)
       } catch {
         /* empty */
       } finally {

@@ -8,7 +8,7 @@
  *         logical CSS properties.
  */
 
-import { Box, Stack, Typography } from '@mui/material'
+import { Box, Stack, Typography, useTheme } from '@mui/material'
 import React from 'react'
 
 interface TrendsData {
@@ -31,6 +31,7 @@ interface TrendChartProps {
 
 /** Occupied vs Vacant donut chart — inline SVG. */
 export function OccupiedDonut({ total, rented, t }: OccupiedDonutProps): React.JSX.Element {
+  const theme = useTheme()
   const safeTotal = total || 1
   const vacant = safeTotal - rented
   const pctRented = Math.round((rented / safeTotal) * 100)
@@ -41,14 +42,21 @@ export function OccupiedDonut({ total, rented, t }: OccupiedDonutProps): React.J
   return (
     <Box sx={{ textAlign: 'center', py: 1 }}>
       <svg width={80} height={80} viewBox="0 0 64 64">
-        <circle cx="32" cy="32" r={radius} fill="none" stroke="#e0e0e0" strokeWidth={6} />
+        <circle
+          cx="32"
+          cy="32"
+          r={radius}
+          fill="none"
+          stroke={theme.palette.divider}
+          strokeWidth={6}
+        />
         {rented > 0 && (
           <circle
             cx="32"
             cy="32"
             r={radius}
             fill="none"
-            stroke="#2e7d32"
+            stroke={theme.palette.success.main}
             strokeWidth={6}
             strokeDasharray={`${circumference * (pctRented / 100)} ${circumference * (pctVacant / 100)}`}
             transform="rotate(-90 32 32)"
@@ -61,7 +69,7 @@ export function OccupiedDonut({ total, rented, t }: OccupiedDonutProps): React.J
             cy="32"
             r={radius}
             fill="none"
-            stroke="#d32f2f"
+            stroke={theme.palette.error.main}
             strokeWidth={6}
             strokeDasharray={`${circumference * (pctVacant / 100)} ${circumference * (pctRented / 100)}`}
             strokeDashoffset={-(circumference * (1 - pctVacant / 100))}
@@ -83,13 +91,13 @@ export function OccupiedDonut({ total, rented, t }: OccupiedDonutProps): React.J
       </svg>
       <Stack direction="row" spacing={1.5} sx={{ mt: 1, justifyContent: 'center' }}>
         <Stack direction="row" spacing={0.5} sx={{ alignItems: 'center' }}>
-          <Box sx={{ width: 10, height: 10, borderRadius: '50%', bgcolor: '#2e7d32' }} />
+          <Box sx={{ width: 10, height: 10, borderRadius: '50%', bgcolor: 'success.main' }} />
           <Typography variant="caption">
             {t('dashboard.rentedProperties')}: {rented}
           </Typography>
         </Stack>
         <Stack direction="row" spacing={0.5} sx={{ alignItems: 'center' }}>
-          <Box sx={{ width: 10, height: 10, borderRadius: '50%', bgcolor: '#d32f2f' }} />
+          <Box sx={{ width: 10, height: 10, borderRadius: '50%', bgcolor: 'error.main' }} />
           <Typography variant="caption">
             {t('property.statusVacant')}: {vacant}
           </Typography>
@@ -101,6 +109,7 @@ export function OccupiedDonut({ total, rented, t }: OccupiedDonutProps): React.J
 
 /** 12-month income vs expense trend line chart — inline SVG. */
 export function TrendChart({ trends, t }: TrendChartProps): React.JSX.Element | null {
+  const theme = useTheme()
   if (!trends) return null
   const allPoints = [...trends.income, ...trends.expense]
   if (allPoints.length === 0) return null
@@ -142,12 +151,22 @@ export function TrendChart({ trends, t }: TrendChartProps): React.JSX.Element | 
             y1={padT + chartH * (1 - frac)}
             x2={padL + chartW}
             y2={padT + chartH * (1 - frac)}
-            stroke="#e0e0e0"
+            stroke={theme.palette.divider}
             strokeWidth={0.5}
           />
         ))}
-        <polyline points={linePoints(incomeMap)} fill="none" stroke="#2e7d32" strokeWidth={2} />
-        <polyline points={linePoints(expenseMap)} fill="none" stroke="#d32f2f" strokeWidth={2} />
+        <polyline
+          points={linePoints(incomeMap)}
+          fill="none"
+          stroke={theme.palette.success.main}
+          strokeWidth={2}
+        />
+        <polyline
+          points={linePoints(expenseMap)}
+          fill="none"
+          stroke={theme.palette.error.main}
+          strokeWidth={2}
+        />
         {months.map((m, i) => {
           if (i % 2 !== 0 && i !== months.length - 1) return null
           const x = padL + (months.length > 1 ? i * stepX : chartW / 2)
@@ -160,11 +179,11 @@ export function TrendChart({ trends, t }: TrendChartProps): React.JSX.Element | 
       </svg>
       <Stack direction="row" spacing={2} sx={{ mt: 0.5, justifyContent: 'center' }}>
         <Stack direction="row" spacing={0.5} sx={{ alignItems: 'center' }}>
-          <Box sx={{ width: 16, height: 2, bgcolor: '#2e7d32' }} />
+          <Box sx={{ width: 16, height: 2, bgcolor: 'success.main' }} />
           <Typography variant="caption">{t('dashboard.incomeLabel')}</Typography>
         </Stack>
         <Stack direction="row" spacing={0.5} sx={{ alignItems: 'center' }}>
-          <Box sx={{ width: 16, height: 2, bgcolor: '#d32f2f' }} />
+          <Box sx={{ width: 16, height: 2, bgcolor: 'error.main' }} />
           <Typography variant="caption">{t('dashboard.expensesLabel')}</Typography>
         </Stack>
       </Stack>

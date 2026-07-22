@@ -8,6 +8,7 @@
  */
 import AttachMoneyIcon from '@mui/icons-material/AttachMoney'
 import BusinessIcon from '@mui/icons-material/Business'
+import DashboardIcon from '@mui/icons-material/Dashboard'
 import NotificationsIcon from '@mui/icons-material/Notifications'
 import PaletteIcon from '@mui/icons-material/Palette'
 import ReceiptIcon from '@mui/icons-material/Receipt'
@@ -31,6 +32,7 @@ import { useTranslation } from 'react-i18next'
 
 export const SETTINGS_SECTIONS = [
   { id: 'appearance', icon: <PaletteIcon />, labelKey: 'settings.navAppearance' },
+  { id: 'dashboard', icon: <DashboardIcon />, labelKey: 'settings.navDashboard' },
   { id: 'company', icon: <BusinessIcon />, labelKey: 'settings.navCompany' },
   { id: 'financial', icon: <AttachMoneyIcon />, labelKey: 'settings.navFinancial' },
   { id: 'receipts', icon: <ReceiptIcon />, labelKey: 'settings.navReceipts' },

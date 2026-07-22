@@ -1,4 +1,4 @@
-import { Snackbar, Alert, Slide } from '@mui/material'
+import { Button, Snackbar, Alert, Slide } from '@mui/material'
 import React from 'react'
 import { useTranslation } from 'react-i18next'
 import type { SnackbarState } from '../hooks/useSnackbar'
@@ -9,6 +9,7 @@ import type { SnackbarState } from '../hooks/useSnackbar'
  *             variant="filled", anchored bottom-center, role="status" + aria-live="polite",
  *             close button present and activatable. Message is always an i18n key.
  * DECISION: Slide transition for a clear enter/exit motion; severity drives the Alert color.
+ *           Optional action button (e.g. Undo) rendered when state.action is provided.
  */
 
 interface GlobalSnackbarProps {
@@ -45,6 +46,13 @@ export default function GlobalSnackbar({ state, onClose }: GlobalSnackbarProps):
         role="status"
         aria-live="polite"
         sx={{ width: '100%', alignItems: 'center' }}
+        action={
+          state.action ? (
+            <Button color="inherit" size="small" onClick={state.action.onClick}>
+              {t(state.action.label)}
+            </Button>
+          ) : undefined
+        }
       >
         {t(state.messageKey, state.params)}
       </Alert>

@@ -44,6 +44,7 @@ import React, { useCallback, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import CompanyInfoCard from '../../components/CompanyInfoCard'
 import CountryManagerDialog from '../../components/CountryManagerDialog'
+import DashboardSettingsCard from '../../components/DashboardSettingsCard'
 import GlobalSnackbar from '../../components/GlobalSnackbar'
 import NotificationTemplateManager from '../../components/NotificationTemplateManager'
 import PageHeader from '../../components/PageHeader'
@@ -296,6 +297,9 @@ export default function Settings(): React.JSX.Element {
               </Box>
             </SettingsSection>
           )}
+
+          {/* ── Dashboard ── */}
+          {activeSection === 'dashboard' && <DashboardSettingsCard />}
 
           {/* ── Company ── */}
           {activeSection === 'company' && (

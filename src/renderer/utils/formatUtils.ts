@@ -26,7 +26,10 @@ export function formatCurrency(amount: number, language: string, currency: strin
     minimumFractionDigits: 2,
     maximumFractionDigits: 2
   }).format(amount)
-  return `${formatted} ${currency}`
+  // Strip Unicode directional isolates/marks (U+200E LTR, U+200F RTL, U+2066-U+2069)
+  // that Intl.NumberFormat inserts for negative numbers in RTL locales.
+  const cleaned = formatted.replace(/[\u200E\u200F\u2066\u2067\u2068\u2069]/g, '')
+  return `${cleaned} ${currency}`
 }
 
 /**

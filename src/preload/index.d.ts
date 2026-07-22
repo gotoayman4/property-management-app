@@ -78,6 +78,13 @@ declare global {
         update: (data: unknown) => Promise<unknown>
         delete: (id: number) => Promise<{ success: boolean }>
         generateCode: (params: { country: string; type: string }) => Promise<string>
+        profitability: (data: { property_id: number }) => Promise<{
+          totalIncome: number
+          totalExpenses: number
+          netProfit: number
+          paymentCount: number
+          expenseCount: number
+        }>
       }
       tenants: {
         list: (filters?: {
@@ -216,6 +223,7 @@ declare global {
           backup_enabled?: number
           backup_frequency?: 'daily' | 'weekly'
           backup_time?: string
+          dashboard_hidden_widgets?: string
         }>
         update: (data: unknown) => Promise<{ success: boolean; settings: unknown }>
       }

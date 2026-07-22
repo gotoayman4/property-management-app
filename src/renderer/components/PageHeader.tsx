@@ -1,4 +1,4 @@
-import { Box, Card, Typography } from '@mui/material'
+import { Box, Card, Typography, alpha } from '@mui/material'
 import React from 'react'
 
 /**
@@ -52,7 +52,7 @@ export default function PageHeader({
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            bgcolor: 'rgba(255,255,255,0.15)',
+            bgcolor: (theme) => alpha(theme.palette.common.white, 0.15),
             color: 'common.white',
             flexShrink: 0
           }}

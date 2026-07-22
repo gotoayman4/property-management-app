@@ -45,5 +45,11 @@ export default defineConfig(
       'import-x/no-duplicates': 'warn'
     }
   },
+  {
+    files: ['**/*.d.ts'],
+    rules: {
+      'max-lines': 'off'
+    }
+  },
   eslintConfigPrettier
 )

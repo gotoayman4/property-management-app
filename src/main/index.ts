@@ -34,7 +34,8 @@ function createWindow(): void {
     height: 800,
     show: false,
     autoHideMenuBar: true,
-    ...(process.platform === 'linux' ? { icon } : {}),
+    title: 'مدير العقار | PropManager',
+    icon,
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
       sandbox: false
@@ -106,7 +107,7 @@ app.whenReady().then(() => {
   startBackupScheduler(db)
 
   // Set app user model id for windows
-  electronApp.setAppUserModelId('com.electron')
+  electronApp.setAppUserModelId('com.antigravity.propmanager')
 
   // Default open or close DevTools by F12 in development
   // and ignore CommandOrControl + R in production.
@@ -137,7 +138,7 @@ app.whenReady().then(() => {
         { backup_path: string | null } | undefined
       const backupDir = settings?.backup_path?.trim()
         ? settings.backup_path.trim()
-        : join(app.getPath('documents'), 'PropertyManager', 'Backups')
+        : join(app.getPath('documents'), 'PropManager', 'Backups')
       createBackup(db, backupDir, 'automatic', dbPath)
     } catch {
       /* best-effort — don't block quit */

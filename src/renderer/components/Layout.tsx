@@ -4,8 +4,10 @@ import AttachMoneyIcon from '@mui/icons-material/AttachMoney'
 import AutorenewIcon from '@mui/icons-material/Autorenew'
 import BackupIcon from '@mui/icons-material/Backup'
 import BusinessIcon from '@mui/icons-material/Business'
+import DarkModeIcon from '@mui/icons-material/DarkMode'
 import DashboardIcon from '@mui/icons-material/Dashboard'
 import DescriptionIcon from '@mui/icons-material/Description'
+import LightModeIcon from '@mui/icons-material/LightMode'
 import MenuIcon from '@mui/icons-material/Menu'
 import MenuOpenIcon from '@mui/icons-material/MenuOpen'
 import NotificationsIcon from '@mui/icons-material/Notifications'
@@ -28,11 +30,13 @@ import {
   ListItemText,
   IconButton,
   Tooltip,
-  Badge
+  Badge,
+  alpha
 } from '@mui/material'
 import React, { useCallback, useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, useLocation } from 'react-router-dom'
+import appLogo from '../assets/logo.png'
 import { useUiPreferences } from '../stores/uiPreferencesStore'
 import NotificationBell from './NotificationBell'
 import SearchBar from './SearchBar'
@@ -51,6 +55,8 @@ export default function Layout({ children }: LayoutProps): React.JSX.Element {
   const location = useLocation()
   const sidebarCollapsed = useUiPreferences((s) => s.sidebarCollapsed)
   const toggleSidebar = useUiPreferences((s) => s.toggleSidebar)
+  const themeMode = useUiPreferences((s) => s.theme)
+  const toggleTheme = useUiPreferences((s) => s.toggleTheme)
 
   const currentLanguage = i18n.language
   const direction = currentLanguage === 'ar' ? 'rtl' : 'ltr'
@@ -131,22 +137,50 @@ export default function Layout({ children }: LayoutProps): React.JSX.Element {
 
   const drawer = (
     <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-      <Toolbar sx={{ justifyContent: 'center' }}>
-        <Typography
-          variant="h5"
-          color="primary"
-          sx={{
-            fontWeight: 700,
-            fontSize: sidebarCollapsed ? '0.75rem' : undefined,
-            lineHeight: sidebarCollapsed ? 1 : undefined,
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
-            whiteSpace: 'nowrap',
-            maxWidth: sidebarCollapsed ? drawerCollapsedWidth - 16 : undefined
-          }}
+      <Toolbar
+        sx={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: sidebarCollapsed ? 'center' : 'flex-start',
+          px: sidebarCollapsed ? 1 : 2,
+          minHeight: 64
+        }}
+      >
+        <Tooltip
+          title={sidebarCollapsed ? t('app.brand') : ''}
+          placement={direction === 'rtl' ? 'left' : 'right'}
+          arrow
         >
-          {sidebarCollapsed ? 'أثـيـر' : t('app.brand')}
-        </Typography>
+          <Box
+            component="img"
+            src={appLogo}
+            alt={t('app.brand')}
+            sx={{
+              width: 36,
+              height: 36,
+              borderRadius: '8px',
+              objectFit: 'cover',
+              boxShadow: (theme) => `0 2px 8px ${alpha(theme.palette.primary.main, 0.19)}`,
+              flexShrink: 0
+            }}
+          />
+        </Tooltip>
+        {!sidebarCollapsed && (
+          <Typography
+            variant="h6"
+            color="primary"
+            sx={{
+              fontWeight: 700,
+              fontSize: '1.15rem',
+              ms: 1.5,
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap'
+            }}
+          >
+            {t('app.brand')}
+          </Typography>
+        )}
       </Toolbar>
       <Divider />
       <List sx={{ flexGrow: 1, px: sidebarCollapsed ? 0.5 : 1 }}>
@@ -267,9 +301,16 @@ export default function Layout({ children }: LayoutProps): React.JSX.Element {
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
             <SearchBar onInputMount={handleSearchInputMount} />
             <NotificationBell />
-            <IconButton color="inherit" onClick={toggleLanguage}>
-              <TranslateIcon />
-            </IconButton>
+            <Tooltip title={t('sidebar.toggleTheme')} arrow>
+              <IconButton color="inherit" onClick={toggleTheme}>
+                {themeMode === 'dark' ? <LightModeIcon /> : <DarkModeIcon />}
+              </IconButton>
+            </Tooltip>
+            <Tooltip title={t('sidebar.toggleLanguage')} arrow>
+              <IconButton color="inherit" onClick={toggleLanguage}>
+                <TranslateIcon />
+              </IconButton>
+            </Tooltip>
           </Box>
         </Toolbar>
       </AppBar>
