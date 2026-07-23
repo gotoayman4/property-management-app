@@ -1,7 +1,5 @@
 import { ipcMain } from 'electron'
 import { z } from 'zod'
-
-const isDev = process.env.NODE_ENV !== 'production'
 import { db } from '../db/database'
 import {
   createPayment,
@@ -10,6 +8,8 @@ import {
   PaymentError,
   type CreatePaymentInput
 } from '../db/paymentRepository'
+
+const isDev = process.env.NODE_ENV !== 'production'
 
 /**
  * INTENT: IPC handlers for the payments (income) domain — channels use the domain:verb convention.

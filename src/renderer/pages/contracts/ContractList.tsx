@@ -50,8 +50,7 @@ interface Contract {
 type PendingAction = { id: number; kind: 'terminate' | 'delete' } | null
 
 export function ContractList(): React.ReactElement {
-  const { t, i18n } = useTranslation()
-  const isRtl = i18n.language === 'ar'
+  const { t } = useTranslation()
   const navigate = useNavigate()
   const { snack, showError, showSuccess, hideSnackbar } = useSnackbar()
   const [contracts, setContracts] = useState<Contract[]>([])
@@ -295,8 +294,7 @@ export function ContractList(): React.ReactElement {
         action={
           <Button
             variant="contained"
-            startIcon={isRtl ? undefined : <AddIcon />}
-            endIcon={isRtl ? <AddIcon /> : undefined}
+            startIcon={<AddIcon />}
             onClick={handleAddClick}
             sx={{ px: 3, py: 1, borderRadius: 2 }}
           >

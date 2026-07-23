@@ -6,17 +6,14 @@
  * DECISION: Standalone component that manages its own data loading so it works
  *           identically regardless of which parent renders it.
  */
-import AddIcon from '@mui/icons-material/Add'
 import CheckCircleIcon from '@mui/icons-material/CheckCircle'
 import EditIcon from '@mui/icons-material/Edit'
 import RemoveCircleIcon from '@mui/icons-material/RemoveCircle'
 import {
-  Autocomplete,
   Box,
   Button,
   Card,
   CardContent,
-  Chip,
   Dialog,
   DialogTitle,
   DialogContent,
@@ -37,6 +34,7 @@ import { useTranslation } from 'react-i18next'
 import { worldCountries, type WorldCountry } from '../data/worldCountries'
 import { getLocalizedCountryName } from '../utils/countryUtils'
 import ConfirmDialog from './ConfirmDialog'
+import { CountryFormCard } from './CountryFormCard'
 
 interface CountryRow {
   id: number
@@ -105,7 +103,7 @@ export default function CountryManagerDialog({
         window.api.settings.get()
       ])
       setCountries(countryList)
-      setDefaultCountry(settingsData.default_country ?? null)
+      setDefaultCountry(settingsData?.default_country ?? null)
     } catch {
       // Silent — parent handles errors via snackbar
     } finally {
@@ -381,111 +379,18 @@ export default function CountryManagerDialog({
               )}
 
               {/* Add Country Form */}
-              {!showAddForm ? (
-                <Button startIcon={<AddIcon />} onClick={() => setShowAddForm(true)} sx={{ mt: 2 }}>
-                  {t('countries.addTitle')}
-                </Button>
-              ) : (
-                <Card variant="outlined" sx={{ mt: 2 }}>
-                  <CardContent sx={{ p: 2, '&:last-child': { pb: 2 } }}>
-                    <Typography variant="subtitle2" sx={{ mb: 1.5 }}>
-                      {t('countries.addTitle')}
-                    </Typography>
-
-                    <Autocomplete
-                      fullWidth
-                      size="small"
-                      options={availableWorldCountries}
-                      getOptionLabel={(option) => `${localizedName(option)} (${option.code})`}
-                      value={selectedWorldCountry}
-                      onChange={(_, value) => setSelectedWorldCountry(value)}
-                      filterOptions={(options, { inputValue }) =>
-                        options.filter(
-                          (o) =>
-                            localizedName(o).toLowerCase().includes(inputValue.toLowerCase()) ||
-                            o.code.toLowerCase().includes(inputValue.toLowerCase())
-                        )
-                      }
-                      noOptionsText={t('countries.noMatch')}
-                      renderOption={(props, option) => (
-                        <Box
-                          component="li"
-                          {...props}
-                          sx={{ display: 'flex', justifyContent: 'space-between', gap: 1 }}
-                        >
-                          <span>{localizedName(option)}</span>
-                          <Chip
-                            label={`${option.code} · ${option.default_currency}`}
-                            size="small"
-                            variant="outlined"
-                            sx={{ flexShrink: 0 }}
-                          />
-                        </Box>
-                      )}
-                      renderInput={(params) => (
-                        <TextField
-                          {...params}
-                          label={t('countries.searchCountry')}
-                          placeholder={t('countries.searchCountryPlaceholder')}
-                        />
-                      )}
-                    />
-
-                    {/* Show selected country details */}
-                    {selectedWorldCountry && (
-                      <Box
-                        sx={{
-                          mt: 1.5,
-                          p: 1.5,
-                          bgcolor: 'action.selected',
-                          borderRadius: 1,
-                          display: 'flex',
-                          gap: 2,
-                          flexWrap: 'wrap'
-                        }}
-                      >
-                        <Typography variant="body2">
-                          <strong>{t('countries.code')}:</strong> {selectedWorldCountry.code}
-                        </Typography>
-                        <Typography variant="body2">
-                          <strong>{t('countries.name')}:</strong>{' '}
-                          {localizedName(selectedWorldCountry)}
-                        </Typography>
-                        <Typography variant="body2">
-                          <strong>{t('countries.defaultCurrency')}:</strong>{' '}
-                          {selectedWorldCountry.default_currency}
-                        </Typography>
-                      </Box>
-                    )}
-
-                    {addError && (
-                      <FormHelperText error sx={{ mt: 1 }}>
-                        {addError}
-                      </FormHelperText>
-                    )}
-                    <Box sx={{ display: 'flex', gap: 1, mt: 1.5 }}>
-                      <Button
-                        variant="contained"
-                        size="small"
-                        onClick={handleAdd}
-                        disabled={!selectedWorldCountry}
-                      >
-                        {t('common.add')}
-                      </Button>
-                      <Button
-                        size="small"
-                        onClick={() => {
-                          setShowAddForm(false)
-                          setSelectedWorldCountry(null)
-                          setAddError('')
-                        }}
-                      >
-                        {t('common.cancel')}
-                      </Button>
-                    </Box>
-                  </CardContent>
-                </Card>
-              )}
+              <CountryFormCard
+                showAddForm={showAddForm}
+                setShowAddForm={setShowAddForm}
+                availableWorldCountries={availableWorldCountries}
+                selectedWorldCountry={selectedWorldCountry}
+                setSelectedWorldCountry={setSelectedWorldCountry}
+                localizedName={localizedName}
+                handleAddSubmit={async () => {
+                  await handleAdd()
+                }}
+                addError={addError}
+              />
             </>
           )}
         </DialogContent>

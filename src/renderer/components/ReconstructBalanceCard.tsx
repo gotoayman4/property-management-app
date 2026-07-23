@@ -46,12 +46,7 @@ export default function ReconstructBalanceCard({
           </Button>
         </Grid>
         <Grid size={{ xs: 12, sm: 5 }} sx={{ textAlign: isRtl ? 'left' : 'right' }}>
-          <Button
-            variant="contained"
-            startIcon={isRtl ? undefined : <AddIcon />}
-            endIcon={isRtl ? <AddIcon /> : undefined}
-            onClick={onOpenAdjustment}
-          >
+          <Button variant="contained" startIcon={<AddIcon />} onClick={onOpenAdjustment}>
             {t('ledger.addManualAdjustment')}
           </Button>
         </Grid>

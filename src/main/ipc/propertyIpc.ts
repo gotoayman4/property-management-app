@@ -1,9 +1,9 @@
 import { ipcMain } from 'electron'
 import { z } from 'zod'
-
-const isDev = process.env.NODE_ENV !== 'production'
 import { getNextPropertyCode } from '../db/codeGenerator'
 import { db } from '../db/database'
+
+const isDev = process.env.NODE_ENV !== 'production'
 
 // Define validation schemas for property creation/update
 const propertyCreateSchema = z.object({

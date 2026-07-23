@@ -329,8 +329,7 @@ export default function Layout({ children }: LayoutProps): React.JSX.Element {
       >
         <Drawer
           variant="permanent"
-          anchor={direction === 'rtl' ? 'right' : 'left'}
-
+          anchor="left"
           dir={direction}
           sx={{
             display: { xs: 'none', sm: 'block' },

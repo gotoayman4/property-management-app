@@ -1,9 +1,9 @@
 import { ipcMain } from 'electron'
 import { z } from 'zod'
-
-const isDev = process.env.NODE_ENV !== 'production'
 import { getNextTenantCode } from '../db/codeGenerator'
 import { db } from '../db/database'
+
+const isDev = process.env.NODE_ENV !== 'production'
 
 // Define Zod validation schemas for Tenant (SRS §8 + FR-TEN-01)
 const tenantCreateSchema = z.object({

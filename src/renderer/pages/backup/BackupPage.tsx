@@ -172,7 +172,7 @@ export default function BackupPage(): React.ReactElement {
           filePath: res.filePath,
           confirm: false
         })
-        if (restoreRes.backupInfo) {
+        if ('backupInfo' in restoreRes && restoreRes.backupInfo) {
           setSelectedBackup(restoreRes.backupInfo as BackupRow)
           setRestoreConfirmText('')
           setSelectDialogOpen(false)
@@ -194,11 +194,16 @@ export default function BackupPage(): React.ReactElement {
         confirm: true
       })
       setRestoreDialogOpen(false)
-      if (result.success && result.requiresRestart) {
+      if (
+        'success' in result &&
+        result.success &&
+        'requiresRestart' in result &&
+        result.requiresRestart
+      ) {
         // INTENT: Don't auto-restart — the user might have unsaved view state.
         //         Prompt explicitly; "Restart Now" calls window.api.backup.relaunch().
         setRestartDialogOpen(true)
-      } else {
+      } else if ('error' in result) {
         showError(result.error || 'backup.restoreFailed')
       }
     } catch {

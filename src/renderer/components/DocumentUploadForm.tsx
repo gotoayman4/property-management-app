@@ -76,8 +76,7 @@ export default function DocumentUploadForm({
   entityId,
   onSuccess
 }: DocumentUploadFormProps): React.ReactElement {
-  const { t, i18n } = useTranslation()
-  const isRtl = i18n.language === 'ar'
+  const { t } = useTranslation()
   const { snack, showError, showSuccess, hideSnackbar } = useSnackbar()
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
@@ -176,8 +175,7 @@ export default function DocumentUploadForm({
         <Button
           variant="outlined"
           component="label"
-          startIcon={isRtl ? undefined : <UploadIcon />}
-          endIcon={isRtl ? <UploadIcon /> : undefined}
+          startIcon={<UploadIcon />}
           sx={{ alignSelf: 'flex-start' }}
         >
           {selectedFile ? selectedFile.name : t('documents.selectFile')}
@@ -270,8 +268,7 @@ export default function DocumentUploadForm({
           type="submit"
           variant="contained"
           disabled={!selectedFile || uploading}
-          startIcon={isRtl ? undefined : <UploadIcon />}
-          endIcon={isRtl ? <UploadIcon /> : undefined}
+          startIcon={<UploadIcon />}
         >
           {uploading ? t('documents.uploading') : t('documents.upload')}
         </Button>

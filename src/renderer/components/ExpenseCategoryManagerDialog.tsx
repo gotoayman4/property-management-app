@@ -165,13 +165,7 @@ export default function ExpenseCategoryManagerDialog({
               onChange={(e) => setNewCategoryName(e.target.value)}
               sx={{ flexGrow: 1 }}
             />
-            <Button
-              variant="contained"
-              size="small"
-              startIcon={isRtl ? undefined : <AddIcon />}
-              endIcon={isRtl ? <AddIcon /> : undefined}
-              onClick={handleAdd}
-            >
+            <Button variant="contained" size="small" startIcon={<AddIcon />} onClick={handleAdd}>
               {t('common.add')}
             </Button>
           </Box>

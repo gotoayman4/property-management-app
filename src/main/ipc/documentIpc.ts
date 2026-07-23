@@ -14,9 +14,9 @@ import { join, basename } from 'path'
 import { ipcMain, app } from 'electron'
 import { fromBuffer } from 'file-type'
 import { z } from 'zod'
+import { db } from '../db/database'
 
 const isDev = process.env.NODE_ENV !== 'production'
-import { db } from '../db/database'
 
 // FR-DOC-03 / SRS §9.11: PDF, JPG, PNG, DOCX, XLSX.
 // file-type@16.5.4 returns the long OOXML MIME types for Office files.

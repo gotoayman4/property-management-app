@@ -306,20 +306,7 @@ export default function Ledger(): React.ReactElement {
           <Button
             variant="contained"
             startIcon={
-              isRtl ? undefined : exporting ? (
-                <CircularProgress size={18} color="inherit" />
-              ) : (
-                <FileDownloadIcon />
-              )
-            }
-            endIcon={
-              isRtl ? (
-                exporting ? (
-                  <CircularProgress size={18} color="inherit" />
-                ) : (
-                  <FileDownloadIcon />
-                )
-              ) : undefined
+              exporting ? <CircularProgress size={18} color="inherit" /> : <FileDownloadIcon />
             }
             onClick={handleExportExcel}
             disabled={!selectedPropertyId || exporting}

@@ -5,6 +5,7 @@
  *
  * CONSTRAINT: All message bodies are resolved using tenant preferred_language (or app_language).
  */
+import { type Database } from 'better-sqlite3'
 import { db } from '../db/database'
 import { type TriggerType } from './notificationTemplates'
 
@@ -41,18 +42,19 @@ function resolveLanguage(tenantPrefLang: string | null | undefined, appLanguage:
   return appLanguage || 'en'
 }
 
-export function evaluateNotifications(): void {
-  const settings = db.prepare('SELECT * FROM settings WHERE id = 1').get() as {
+export function evaluateNotifications(dbParam?: Database): void {
+  const targetDb = dbParam || db
+  const settings = targetDb.prepare('SELECT * FROM settings WHERE id = 1').get() as {
     app_language: string
     reminder_days_before_due: number
     reminder_days_before_contract_end: number
     reminder_days_before_document_expiry: number
     reminder_days_before_recurring_expense: number
   }
-  const appLanguage = settings.app_language || 'en'
+  const appLanguage = settings?.app_language || 'en'
 
   // Pre-load all notification templates in a single query to eliminate N+1 lookup queries
-  const templateRows = db
+  const templateRows = targetDb
     .prepare('SELECT trigger_type, language, message_body FROM notification_templates')
     .all() as Array<{ trigger_type: string; language: string; message_body: string }>
   const templateMap = new Map<string, string>()
@@ -60,11 +62,11 @@ export function evaluateNotifications(): void {
     templateMap.set(`${row.trigger_type}:${row.language}`, row.message_body)
   }
 
-  db.transaction(() => {
+  targetDb.transaction(() => {
     // 1. Rent Due (contracts active, end_date >= today, next payment within N days)
     const today = new Date().toISOString().split('T')[0]
 
-    const rentDueContracts = db
+    const rentDueContracts = targetDb
       .prepare(
         `SELECT c.id, c.start_date, c.end_date, c.rent_amount, c.currency, c.tenant_id,
                 p.name as property_name, t.fullname as tenant_name, t.preferred_language as tenant_lang
@@ -85,7 +87,7 @@ export function evaluateNotifications(): void {
       tenant_lang: string | null
     }>
 
-    const insert = db.prepare(`
+    const insert = targetDb.prepare(`
       INSERT INTO notifications (notification_type, entity_type, entity_id, title, message, message_key, message_vars, due_date)
       SELECT ?, ?, ?, ?, ?, ?, ?, ?
       WHERE NOT EXISTS (
@@ -120,7 +122,7 @@ export function evaluateNotifications(): void {
     }
 
     // 2. Overdue Payments
-    const overdueContracts = db
+    const overdueContracts = targetDb
       .prepare(
         `SELECT c.id, c.end_date, c.rent_amount, c.currency, c.tenant_id,
                 p.name as property_name, t.fullname as tenant_name, t.preferred_language as tenant_lang
@@ -171,7 +173,7 @@ export function evaluateNotifications(): void {
     contractExpThreshold.setDate(contractExpThreshold.getDate() + contractExpDays)
     const contractExpStr = contractExpThreshold.toISOString().split('T')[0]
 
-    const expiringContracts = db
+    const expiringContracts = targetDb
       .prepare(
         `SELECT c.id, c.end_date, p.name as property_name, t.fullname as tenant_name, t.preferred_language as tenant_lang
          FROM contracts c
@@ -217,7 +219,7 @@ export function evaluateNotifications(): void {
     escalationThreshold.setDate(escalationThreshold.getDate() + 14)
     const escalationThresholdStr = escalationThreshold.toISOString().split('T')[0]
 
-    const upcomingEscalations = db
+    const upcomingEscalations = targetDb
       .prepare(
         `SELECT s.id, s.contract_id, s.effective_start_date AS effective_date, s.rent_amount AS new_rent_amount,
                 p.name as property_name, t.fullname as tenant_name, t.preferred_language as tenant_lang
@@ -268,7 +270,7 @@ export function evaluateNotifications(): void {
     docThreshold.setDate(docThreshold.getDate() + docDays)
     const docThresholdStr = docThreshold.toISOString().split('T')[0]
 
-    const expiringDocuments = db
+    const expiringDocuments = targetDb
       .prepare(
         `SELECT id, file_name AS name, COALESCE(document_type, mime_type) AS type, expiry_date
          FROM documents
@@ -310,7 +312,7 @@ export function evaluateNotifications(): void {
     recThreshold.setDate(recThreshold.getDate() + recDays)
     const recThresholdStr = recThreshold.toISOString().split('T')[0]
 
-    const activeTemplates = db
+    const activeTemplates = targetDb
       .prepare(
         `SELECT id, name, amount, currency, day_of_month, frequency, next_due_date
          FROM recurring_expense_templates

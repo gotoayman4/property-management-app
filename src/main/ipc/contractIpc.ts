@@ -1,7 +1,5 @@
 import { ipcMain } from 'electron'
 import { z } from 'zod'
-
-const isDev = process.env.NODE_ENV !== 'production'
 import {
   validateEscalationSchedule,
   persistSchedule,
@@ -12,6 +10,8 @@ import { checkOverlap, syncPropertyStatus, logHistory } from '../db/contractHelp
 import { db } from '../db/database'
 import { appendLedgerEntry } from '../db/ledgerService'
 import { createPayment } from '../db/paymentRepository'
+
+const isDev = process.env.NODE_ENV !== 'production'
 
 /**
  * INTENT: IPC handlers for the contracts domain (renamed from leases) + multi-year escalation.

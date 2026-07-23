@@ -35,8 +35,7 @@ interface NotificationRow {
 }
 
 export default function NotificationCenter(): React.ReactElement {
-  const { t, i18n } = useTranslation()
-  const isRtl = i18n.language === 'ar'
+  const { t } = useTranslation()
   const { snack, showError, showSuccess, hideSnackbar } = useSnackbar()
 
   const [tab, setTab] = useState(0)
@@ -225,12 +224,7 @@ export default function NotificationCenter(): React.ReactElement {
         subtitle={`${unreadCount} ${t('notification.unread')}`}
         action={
           unreadCount > 0 ? (
-            <Button
-              variant="outlined"
-              startIcon={isRtl ? undefined : <MarkAllReadIcon />}
-              endIcon={isRtl ? <MarkAllReadIcon /> : undefined}
-              onClick={handleMarkAllRead}
-            >
+            <Button variant="outlined" startIcon={<MarkAllReadIcon />} onClick={handleMarkAllRead}>
               {t('notifications.markAllRead')}
             </Button>
           ) : undefined

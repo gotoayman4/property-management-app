@@ -1,7 +1,5 @@
 import { ipcMain } from 'electron'
 import { z } from 'zod'
-
-const isDev = process.env.NODE_ENV !== 'production'
 import { db } from '../db/database'
 import {
   createExpense,
@@ -14,6 +12,8 @@ import {
   ExpenseError,
   type CreateExpenseInput
 } from '../db/expenseRepository'
+
+const isDev = process.env.NODE_ENV !== 'production'
 
 /**
  * INTENT: IPC handlers for the expenses domain. All writes delegate to expenseRepository which

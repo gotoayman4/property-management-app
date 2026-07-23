@@ -241,8 +241,7 @@ export function TenantList(): React.ReactElement {
         action={
           <Button
             variant="contained"
-            startIcon={isRtl ? undefined : <AddIcon />}
-            endIcon={isRtl ? <AddIcon /> : undefined}
+            startIcon={<AddIcon />}
             onClick={handleAddClick}
             sx={{ px: 3, py: 1, borderRadius: 2 }}
           >

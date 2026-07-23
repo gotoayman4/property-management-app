@@ -62,6 +62,7 @@ const templateListFiltersSchema = z
     frequency: FREQUENCY_ENUM.optional()
   })
   .optional()
+  .nullable()
 
 const idSchema = z.number().int().positive()
 
@@ -81,12 +82,11 @@ const confirmSchema = z.object({
 export function registerRecurringExpenseIpcHandlers(): void {
   ipcMain.handle('recurringExpenses:list', async (_, rawFilters: unknown) => {
     try {
-      const filters = templateListFiltersSchema.parse(rawFilters)
+      const filters = rawFilters ? templateListFiltersSchema.parse(rawFilters) : undefined
       let query = `
         SELECT t.*,
-               p.name as property_name,
-               c.name_ar as category_name_ar, c.name_en as category_name_en, c.name_tr as category_name_tr,
-               c.icon as category_icon
+               p.name as property_name, p.code as property_code,
+               c.name_key as category_name_key
         FROM recurring_expense_templates t
         LEFT JOIN properties p ON t.property_id = p.id
         LEFT JOIN expense_categories c ON t.category_id = c.id
@@ -119,7 +119,9 @@ export function registerRecurringExpenseIpcHandlers(): void {
           is_ended: isEnded
         }
       })
-    } catch {
+    } catch (err) {
+      if (process.env.NODE_ENV !== 'production')
+        console.error('Error listing recurring expenses:', err)
       throw new Error('FAILED_TO_LIST_RECURRING_TEMPLATES')
     }
   })
@@ -130,9 +132,8 @@ export function registerRecurringExpenseIpcHandlers(): void {
       const row = db
         .prepare(
           `SELECT t.*,
-                  p.name as property_name,
-                  c.name_ar as category_name_ar, c.name_en as category_name_en, c.name_tr as category_name_tr,
-                  c.icon as category_icon
+                  p.name as property_name, p.code as property_code,
+                  c.name_key as category_name_key
            FROM recurring_expense_templates t
            LEFT JOIN properties p ON t.property_id = p.id
            LEFT JOIN expense_categories c ON t.category_id = c.id
@@ -286,6 +287,34 @@ export function registerRecurringExpenseIpcHandlers(): void {
     }
   })
 
+  ipcMain.handle('recurringExpenses:activate', async (_, rawId: unknown) => {
+    try {
+      const id = idSchema.parse(rawId)
+      const res = db
+        .prepare('UPDATE recurring_expense_templates SET is_active = 1 WHERE id = ?')
+        .run(id)
+      if (res.changes === 0) throw new Error('RECURRING_TEMPLATE_NOT_FOUND')
+      return { success: true, is_active: true }
+    } catch (err) {
+      if (err instanceof Error && err.message === 'RECURRING_TEMPLATE_NOT_FOUND') throw err
+      throw new Error('FAILED_TO_ACTIVATE_RECURRING_TEMPLATE')
+    }
+  })
+
+  ipcMain.handle('recurringExpenses:deactivate', async (_, rawId: unknown) => {
+    try {
+      const id = idSchema.parse(rawId)
+      const res = db
+        .prepare('UPDATE recurring_expense_templates SET is_active = 0 WHERE id = ?')
+        .run(id)
+      if (res.changes === 0) throw new Error('RECURRING_TEMPLATE_NOT_FOUND')
+      return { success: true, is_active: false }
+    } catch (err) {
+      if (err instanceof Error && err.message === 'RECURRING_TEMPLATE_NOT_FOUND') throw err
+      throw new Error('FAILED_TO_DEACTIVATE_RECURRING_TEMPLATE')
+    }
+  })
+
   ipcMain.handle('recurringExpenses:toggleActive', async (_, rawId: unknown) => {
     try {
       const id = idSchema.parse(rawId)
@@ -295,9 +324,10 @@ export function registerRecurringExpenseIpcHandlers(): void {
       if (!row) throw new Error('RECURRING_TEMPLATE_NOT_FOUND')
 
       const nextActive = row.is_active === 1 ? 0 : 1
-      db.prepare(
-        'UPDATE recurring_expense_templates SET is_active = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?'
-      ).run(nextActive, id)
+      db.prepare('UPDATE recurring_expense_templates SET is_active = ? WHERE id = ?').run(
+        nextActive,
+        id
+      )
 
       return { success: true, is_active: nextActive === 1 }
     } catch (err) {
@@ -438,7 +468,42 @@ export function registerRecurringExpenseIpcHandlers(): void {
   ipcMain.handle('recurringExpenses:confirm', handleConfirm)
   ipcMain.handle('recurringExpenses:confirmInstance', handleConfirm)
 
-  ipcMain.handle('recurringExpenses:logList', async (_, rawTemplateId: unknown) => {
+  ipcMain.handle('recurringExpenses:pendingDue', async () => {
+    try {
+      const today = toLocalISODate(new Date())
+      const rows = db
+        .prepare(
+          `SELECT t.id as template_id,
+                  t.name,
+                  t.property_id,
+                  p.name as property_name,
+                  t.next_due_date as due_date,
+                  t.amount,
+                  t.currency,
+                  t.vendor_name,
+                  t.frequency
+           FROM recurring_expense_templates t
+           LEFT JOIN properties p ON t.property_id = p.id
+           WHERE t.is_active = 1
+             AND t.next_due_date IS NOT NULL
+             AND t.next_due_date <= ?
+             AND (t.end_date IS NULL OR t.end_date >= t.next_due_date)
+             AND NOT EXISTS (
+               SELECT 1 FROM recurring_expense_log l
+               WHERE l.template_id = t.id AND l.due_date = t.next_due_date
+             )
+           ORDER BY t.next_due_date ASC, t.name ASC`
+        )
+        .all(today)
+      return rows
+    } catch (err) {
+      if (process.env.NODE_ENV !== 'production')
+        console.error('Error in recurringExpenses:pendingDue:', err)
+      throw new Error('FAILED_TO_GET_PENDING_DUE_RECURRING_EXPENSES')
+    }
+  })
+
+  const handleLogList = async (_: unknown, rawTemplateId: unknown): Promise<unknown[]> => {
     try {
       const templateId = idSchema.parse(rawTemplateId)
       return db
@@ -453,7 +518,10 @@ export function registerRecurringExpenseIpcHandlers(): void {
     } catch {
       throw new Error('FAILED_TO_LIST_RECURRING_LOGS')
     }
-  })
+  }
+
+  ipcMain.handle('recurringExpenses:log', handleLogList)
+  ipcMain.handle('recurringExpenses:logList', handleLogList)
 
   ipcMain.handle('recurringExpenses:evaluate', async () => {
     try {

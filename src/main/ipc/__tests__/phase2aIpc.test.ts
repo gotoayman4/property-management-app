@@ -224,6 +224,49 @@ describe('recurringExpenseIpc', () => {
       .get(templateId) as { is_active: number }
     expect(row.is_active).toBe(0)
   })
+
+  it('lists recurring expense templates with proper joined category and property names', async () => {
+    const templateId = seedTemplate('2026-01-01')
+    const list = (await invoke(registry, 'recurringExpenses:list')) as Array<{
+      id: number
+      property_name: string
+      category_name_key: string
+    }>
+    expect(list.length).toBe(1)
+    expect(list[0].id).toBe(templateId)
+    expect(list[0].property_name).toBe('Recurring Prop')
+    expect(list[0].category_name_key).toBe('expense.category.maintenance')
+  })
+
+  it('activates and deactivates a template via IPC', async () => {
+    const templateId = seedTemplate('2026-01-01', 1)
+    await invoke(registry, 'recurringExpenses:deactivate', templateId)
+    let row = testDb
+      .prepare('SELECT is_active FROM recurring_expense_templates WHERE id = ?')
+      .get(templateId) as { is_active: number }
+    expect(row.is_active).toBe(0)
+
+    await invoke(registry, 'recurringExpenses:activate', templateId)
+    row = testDb
+      .prepare('SELECT is_active FROM recurring_expense_templates WHERE id = ?')
+      .get(templateId) as { is_active: number }
+    expect(row.is_active).toBe(1)
+  })
+
+  it('returns pending due recurring expenses via pendingDue IPC', async () => {
+    const templateId = seedTemplate('2020-01-01')
+    testDb
+      .prepare('UPDATE recurring_expense_templates SET next_due_date = ? WHERE id = ?')
+      .run('2020-02-01', templateId)
+
+    const pending = (await invoke(registry, 'recurringExpenses:pendingDue')) as Array<{
+      template_id: number
+      due_date: string
+    }>
+    expect(pending.length).toBe(1)
+    expect(pending[0].template_id).toBe(templateId)
+    expect(pending[0].due_date).toBe('2020-02-01')
+  })
 })
 
 describe('notificationIpc', () => {

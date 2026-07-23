@@ -67,7 +67,6 @@ function todayISO(): string {
 
 export function RecurringExpenseList(): React.ReactElement {
   const { t, i18n } = useTranslation()
-  const isRtl = i18n.language === 'ar'
   const { snack, showError, showSuccess, hideSnackbar } = useSnackbar()
 
   const [templates, setTemplates] = useState<RecurringTemplate[]>([])
@@ -286,8 +285,7 @@ export function RecurringExpenseList(): React.ReactElement {
         action={
           <Button
             variant="contained"
-            startIcon={isRtl ? undefined : <AddIcon />}
-            endIcon={isRtl ? <AddIcon /> : undefined}
+            startIcon={<AddIcon />}
             onClick={() => {
               setEditTarget(null)
               setOpenForm(true)

@@ -174,7 +174,11 @@ export function ReceiptDialog({
                 {t('payment.paymentMethod')}
               </Typography>
               <Typography variant="body1" sx={{ fontWeight: 500 }}>
-                {payment.payment_method || t('common.none')}
+                {payment.payment_method
+                  ? t(
+                      `payment.method${payment.payment_method.charAt(0).toUpperCase() + payment.payment_method.slice(1)}`
+                    )
+                  : t('common.none')}
               </Typography>
             </Grid>
 

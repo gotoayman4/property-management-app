@@ -181,8 +181,7 @@ export function ExpenseList(): React.ReactElement {
         action={
           <Button
             variant="contained"
-            startIcon={isRtl ? undefined : <AddIcon />}
-            endIcon={isRtl ? <AddIcon /> : undefined}
+            startIcon={<AddIcon />}
             onClick={() => setOpenDialog(true)}
             sx={{ px: 3, py: 1, borderRadius: 2 }}
           >
