@@ -56,8 +56,8 @@ export const getTheme = (
         dark: '#075985'
       },
       background: {
-        default: mode === 'dark' ? '#0f172a' : '#f8fafc',
-        paper: mode === 'dark' ? '#1e293b' : '#ffffff'
+        default: mode === 'dark' ? '#0b1329' : '#f8fafc',
+        paper: mode === 'dark' ? '#131f37' : '#ffffff'
       },
       text: {
         primary: mode === 'dark' ? '#f1f5f9' : '#0f172a',
@@ -68,12 +68,12 @@ export const getTheme = (
       fontFamily: isRtl
         ? '"Cairo", "Tajawal", "Roboto", "Helvetica", "Arial", sans-serif'
         : '"Outfit", "Inter", "Roboto", "Helvetica", "Arial", sans-serif',
-      h1: { fontSize: fn(2.25 * 16), fontWeight: 700 },
-      h2: { fontSize: fn(1.875 * 16), fontWeight: 700 },
-      h3: { fontSize: fn(1.5 * 16), fontWeight: 600 },
-      h4: { fontSize: fn(1.25 * 16), fontWeight: 600 },
-      h5: { fontSize: fn(1 * 16), fontWeight: 600 },
-      h6: { fontSize: fn(0.875 * 16), fontWeight: 600 },
+      h1: { fontSize: fn(2.25 * 16), fontWeight: 700, lineHeight: isRtl ? 1.4 : 1.2 },
+      h2: { fontSize: fn(1.875 * 16), fontWeight: 700, lineHeight: isRtl ? 1.4 : 1.25 },
+      h3: { fontSize: fn(1.5 * 16), fontWeight: 600, lineHeight: isRtl ? 1.45 : 1.3 },
+      h4: { fontSize: fn(1.25 * 16), fontWeight: 600, lineHeight: isRtl ? 1.5 : 1.35 },
+      h5: { fontSize: fn(1 * 16), fontWeight: 600, lineHeight: isRtl ? 1.55 : 1.4 },
+      h6: { fontSize: fn(0.875 * 16), fontWeight: 600, lineHeight: isRtl ? 1.6 : 1.43 },
       body1: { fontSize: fn(16), lineHeight: isRtl ? 1.75 : 1.5 },
       body2: { fontSize: fn(14), lineHeight: isRtl ? 1.7 : 1.43 },
       button: { fontWeight: 600, textTransform: 'none' }
@@ -99,8 +99,12 @@ export const getTheme = (
             padding: '8px 16px',
             fontSize: '0.875rem',
             boxShadow: 'none',
+            transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+            '&:active': {
+              transform: 'scale(0.98)'
+            },
             '&:hover': {
-              boxShadow: '0px 2px 4px rgba(15, 23, 42, 0.08)'
+              boxShadow: '0px 3px 6px rgba(15, 23, 42, 0.1)'
             }
           }
         }
@@ -111,10 +115,41 @@ export const getTheme = (
             borderRadius: 16,
             boxShadow:
               theme.palette.mode === 'dark'
-                ? '0px 4px 8px rgba(0, 0, 0, 0.3)'
-                : '0px 4px 8px rgba(15, 23, 42, 0.05)',
-            border: `1px solid ${theme.palette.divider}`
+                ? '0px 4px 12px rgba(0, 0, 0, 0.35)'
+                : '0px 4px 12px rgba(15, 23, 42, 0.04)',
+            border: `1px solid ${theme.palette.divider}`,
+            transition: 'transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out'
           })
+        }
+      },
+      MuiChip: {
+        styleOverrides: {
+          root: {
+            fontWeight: 600,
+            borderRadius: 6
+          }
+        }
+      },
+      MuiOutlinedInput: {
+        styleOverrides: {
+          root: ({ theme }) => ({
+            transition: 'border-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out',
+            '&.Mui-focused': {
+              boxShadow: `0 0 0 3px ${
+                theme.palette.mode === 'dark'
+                  ? 'rgba(59, 130, 246, 0.25)'
+                  : 'rgba(30, 58, 138, 0.15)'
+              }`
+            }
+          })
+        }
+      },
+      MuiBackdrop: {
+        styleOverrides: {
+          root: {
+            backdropFilter: 'blur(4px)',
+            backgroundColor: 'rgba(15, 23, 42, 0.5)'
+          }
         }
       },
       MuiFormLabel: {

@@ -6,7 +6,8 @@ import {
   DialogActions,
   IconButton,
   Typography,
-  Box
+  Box,
+  alpha
 } from '@mui/material'
 import React, { useState } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -66,7 +67,12 @@ export default function StandardDialog({
       sx={{
         '& .MuiDialog-paper': {
           borderRadius: 4,
-          p: 1
+          p: 0.5,
+          boxShadow: (theme) =>
+            theme.palette.mode === 'dark'
+              ? '0px 16px 32px rgba(0, 0, 0, 0.5)'
+              : '0px 16px 32px rgba(15, 23, 42, 0.12)',
+          border: (theme) => `1px solid ${theme.palette.divider}`
         }
       }}
     >
@@ -82,7 +88,12 @@ export default function StandardDialog({
           onClick={handleCancelClick}
           sx={{
             color: 'text.secondary',
-            marginInlineStart: 'auto'
+            marginInlineStart: 'auto',
+            transition: 'all 0.2s ease-in-out',
+            '&:hover': {
+              bgcolor: (theme) => alpha(theme.palette.action.hover, 0.8),
+              color: 'text.primary'
+            }
           }}
         >
           <CloseIcon />

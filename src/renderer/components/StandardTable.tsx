@@ -1,5 +1,5 @@
 import { ErrorOutlined, InboxOutlined } from '@mui/icons-material'
-import { Box, Typography, Button, CircularProgress, Paper } from '@mui/material'
+import { Box, Typography, Button, Paper, Skeleton, alpha } from '@mui/material'
 import {
   DataGrid,
   GridColDef,
@@ -96,27 +96,31 @@ export default function StandardTable({
     }
   }, [])
 
-  // 1. Loading State
+  // 1. Loading State (Shimmer Skeletons)
   if (loading) {
     return (
       <Paper
         elevation={0}
         sx={{
-          p: 6,
+          p: 3,
           display: 'flex',
           flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
+          gap: 1.5,
           minHeight: 400,
           border: '1px solid',
           borderColor: 'divider',
           borderRadius: 0
         }}
       >
-        <CircularProgress size={40} sx={{ mb: 2 }} />
-        <Typography variant="body1" color="text.secondary">
-          {t('common.loading')}
-        </Typography>
+        <Skeleton variant="rectangular" height={44} sx={{ borderRadius: 1 }} />
+        {Array.from({ length: 5 }).map((_, i) => (
+          <Skeleton
+            key={i}
+            variant="rounded"
+            height={52}
+            sx={{ borderRadius: 1, opacity: 1 - i * 0.15 }}
+          />
+        ))}
       </Paper>
     )
   }
@@ -136,10 +140,23 @@ export default function StandardTable({
           border: '1px solid',
           borderColor: 'divider',
           borderRadius: 0,
-          bgcolor: 'error.lighter'
+          bgcolor: (theme) => alpha(theme.palette.error.main, 0.04)
         }}
       >
-        <ErrorOutlined color="error" sx={{ fontSize: 48, mb: 2 }} />
+        <Box
+          sx={{
+            width: 72,
+            height: 72,
+            borderRadius: '50%',
+            bgcolor: (theme) => alpha(theme.palette.error.main, 0.1),
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            mb: 2
+          }}
+        >
+          <ErrorOutlined color="error" sx={{ fontSize: 40 }} />
+        </Box>
         <Typography variant="h6" color="error.dark" gutterBottom sx={{ fontWeight: 600 }}>
           {t('common.error')}
         </Typography>
@@ -172,7 +189,20 @@ export default function StandardTable({
           borderRadius: 0
         }}
       >
-        <InboxOutlined color="action" sx={{ fontSize: 48, mb: 2 }} />
+        <Box
+          sx={{
+            width: 72,
+            height: 72,
+            borderRadius: '50%',
+            bgcolor: (theme) => alpha(theme.palette.primary.main, 0.06),
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            mb: 2
+          }}
+        >
+          <InboxOutlined color="action" sx={{ fontSize: 40 }} />
+        </Box>
         <Typography variant="body1" color="text.secondary" align="center" sx={{ mb: 3 }}>
           {emptyMessage || t('common.noData')}
         </Typography>
@@ -215,7 +245,8 @@ export default function StandardTable({
           sx={{
             border: 'none',
             '& .MuiDataGrid-columnHeaders': {
-              bgcolor: 'background.default',
+              bgcolor: (theme) => alpha(theme.palette.background.default, 0.9),
+              backdropFilter: 'blur(8px)',
               borderBottom: '2px solid',
               borderColor: 'divider',
               position: 'sticky',
@@ -236,15 +267,21 @@ export default function StandardTable({
               fontSize: '0.875rem',
               py: 1
             },
+            '& .MuiDataGrid-row': {
+              transition: 'background-color 0.15s ease-in-out'
+            },
+            '& .MuiDataGrid-row:nth-of-type(even)': {
+              bgcolor: (theme) =>
+                alpha(theme.palette.primary.main, theme.palette.mode === 'dark' ? 0.07 : 0.035)
+            },
             '& .MuiDataGrid-row:hover': {
-              bgcolor: 'action.hover'
+              bgcolor: (theme) =>
+                alpha(theme.palette.primary.main, theme.palette.mode === 'dark' ? 0.12 : 0.07)
             },
             '& .MuiDataGrid-row.Mui-selected': {
-              bgcolor: 'primary.main',
-              opacity: 0.12,
+              bgcolor: (theme) => alpha(theme.palette.primary.main, 0.12),
               '&:hover': {
-                bgcolor: 'primary.main',
-                opacity: 0.16
+                bgcolor: (theme) => alpha(theme.palette.primary.main, 0.18)
               }
             },
             '& .MuiDataGrid-footerContainer': {
