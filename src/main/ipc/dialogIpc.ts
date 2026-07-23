@@ -72,4 +72,33 @@ export function registerDialogIpcHandlers(): void {
       return { base64: null, canceled: true }
     }
   })
+
+  /**
+   * dialog:pickBackupFile — Open native file picker for selecting a .db backup file from disk.
+   */
+  ipcMain.handle('dialog:pickBackupFile', async () => {
+    try {
+      const focused = BrowserWindow.getFocusedWindow()
+      const options: Electron.OpenDialogOptions = {
+        title: 'Select Backup File',
+        filters: [
+          { name: 'Database Backup (*.db)', extensions: ['db'] },
+          { name: 'All Files', extensions: ['*'] }
+        ],
+        properties: ['openFile']
+      }
+      const result = focused
+        ? await dialog.showOpenDialog(focused, options)
+        : await dialog.showOpenDialog(options)
+
+      if (result.canceled || !result.filePaths[0]) {
+        return { filePath: null, canceled: true }
+      }
+
+      return { filePath: result.filePaths[0], canceled: false }
+    } catch (error) {
+      console.error('Backup file picker error:', error)
+      return { filePath: null, canceled: true }
+    }
+  })
 }

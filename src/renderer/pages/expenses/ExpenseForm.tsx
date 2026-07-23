@@ -16,6 +16,7 @@ import { useForm, Controller } from 'react-hook-form'
 import { useTranslation } from 'react-i18next'
 import { z } from 'zod'
 import { CurrencyInput } from '../../components/CurrencyInput'
+import { DualCurrencySummary } from '../../components/DualCurrencySummary'
 import ExpenseCategoryManagerDialog from '../../components/ExpenseCategoryManagerDialog'
 import { FormField } from '../../components/FormField'
 import GlobalSnackbar from '../../components/GlobalSnackbar'
@@ -68,6 +69,8 @@ export function ExpenseForm({ onSuccess, onCancel }: ExpenseFormProps): React.Re
   const [manageCatsOpen, setManageCatsOpen] = useState<boolean>(false)
   // Reporting currency drives the display-only conversion preview (BR-13, FR-FX-06).
   const [reportingCurrency, setReportingCurrency] = useState<string>('USD')
+  const [customRate, setCustomRate] = useState<number | null>(null)
+  const [fetching, setFetching] = useState<boolean>(false)
 
   const defaultValues: ExpenseFormValues = {
     property_id: null,
@@ -129,6 +132,29 @@ export function ExpenseForm({ onSuccess, onCancel }: ExpenseFormProps): React.Re
     conversions.find((c) => c.currency === reportingCurrency && c.currency !== selectedCurrency) ??
     null
 
+  const handleFetchOnline = async (): Promise<void> => {
+    if (!selectedCurrency || !reportingCurrency || selectedCurrency === reportingCurrency) return
+    setFetching(true)
+    try {
+      const res = await window.api.exchangeRates.fetchOnline({
+        currency_from: selectedCurrency,
+        currency_to: reportingCurrency
+      })
+      await window.api.exchangeRates.add({
+        currency_from: res.currency_from,
+        currency_to: res.currency_to,
+        rate: res.rate,
+        effective_date: res.effective_date,
+        source: 'online'
+      })
+      showSuccess('currency.fetchedSuccessfully', { rate: res.rate })
+    } catch {
+      showError('currency.fetchFailed')
+    } finally {
+      setFetching(false)
+    }
+  }
+
   // Lock currency to the selected property (BR-13); when no property, keep the editable default.
   useEffect(() => {
     if (selectedPropertyId) {
@@ -146,7 +172,8 @@ export function ExpenseForm({ onSuccess, onCancel }: ExpenseFormProps): React.Re
         vendor_name: data.vendor_name ?? null,
         amount: data.amount,
         currency: data.currency,
-        notes: data.notes ?? null
+        notes: data.notes ?? null,
+        custom_exchange_rate: customRate
       })
       showSuccess('common.saveSuccess')
       notifyDataChanged()
@@ -293,6 +320,22 @@ export function ExpenseForm({ onSuccess, onCancel }: ExpenseFormProps): React.Re
               )}
             />
           </Grid>
+
+          {/* Dual Currency Summary Card */}
+          {watchedAmount > 0 && selectedCurrency !== reportingCurrency && (
+            <Grid size={{ xs: 12 }}>
+              <DualCurrencySummary
+                amount={watchedAmount}
+                nativeCurrency={selectedCurrency}
+                reportingCurrency={reportingCurrency}
+                conversion={primaryConversion}
+                onFetchOnline={handleFetchOnline}
+                isFetching={fetching}
+                customRate={customRate}
+                onCustomRateChange={setCustomRate}
+              />
+            </Grid>
+          )}
 
           <Grid size={{ xs: 12 }}>
             <FormField

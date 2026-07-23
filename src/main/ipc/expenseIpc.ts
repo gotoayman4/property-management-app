@@ -27,7 +27,8 @@ const expenseCreateSchema = z.object({
   amount: z.number().positive(),
   currency: z.string().min(3).max(3),
   notes: z.string().max(2000).optional().nullable(),
-  receipt_file_path: z.string().max(1000).optional().nullable()
+  receipt_file_path: z.string().max(1000).optional().nullable(),
+  custom_exchange_rate: z.number().positive().optional().nullable()
 })
 
 const expenseListFiltersSchema = z
@@ -159,7 +160,8 @@ export function registerExpenseIpcHandlers(): void {
         currency: v.currency,
         property_currency: propertyCurrency,
         notes: v.notes ?? null,
-        receipt_file_path: v.receipt_file_path ?? null
+        receipt_file_path: v.receipt_file_path ?? null,
+        custom_exchange_rate: v.custom_exchange_rate ?? null
       }
       return createExpense(db, input)
     } catch (error: unknown) {

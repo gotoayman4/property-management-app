@@ -1,25 +1,32 @@
-import { AccountBalanceWallet as LedgerIcon, Add as AddIcon } from '@mui/icons-material'
 import {
+  AccountBalanceWallet as LedgerIcon,
+  FileDownload as FileDownloadIcon
+} from '@mui/icons-material'
+import {
+  alpha,
   Box,
   Button,
   Chip,
+  CircularProgress,
+  FormControl,
   FormControlLabel,
+  Grid,
+  InputLabel,
+  MenuItem,
   Paper,
+  Select,
+  Stack,
   Switch,
   TextField,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
-  Grid,
-  Typography,
-  Stack
+  Typography
 } from '@mui/material'
 import { GridColDef } from '@mui/x-data-grid'
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import GlobalSnackbar from '../../components/GlobalSnackbar'
+import LedgerSummaryCard from '../../components/LedgerSummaryCard'
 import PageHeader from '../../components/PageHeader'
+import ReconstructBalanceCard from '../../components/ReconstructBalanceCard'
 import StandardTable from '../../components/StandardTable'
 import { useSnackbar } from '../../hooks/useSnackbar'
 import { ManualAdjustmentDialog } from './ManualAdjustmentDialog'
@@ -297,10 +304,41 @@ export default function Ledger(): React.ReactElement {
         title={t('ledger.title')}
         action={
           <Button
-            variant="outlined"
+            variant="contained"
+            startIcon={
+              isRtl ? undefined : exporting ? (
+                <CircularProgress size={18} color="inherit" />
+              ) : (
+                <FileDownloadIcon />
+              )
+            }
+            endIcon={
+              isRtl ? (
+                exporting ? (
+                  <CircularProgress size={18} color="inherit" />
+                ) : (
+                  <FileDownloadIcon />
+                )
+              ) : undefined
+            }
             onClick={handleExportExcel}
             disabled={!selectedPropertyId || exporting}
-            sx={{ px: 3, py: 1, borderRadius: 2 }}
+            sx={{
+              px: 3,
+              py: 1,
+              borderRadius: 2,
+              bgcolor: 'background.paper',
+              color: 'text.primary',
+              boxShadow: 2,
+              '&:hover': {
+                bgcolor: (theme) => alpha(theme.palette.background.paper, 0.9),
+                boxShadow: 4
+              },
+              '&.Mui-disabled': {
+                bgcolor: (theme) => alpha(theme.palette.background.paper, 0.4),
+                color: (theme) => alpha(theme.palette.text.primary, 0.4)
+              }
+            }}
           >
             {exporting ? t('reports.exporting') : t('ledger.exportExcel')}
           </Button>
@@ -392,19 +430,19 @@ export default function Ledger(): React.ReactElement {
           with the reporting-currency toggle; totals come from computeSummaryReporting when on. */}
       {summary && selectedPropertyId && (
         <Stack direction="row" spacing={2} sx={{ mb: 3, flexWrap: 'wrap', gap: 2 }}>
-          <SummaryCard
+          <LedgerSummaryCard
             label={t('ledger.summaryTotalDebit')}
             value={summary.total_debit}
             currency={displayCurrency}
             tone="success"
           />
-          <SummaryCard
+          <LedgerSummaryCard
             label={t('ledger.summaryTotalCredit')}
             value={summary.total_credit}
             currency={displayCurrency}
             tone="error"
           />
-          <SummaryCard
+          <LedgerSummaryCard
             label={t('ledger.summaryNet')}
             value={summary.net_balance}
             currency={displayCurrency}
@@ -425,47 +463,15 @@ export default function Ledger(): React.ReactElement {
 
       {/* Reconstruct balance + manual adjustment actions */}
       {selectedPropertyId && (
-        <Paper
-          elevation={1}
-          sx={{ p: 2, mt: 3, borderRadius: 3, border: '1px solid', borderColor: 'divider' }}
-        >
-          <Grid container spacing={2} sx={{ alignItems: 'center' }}>
-            <Grid size={{ xs: 12, sm: 4 }}>
-              <TextField
-                label={t('ledger.reconstructAsOf')}
-                type="date"
-                value={reconstructDate}
-                onChange={(e) => setReconstructDate(e.target.value)}
-                fullWidth
-                slotProps={{ inputLabel: { shrink: true } }}
-              />
-            </Grid>
-            <Grid size={{ xs: 12, sm: 3 }}>
-              <Button variant="outlined" onClick={handleReconstruct} disabled={!reconstructDate}>
-                {t('ledger.reconstruct')}
-              </Button>
-            </Grid>
-            <Grid size={{ xs: 12, sm: 5 }} sx={{ textAlign: isRtl ? 'left' : 'right' }}>
-              <Button
-                variant="contained"
-                startIcon={isRtl ? undefined : <AddIcon />}
-                endIcon={isRtl ? <AddIcon /> : undefined}
-                onClick={() => setAdjustOpen(true)}
-              >
-                {t('ledger.addManualAdjustment')}
-              </Button>
-            </Grid>
-            {reconstructResult !== null && (
-              <Grid size={{ xs: 12 }}>
-                <Typography sx={{ fontWeight: 600 }}>
-                  {t('ledger.reconstructResult', {
-                    amount: `${reconstructResult.toLocaleString()} ${displayCurrency}`
-                  })}
-                </Typography>
-              </Grid>
-            )}
-          </Grid>
-        </Paper>
+        <ReconstructBalanceCard
+          reconstructDate={reconstructDate}
+          onDateChange={setReconstructDate}
+          onReconstruct={handleReconstruct}
+          onOpenAdjustment={() => setAdjustOpen(true)}
+          reconstructResult={reconstructResult}
+          displayCurrency={displayCurrency}
+          isRtl={isRtl}
+        />
       )}
 
       {adjustOpen && (
@@ -485,40 +491,6 @@ export default function Ledger(): React.ReactElement {
 
       <GlobalSnackbar state={snack} onClose={hideSnackbar} />
     </Box>
-  )
-}
-
-/** Summary metric tile for the debit/credit/net bar. */
-function SummaryCard({
-  label,
-  value,
-  currency,
-  tone
-}: {
-  label: string
-  value: number
-  currency: string
-  tone: 'success' | 'error'
-}): React.ReactElement {
-  return (
-    <Paper
-      elevation={0}
-      sx={{
-        flex: 1,
-        minWidth: 160,
-        p: 2,
-        borderRadius: 3,
-        border: '1px solid',
-        borderColor: 'divider'
-      }}
-    >
-      <Typography variant="caption" color="text.secondary">
-        {label}
-      </Typography>
-      <Typography variant="h6" sx={{ fontWeight: 700, color: `${tone}.main` }}>
-        {value.toLocaleString()} {currency}
-      </Typography>
-    </Paper>
   )
 }
 

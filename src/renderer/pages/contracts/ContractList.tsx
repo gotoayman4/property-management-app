@@ -317,17 +317,22 @@ export function ContractList(): React.ReactElement {
 
       <StandardDialog
         open={openDialog}
-        onClose={() => setOpenDialog(false)}
+        onClose={() => {
+          setOpenDialog(false)
+          fetchContracts()
+        }}
         title={selectedContract ? t('contract.editTitle') : t('contract.add')}
         maxWidth="lg"
       >
         <ContractForm
           contract={selectedContract}
           onSuccess={() => {
+            fetchContracts()
+          }}
+          onCancel={() => {
             setOpenDialog(false)
             fetchContracts()
           }}
-          onCancel={() => setOpenDialog(false)}
         />
       </StandardDialog>
 

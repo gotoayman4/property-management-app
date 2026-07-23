@@ -38,6 +38,7 @@ import GlobalSnackbar from '../../components/GlobalSnackbar'
 import PageHeader from '../../components/PageHeader'
 import StandardTable from '../../components/StandardTable'
 import { useSnackbar } from '../../hooks/useSnackbar'
+import SelectBackupDialog from './SelectBackupDialog'
 
 interface BackupRow {
   id: number
@@ -59,6 +60,9 @@ export default function BackupPage(): React.ReactElement {
   const [backups, setBackups] = useState<BackupRow[]>([])
   const [loading, setLoading] = useState(true)
   const [creating, setCreating] = useState(false)
+
+  // Select backup selection dialog state (no auto-selection)
+  const [selectDialogOpen, setSelectDialogOpen] = useState(false)
 
   // Restore dialog state
   const [restoreDialogOpen, setRestoreDialogOpen] = useState(false)
@@ -148,6 +152,38 @@ export default function BackupPage(): React.ReactElement {
     setRestoreConfirmText('')
     setRestoreDialogOpen(true)
   }, [])
+
+  const handleHeaderRestore = useCallback((): void => {
+    setSelectDialogOpen(true)
+  }, [])
+
+  const handleSelectBackup = useCallback((backup: BackupRow): void => {
+    setSelectedBackup(backup)
+    setRestoreConfirmText('')
+    setSelectDialogOpen(false)
+    setRestoreDialogOpen(true)
+  }, [])
+
+  const handleBrowseFile = useCallback(async (): Promise<void> => {
+    try {
+      const res = await window.api.dialog.pickBackupFile()
+      if (!res.canceled && res.filePath) {
+        const restoreRes = await window.api.backup.restore({
+          filePath: res.filePath,
+          confirm: false
+        })
+        if (restoreRes.backupInfo) {
+          setSelectedBackup(restoreRes.backupInfo as BackupRow)
+          setRestoreConfirmText('')
+          setSelectDialogOpen(false)
+          setRestoreDialogOpen(true)
+          fetchBackups()
+        }
+      }
+    } catch {
+      showError('backup.browseError')
+    }
+  }, [fetchBackups, showError])
 
   const handleRestore = useCallback(async (): Promise<void> => {
     if (!selectedBackup) return
@@ -314,20 +350,31 @@ export default function BackupPage(): React.ReactElement {
   ]
 
   return (
-    <Box sx={{ py: 3, px: 4 }}>
+    <Box sx={{ width: '100%' }}>
       <PageHeader
         icon={<BackupIcon />}
         title={t('backup.title')}
         subtitle={t('backup.subtitle')}
         action={
-          <Button
-            variant="contained"
-            startIcon={creating ? <CircularProgress size={18} color="inherit" /> : <BackupIcon />}
-            onClick={handleCreateBackup}
-            disabled={creating}
-          >
-            {creating ? t('backup.creating') : t('backup.createNow')}
-          </Button>
+          <Box sx={{ display: 'flex', gap: 1.5 }}>
+            <Button
+              variant="outlined"
+              color="warning"
+              startIcon={<RestoreIcon />}
+              onClick={handleHeaderRestore}
+              disabled={restoring || creating}
+            >
+              {t('backup.restore')}
+            </Button>
+            <Button
+              variant="contained"
+              startIcon={creating ? <CircularProgress size={18} color="inherit" /> : <BackupIcon />}
+              onClick={handleCreateBackup}
+              disabled={creating}
+            >
+              {creating ? t('backup.creating') : t('backup.createNow')}
+            </Button>
+          </Box>
         }
       />
 
@@ -344,6 +391,16 @@ export default function BackupPage(): React.ReactElement {
         pageSize={15}
         pageSizeOptions={[10, 15, 25]}
         tableId="backup-list"
+      />
+
+      {/* Select Backup dialog — user browses history or disk file without auto-selection */}
+      <SelectBackupDialog
+        open={selectDialogOpen}
+        backups={backups}
+        isRtl={isRtl}
+        onClose={() => setSelectDialogOpen(false)}
+        onSelectBackup={handleSelectBackup}
+        onBrowseFile={handleBrowseFile}
       />
 
       {/* Restore confirmation dialog — FR-BAK-05 double confirmation */}

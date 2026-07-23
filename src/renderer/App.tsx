@@ -2,11 +2,10 @@ import { CacheProvider, Global } from '@emotion/react'
 import { ThemeProvider, CssBaseline } from '@mui/material'
 import React, { useEffect, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
-import { createHashRouter, RouterProvider, Outlet } from 'react-router-dom'
+import { createHashRouter, RouterProvider, Outlet, Navigate } from 'react-router-dom'
 import AuthGate from './components/AuthGate'
 import Layout from './components/Layout'
 import { AuthProvider } from './contexts/AuthContext'
-import BackupPage from './pages/backup/BackupPage'
 import ContractDetail from './pages/contracts/ContractDetail'
 import { ContractList } from './pages/contracts/ContractList'
 import ExchangeRateManager from './pages/currency/ExchangeRateManager'
@@ -104,7 +103,7 @@ const router = createHashRouter([
       },
       {
         path: '/backup',
-        element: <BackupPage />
+        element: <Navigate to="/settings?section=backup" replace />
       }
     ]
   }

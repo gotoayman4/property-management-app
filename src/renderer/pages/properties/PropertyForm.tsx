@@ -24,6 +24,7 @@ import GlobalSnackbar from '../../components/GlobalSnackbar'
 import StandardDialog from '../../components/StandardDialog'
 import { useSnackbar } from '../../hooks/useSnackbar'
 import { getLocalizedCountryName } from '../../utils/countryUtils'
+import { notifyDataChanged } from '../../utils/eventBus'
 
 interface Property {
   id: number
@@ -158,11 +159,14 @@ export default function PropertyForm({
       if (isEdit) {
         await window.api.properties.update({ id: property.id, ...data })
         showSuccess('common.saveSuccess')
+        notifyDataChanged()
         onSuccess()
       } else {
         const result = (await window.api.properties.create(data)) as Property
         setCreatedEntity(result)
         showSuccess('common.saveSuccess')
+        notifyDataChanged()
+        onSuccess()
       }
     } catch (err: unknown) {
       console.error(err)

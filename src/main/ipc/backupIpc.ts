@@ -11,8 +11,11 @@
  *   - NFR-SEC-05: all queries parameterized.
  */
 
+import { createHash } from 'crypto'
+import { existsSync, statSync, readFileSync } from 'fs'
 import { join } from 'path'
-import { ipcMain, app } from 'electron'
+import { is } from '@electron-toolkit/utils'
+import { ipcMain, app, BrowserWindow } from 'electron'
 import { z } from 'zod'
 import { db, dbPath } from '../db/database'
 import {
@@ -86,6 +89,7 @@ export function registerBackupIpcHandlers(): void {
 
   /**
    * backup:restore — Two-phase restore (FR-BAK-05).
+   * Supports restoring by backupId OR by explicit filePath.
    *
    * Phase 1 (confirm = false): returns backup info for display in confirmation dialog.
    * Phase 2 (confirm = true):  performs the actual restore.
@@ -96,10 +100,44 @@ export function registerBackupIpcHandlers(): void {
     try {
       const parsed = z
         .object({
-          backupId: z.number().int().positive(),
+          backupId: z.number().int().positive().optional(),
+          filePath: z.string().min(1).optional(),
           confirm: z.boolean().default(false)
         })
+        .refine((d) => d.backupId !== undefined || d.filePath !== undefined, {
+          message: 'Either backupId or filePath must be provided'
+        })
         .parse(data)
+
+      let targetBackupId = parsed.backupId
+
+      if (!targetBackupId && parsed.filePath) {
+        if (!existsSync(parsed.filePath)) {
+          throw new Error('BACKUP_NOT_FOUND')
+        }
+        const existing = db
+          .prepare('SELECT id FROM backup_log WHERE backup_file_path = ?')
+          .get(parsed.filePath) as { id: number } | undefined
+
+        if (existing) {
+          targetBackupId = existing.id
+        } else {
+          const stats = statSync(parsed.filePath)
+          const sizeKb = Math.round(stats.size / 1024)
+          const dataBuffer = readFileSync(parsed.filePath)
+          const checksum = createHash('sha256').update(dataBuffer).digest('hex')
+
+          const info = db
+            .prepare(
+              `INSERT INTO backup_log (backup_file_path, backup_type, file_size_kb, checksum, is_verified, status)
+               VALUES (?, 'manual', ?, ?, 1, 'success')`
+            )
+            .run(parsed.filePath, sizeKb, checksum)
+          targetBackupId = Number(info.lastInsertRowid)
+        }
+      }
+
+      if (!targetBackupId) throw new Error('BACKUP_NOT_FOUND')
 
       // Phase 1: return backup info for confirmation
       if (!parsed.confirm) {
@@ -107,7 +145,7 @@ export function registerBackupIpcHandlers(): void {
           .prepare(
             'SELECT id, backup_file_path, backup_type, file_size_kb, created_at FROM backup_log WHERE id = ?'
           )
-          .get(parsed.backupId) as
+          .get(targetBackupId) as
           | {
               id: number
               backup_file_path: string
@@ -126,7 +164,7 @@ export function registerBackupIpcHandlers(): void {
 
       // Phase 2: perform restore
       const backupDir = resolveBackupDir()
-      const result = restoreFromBackup(db, parsed.backupId, backupDir, dbPath)
+      const result = restoreFromBackup(db, targetBackupId, backupDir, dbPath)
 
       if (result.success) {
         return {
@@ -188,13 +226,19 @@ export function registerBackupIpcHandlers(): void {
    * app:relaunch — Quit and relaunch the Electron app (FR-BAK-05 post-restore restart).
    *
    * INTENT: After a successful restore, the running better-sqlite3 connection still serves the
-   *         pre-restore page cache. The only safe way to pick up the new .db file is a full
-   *         process restart — `app.relaunch()` spawns a fresh instance, `app.exit(0)` terminates
-   *         the current one. The renderer triggers this after the user confirms.
-   * CONSTRAINT: Never call this except after a confirmed restore — it is a hard process exit.
+   *         pre-restore page cache. In production, `app.relaunch()` + `app.exit(0)` restarts the app.
+   *         In development mode, `app.relaunch()` loses `ELECTRON_RENDERER_URL`, causing a white
+   *         screen fallback. In dev, we reload the renderer window with the dev server URL.
    */
   ipcMain.handle('app:relaunch', async () => {
-    app.relaunch()
-    app.exit(0)
+    if (is.dev && process.env['ELECTRON_RENDERER_URL']) {
+      const windows = BrowserWindow.getAllWindows()
+      for (const win of windows) {
+        win.loadURL(process.env['ELECTRON_RENDERER_URL']!)
+      }
+    } else {
+      app.relaunch()
+      app.exit(0)
+    }
   })
 }

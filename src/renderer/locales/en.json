@@ -49,6 +49,7 @@
   "common": {
     "save": "Save",
     "cancel": "Cancel",
+    "next": "Next",
     "delete": "Delete",
     "edit": "Edit",
     "add": "Add",
@@ -761,6 +762,13 @@
     "fetchedSuccessfully": "Rate fetched: {{rate}}",
     "offlineDefault": "Exchange rates are entered manually by default. The online fetch is a convenience — the app works fully offline.",
     "noRates": "No exchange rates recorded yet. Add your first rate above.",
+    "dualCurrencySummary": "Consolidated Conversion Summary",
+    "nativeAmount": "Native Amount",
+    "consolidatedAmount": "Consolidated Amount",
+    "customRate": "Custom Exchange Rate",
+    "useCustomRate": "Override Exchange Rate",
+    "rateSource": "Rate Source",
+    "autoFetchInline": "Fetch Live Rate",
     "name": {
       "JOD": "JOD — Jordanian Dinar",
       "TRY": "TRY — Turkish Lira",
@@ -770,9 +778,7 @@
       "SAR": "SAR — Saudi Riyal"
     }
   },
-  "search": {
-    "placeholder": "Search properties, tenants..."
-  },
+
   "recurringExpense": {
     "title": "Recurring Expenses",
     "subtitle": "Automate regular costs with templates",
@@ -902,6 +908,12 @@
     "verifySuccess": "Backup file integrity verified successfully.",
     "verifyFailed": "Backup verification failed.",
     "restore": "Restore",
+    "selectBackupTitle": "Select Backup to Restore",
+    "selectBackupSubtitle": "Choose a backup from your history or browse your computer for a backup file",
+    "selectBackupLabel": "Select Backup File",
+    "selectBackupPlaceholder": "-- Choose a backup from list --",
+    "browseFile": "Browse File...",
+    "browseFileOr": "OR browse from your computer:",
     "restoreConfirmTitle": "Restore from Backup?",
     "restoreConfirmBody": "Are you sure you want to restore from the backup created on {date} ({type})?",
     "restoreWarning": "This will replace ALL current data with the backup data. The app will need to restart after restore. An emergency backup will be created first.",
@@ -961,6 +973,7 @@
     "exporting": "Preparing export…",
     "cancelExport": "Cancel",
     "exportSuccess": "Report exported successfully",
+    "showInReportingCurrency": "Show in {{currency}} (reporting currency)",
     "exportCanceled": "Export was canceled",
     "exportFailed": "Export failed. Please try again.",
     "noData": "No data for the selected filters",
@@ -1046,6 +1059,7 @@
     }
   },
   "search": {
+    "placeholder": "Search properties, tenants...",
     "contract": "Contract",
     "payment": "Payment",
     "expense": "Expense",

@@ -30,7 +30,8 @@ const paymentCreateSchema = z.object({
     .regex(/^\d{4}-\d{2}$/)
     .optional()
     .nullable(),
-  notes: z.string().max(2000).optional().nullable()
+  notes: z.string().max(2000).optional().nullable(),
+  custom_exchange_rate: z.number().positive().optional().nullable()
 })
 
 const paymentListFiltersSchema = z
@@ -102,7 +103,8 @@ export function registerPaymentIpcHandlers(): void {
         tenant_id: v.tenant_id ?? null,
         payment_method: v.payment_method ?? null,
         related_period_month: v.related_period_month ?? null,
-        notes: v.notes ?? null
+        notes: v.notes ?? null,
+        custom_exchange_rate: v.custom_exchange_rate ?? null
       }
       return createPayment(db, input)
     } catch (error: unknown) {

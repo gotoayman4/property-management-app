@@ -59,7 +59,7 @@ describe('escalationService', () => {
          VALUES (?, ?, ?, ?, ?, ?, 'JOD', 'monthly', ?, ?)`
       )
       .run(
-        `C-${Date.now()}`,
+        `C-${Date.now()}-${Math.random()}`,
         propertyId,
         tenantId,
         overrides.start_date ?? '2026-01-01',

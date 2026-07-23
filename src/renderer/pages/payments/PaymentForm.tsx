@@ -17,6 +17,7 @@ import { useForm, Controller } from 'react-hook-form'
 import { useTranslation } from 'react-i18next'
 import { z } from 'zod'
 import { CurrencyInput } from '../../components/CurrencyInput'
+import { DualCurrencySummary } from '../../components/DualCurrencySummary'
 import { FormField } from '../../components/FormField'
 import GlobalSnackbar from '../../components/GlobalSnackbar'
 import { useCurrencyConversion } from '../../hooks/useCurrencyConversion'
@@ -85,6 +86,8 @@ export function PaymentForm({ onSuccess, onCancel }: PaymentFormProps): React.Re
   const [contracts, setContracts] = useState<Contract[]>([])
   // Reporting currency drives the display-only conversion preview (BR-13, FR-FX-06).
   const [reportingCurrency, setReportingCurrency] = useState<string>('USD')
+  const [customRate, setCustomRate] = useState<number | null>(null)
+  const [fetching, setFetching] = useState<boolean>(false)
 
   const defaultValues: PaymentFormValues = {
     property_id: 0,
@@ -142,6 +145,29 @@ export function PaymentForm({ onSuccess, onCancel }: PaymentFormProps): React.Re
     conversions.find((c) => c.currency === reportingCurrency && c.currency !== watchedCurrency) ??
     null
 
+  const handleFetchOnline = async (): Promise<void> => {
+    if (!watchedCurrency || !reportingCurrency || watchedCurrency === reportingCurrency) return
+    setFetching(true)
+    try {
+      const res = await window.api.exchangeRates.fetchOnline({
+        currency_from: watchedCurrency,
+        currency_to: reportingCurrency
+      })
+      await window.api.exchangeRates.add({
+        currency_from: res.currency_from,
+        currency_to: res.currency_to,
+        rate: res.rate,
+        effective_date: res.effective_date,
+        source: 'online'
+      })
+      showSuccess('currency.fetchedSuccessfully', { rate: res.rate })
+    } catch {
+      showError('currency.fetchFailed')
+    } finally {
+      setFetching(false)
+    }
+  }
+
   // Lock currency to the selected property (BR-13) and clear it when none selected.
   useEffect(() => {
     if (selectedPropertyId) {
@@ -174,7 +200,8 @@ export function PaymentForm({ onSuccess, onCancel }: PaymentFormProps): React.Re
         payment_method: data.payment_method,
         is_partial: data.is_partial,
         related_period_month: data.related_period_month ?? null,
-        notes: data.notes ?? null
+        notes: data.notes ?? null,
+        custom_exchange_rate: customRate
       })
       showSuccess('common.saveSuccess')
       notifyDataChanged()
@@ -294,6 +321,22 @@ export function PaymentForm({ onSuccess, onCancel }: PaymentFormProps): React.Re
               noRateLabel={t('common.noRateAvailable')}
             />
           </Grid>
+
+          {/* Dual Currency Summary Card */}
+          {watchedAmount > 0 && watchedCurrency !== reportingCurrency && (
+            <Grid size={{ xs: 12 }}>
+              <DualCurrencySummary
+                amount={watchedAmount}
+                nativeCurrency={watchedCurrency}
+                reportingCurrency={reportingCurrency}
+                conversion={primaryConversion}
+                onFetchOnline={handleFetchOnline}
+                isFetching={fetching}
+                customRate={customRate}
+                onCustomRateChange={setCustomRate}
+              />
+            </Grid>
+          )}
 
           <Grid size={{ xs: 12, sm: 6 }}>
             <FormControl fullWidth>

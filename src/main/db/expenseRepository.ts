@@ -32,6 +32,7 @@ export interface CreateExpenseInput {
   property_currency?: string | null
   notes?: string | null
   receipt_file_path?: string | null
+  custom_exchange_rate?: number | null
 }
 
 export interface CreatedExpense {
@@ -61,7 +62,12 @@ export function createExpense(db: Database, input: CreateExpenseInput): CreatedE
   return db.transaction(() => {
     // Freeze the reporting-currency snapshot at write time so reports are deterministic
     // and immune to later rate changes (NULL when no rate exists — graceful fallback).
-    const snapshot = resolveReportingSnapshot(db, input.amount, input.currency)
+    const snapshot = resolveReportingSnapshot(
+      db,
+      input.amount,
+      input.currency,
+      input.custom_exchange_rate
+    )
     const result = db
       .prepare(
         `INSERT INTO expenses

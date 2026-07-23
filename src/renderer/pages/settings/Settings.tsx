@@ -9,12 +9,9 @@
  */
 import AttachMoneyIcon from '@mui/icons-material/AttachMoney'
 import BusinessIcon from '@mui/icons-material/Business'
-import FolderOpenIcon from '@mui/icons-material/FolderOpen'
 import NotificationsIcon from '@mui/icons-material/Notifications'
-import PaletteIcon from '@mui/icons-material/Palette'
 import ReceiptIcon from '@mui/icons-material/Receipt'
 import SettingsIcon from '@mui/icons-material/Settings'
-import StorageIcon from '@mui/icons-material/Storage'
 import WarningAmberIcon from '@mui/icons-material/WarningAmber'
 import {
   Box,
@@ -23,18 +20,11 @@ import {
   CardContent,
   Typography,
   FormControl,
-  FormLabel,
-  RadioGroup,
-  FormControlLabel,
-  Radio,
-  Switch,
   TextField,
   Select,
   MenuItem,
   InputLabel,
   Alert,
-  IconButton,
-  InputAdornment,
   Dialog,
   DialogTitle,
   DialogContent,
@@ -42,6 +32,8 @@ import {
 } from '@mui/material'
 import React, { useCallback, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { useSearchParams } from 'react-router-dom'
+import AppearanceSettingsCard from '../../components/AppearanceSettingsCard'
 import CompanyInfoCard from '../../components/CompanyInfoCard'
 import CountryManagerDialog from '../../components/CountryManagerDialog'
 import DashboardSettingsCard from '../../components/DashboardSettingsCard'
@@ -50,10 +42,15 @@ import NotificationTemplateManager from '../../components/NotificationTemplateMa
 import PageHeader from '../../components/PageHeader'
 import ReceiptSettingsCard from '../../components/ReceiptSettingsCard'
 import ReminderSettingsCard from '../../components/ReminderSettingsCard'
-import SettingsNav, { type SettingsSectionId } from '../../components/SettingsNav'
+import SettingsNav, {
+  SETTINGS_SECTIONS,
+  type SettingsSectionId
+} from '../../components/SettingsNav'
 import SettingsSection from '../../components/SettingsSection'
 import { useSnackbar } from '../../hooks/useSnackbar'
 import { useUiPreferences } from '../../stores/uiPreferencesStore'
+import BackupPage from '../backup/BackupPage'
+import ExchangeRateManager from '../currency/ExchangeRateManager'
 
 interface SettingsData {
   app_language: string
@@ -78,20 +75,18 @@ interface SettingsData {
 
 const CURRENCIES = ['JOD', 'TRY', 'QAR', 'USD', 'EUR', 'SAR']
 
-const SPINNER_LESS = {
-  '&::-webkit-outer-spin-button, &::-webkit-inner-spin-button': {
-    WebkitAppearance: 'none',
-    margin: 0
-  },
-  MozAppearance: 'textfield'
-} as const
-
 export default function Settings(): React.JSX.Element {
   const { t, i18n } = useTranslation()
   const isRtl = i18n.language === 'ar'
   const { snack, showSuccess, showError, hideSnackbar } = useSnackbar()
+  const [searchParams, setSearchParams] = useSearchParams()
+  const sectionParam = searchParams.get('section') as SettingsSectionId | null
+  const [activeSection, setActiveSection] = useState<SettingsSectionId>(
+    sectionParam && SETTINGS_SECTIONS.some((s) => s.id === sectionParam)
+      ? sectionParam
+      : 'appearance'
+  )
   const [settings, setSettings] = useState<SettingsData | null>(null)
-  const [activeSection, setActiveSection] = useState<SettingsSectionId>('appearance')
   const [countryDialogOpen, setCountryDialogOpen] = useState(false)
   const [templateDialogOpen, setTemplateDialogOpen] = useState(false)
   const [wipeDialogOpen, setWipeDialogOpen] = useState(false)
@@ -101,6 +96,14 @@ export default function Settings(): React.JSX.Element {
     { code: string; name: string; is_active: number }[]
   >([])
   const refreshPrefs = useUiPreferences((s) => s.refresh)
+
+  const handleNavigate = useCallback(
+    (section: SettingsSectionId): void => {
+      setActiveSection(section)
+      setSearchParams({ section }, { replace: true })
+    },
+    [setSearchParams]
+  )
 
   const fetchAllCountries = useCallback(async (): Promise<void> => {
     try {
@@ -124,7 +127,7 @@ export default function Settings(): React.JSX.Element {
     loadSettings()
   }, [t, showError, fetchAllCountries])
 
-  const updateField = async (field: string, value: string | number | null): Promise<void> => {
+  const updateField = async (field: string, value: unknown): Promise<void> => {
     try {
       await window.api.settings.update({ [field]: value })
       setSettings((prev) => (prev ? { ...prev, [field]: value } : prev))
@@ -140,16 +143,6 @@ export default function Settings(): React.JSX.Element {
       showSuccess('common.saveSuccess')
     } catch {
       showError('common.saveError')
-    }
-  }
-
-  const handleBrowse = async (): Promise<void> => {
-    try {
-      const result = await window.api.dialog.pickFolder()
-      if (result.canceled || !result.filePath) return
-      await updateField('backup_path', result.filePath)
-    } catch {
-      showError('backup.browseError')
     }
   }
 
@@ -180,7 +173,7 @@ export default function Settings(): React.JSX.Element {
 
       {/* Tabs for mobile (renders above flex container) */}
       <Box sx={{ display: { sm: 'none' } }}>
-        <SettingsNav activeSection={activeSection} onNavigate={setActiveSection} />
+        <SettingsNav activeSection={activeSection} onNavigate={handleNavigate} />
       </Box>
 
       <Box
@@ -192,110 +185,14 @@ export default function Settings(): React.JSX.Element {
       >
         {/* Sidebar nav for desktop */}
         <Box sx={{ display: { xs: 'none', sm: 'block' } }}>
-          <SettingsNav activeSection={activeSection} onNavigate={setActiveSection} />
+          <SettingsNav activeSection={activeSection} onNavigate={handleNavigate} />
         </Box>
 
         {/* Section content */}
         <Box sx={{ flex: 1, minWidth: 0, maxWidth: 800 }}>
           {/* ── Appearance ── */}
           {activeSection === 'appearance' && (
-            <SettingsSection
-              icon={<PaletteIcon />}
-              title={t('settings.appearance')}
-              description={t('settings.appearanceDesc')}
-            >
-              <FormControl component="fieldset" sx={{ mb: 3 }}>
-                <FormLabel
-                  component="legend"
-                  sx={{ fontWeight: 600, mb: 1, color: 'text.primary' }}
-                >
-                  {t('settings.language')}
-                </FormLabel>
-                <RadioGroup
-                  row
-                  value={settings.app_language}
-                  onChange={(e) => updateField('app_language', e.target.value)}
-                >
-                  <FormControlLabel value="ar" control={<Radio />} label={t('settings.langAr')} />
-                  <FormControlLabel value="en" control={<Radio />} label={t('settings.langEn')} />
-                </RadioGroup>
-              </FormControl>
-
-              <FormControl component="fieldset" sx={{ mb: 3 }}>
-                <FormLabel
-                  component="legend"
-                  sx={{ fontWeight: 600, mb: 1, color: 'text.primary' }}
-                >
-                  {t('settings.theme')}
-                </FormLabel>
-                <RadioGroup
-                  row
-                  value={settings.theme}
-                  onChange={(e) => updateField('theme', e.target.value)}
-                >
-                  <FormControlLabel
-                    value="light"
-                    control={<Radio />}
-                    label={t('settings.themeLight')}
-                  />
-                  <FormControlLabel
-                    value="dark"
-                    control={<Radio />}
-                    label={t('settings.themeDark')}
-                  />
-                </RadioGroup>
-              </FormControl>
-
-              <FormControl component="fieldset">
-                <FormLabel
-                  component="legend"
-                  sx={{ fontWeight: 600, mb: 1, color: 'text.primary' }}
-                >
-                  {t('settings.fontSize')}
-                </FormLabel>
-                <RadioGroup
-                  row
-                  value={settings.font_size}
-                  onChange={(e) => updateField('font_size', e.target.value)}
-                >
-                  <FormControlLabel
-                    value="small"
-                    control={<Radio />}
-                    label={t('settings.fontSmall')}
-                  />
-                  <FormControlLabel
-                    value="medium"
-                    control={<Radio />}
-                    label={t('settings.fontMedium')}
-                  />
-                  <FormControlLabel
-                    value="large"
-                    control={<Radio />}
-                    label={t('settings.fontLarge')}
-                  />
-                </RadioGroup>
-              </FormControl>
-
-              {/* Security — grouped under Appearance for proximity */}
-              <Box sx={{ mt: 4, pt: 3, borderTop: 1, borderColor: 'divider' }}>
-                <Typography variant="h6" sx={{ mb: 1.5 }}>
-                  {t('settings.security')}
-                </Typography>
-                <Alert severity="info" sx={{ mb: 2 }}>
-                  {t('settings.requireAuthHelp')}
-                </Alert>
-                <FormControlLabel
-                  control={
-                    <Switch
-                      checked={!!settings.require_auth}
-                      onChange={(e) => updateField('require_auth', e.target.checked ? 1 : 0)}
-                      color="primary"
-                    />
-                  }
-                  label={t('settings.requireAuth')}
-                />
-              </Box>
-            </SettingsSection>
+            <AppearanceSettingsCard settings={settings} onUpdateField={updateField} />
           )}
 
           {/* ── Dashboard ── */}
@@ -398,58 +295,15 @@ export default function Settings(): React.JSX.Element {
             </SettingsSection>
           )}
 
-          {/* ── Backup & Data ── */}
-          {activeSection === 'backup' && (
-            <SettingsSection
-              icon={<StorageIcon />}
-              title={t('settings.backupAndData')}
-              description={t('settings.backupAndDataDesc')}
-            >
-              <TextField
-                fullWidth
-                label={t('settings.backupPath')}
-                value={settings.backup_path ?? ''}
-                onChange={(e) => updateField('backup_path', e.target.value)}
-                placeholder={t('settings.backupPathPlaceholder')}
-                helperText={t('settings.backupPathHelp')}
-                slotProps={{
-                  htmlInput: { dir: 'ltr' },
-                  input: {
-                    endAdornment: (
-                      <InputAdornment position="end">
-                        <IconButton
-                          onClick={handleBrowse}
-                          edge="end"
-                          aria-label={t('backup.browse')}
-                        >
-                          <FolderOpenIcon />
-                        </IconButton>
-                      </InputAdornment>
-                    )
-                  }
-                }}
-                sx={{ mb: 3 }}
-              />
-
-              <TextField
-                fullWidth
-                type="text"
-                inputMode="decimal"
-                label={t('settings.maxBackupCount')}
-                value={settings.max_backup_count ?? 10}
-                onChange={(e) => updateField('max_backup_count', Number(e.target.value))}
-                helperText={t('settings.maxBackupCountHelp')}
-                slotProps={{
-                  htmlInput: {
-                    dir: 'ltr',
-                    min: 1,
-                    max: 100,
-                    sx: SPINNER_LESS
-                  }
-                }}
-              />
-            </SettingsSection>
+          {/* ── Exchange Rates History & Offline Log ── */}
+          {activeSection === 'exchangeRates' && (
+            <Box>
+              <ExchangeRateManager />
+            </Box>
           )}
+
+          {/* ── Backup & Data ── */}
+          {activeSection === 'backup' && <BackupPage />}
 
           {/* ── Danger Zone ── */}
           {activeSection === 'danger' && (

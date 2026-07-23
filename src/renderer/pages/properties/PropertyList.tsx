@@ -152,6 +152,10 @@ export default function PropertyList(): React.JSX.Element {
   }
 
   const handleFormSuccess = (): void => {
+    fetchProperties()
+  }
+
+  const handleFormClose = (): void => {
     setDialogOpen(false)
     fetchProperties()
   }
@@ -387,7 +391,7 @@ export default function PropertyList(): React.JSX.Element {
       {dialogOpen && (
         <PropertyForm
           open={dialogOpen}
-          onClose={() => setDialogOpen(false)}
+          onClose={handleFormClose}
           onSuccess={handleFormSuccess}
           property={editingProperty}
           countries={countries}

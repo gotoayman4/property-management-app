@@ -287,17 +287,22 @@ export function TenantList(): React.ReactElement {
 
       <StandardDialog
         open={openDialog}
-        onClose={() => setOpenDialog(false)}
+        onClose={() => {
+          setOpenDialog(false)
+          fetchTenants()
+        }}
         title={selectedTenant ? t('tenant.editTitle') : t('tenant.add')}
         maxWidth="md"
       >
         <TenantForm
           tenant={selectedTenant}
           onSuccess={() => {
+            fetchTenants()
+          }}
+          onCancel={() => {
             setOpenDialog(false)
             fetchTenants()
           }}
-          onCancel={() => setOpenDialog(false)}
         />
       </StandardDialog>
 

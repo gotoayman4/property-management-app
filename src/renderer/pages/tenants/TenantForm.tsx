@@ -24,6 +24,7 @@ import EntityDocumentsTab from '../../components/EntityDocumentsTab'
 import { FormField } from '../../components/FormField'
 import GlobalSnackbar from '../../components/GlobalSnackbar'
 import { useSnackbar } from '../../hooks/useSnackbar'
+import { notifyDataChanged } from '../../utils/eventBus'
 
 const tenantFormSchema = z.object({
   code: z
@@ -155,11 +156,14 @@ export function TenantForm({ tenant, onSuccess, onCancel }: TenantFormProps): Re
       if (isEdit && tenant) {
         await window.api.tenants.update({ id: tenant.id, ...data })
         showSuccess('common.saveSuccess')
+        notifyDataChanged()
         onSuccess()
       } else {
         const result = (await window.api.tenants.create(data)) as { id: number }
         setCreatedEntity(result)
         showSuccess('common.saveSuccess')
+        notifyDataChanged()
+        onSuccess()
       }
     } catch (err: unknown) {
       console.error(err)

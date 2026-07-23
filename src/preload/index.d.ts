@@ -466,6 +466,7 @@ declare global {
       dialog: {
         pickFolder: () => Promise<{ filePath: string | null; canceled: boolean }>
         pickImage: () => Promise<{ base64: string | null; canceled: boolean }>
+        pickBackupFile: () => Promise<{ filePath: string | null; canceled: boolean }>
       }
       data: {
         wipeAll: (token: string) => Promise<{ success: boolean }>
@@ -491,7 +492,7 @@ declare global {
           }[]
         >
         verify: (data: { backupId: number }) => Promise<{ valid: boolean; error?: string }>
-        restore: (data: { backupId: number; confirm?: boolean }) => Promise<{
+        restore: (data: { backupId?: number; filePath?: string; confirm?: boolean }) => Promise<{
           confirmed?: boolean
           success?: boolean
           backupInfo?: unknown

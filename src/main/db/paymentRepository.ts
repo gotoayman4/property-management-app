@@ -35,6 +35,7 @@ export interface CreatePaymentInput {
   is_partial?: boolean
   related_period_month?: string | null
   notes?: string | null
+  custom_exchange_rate?: number | null
 }
 
 /** Return shape of createPayment: the new row ids + the generated receipt number. */
@@ -61,7 +62,12 @@ export function createPayment(db: Database, input: CreatePaymentInput): CreatedP
     const receiptNumber = generateReceiptNumber(db)
     // Freeze the reporting-currency snapshot at write time so reports are deterministic
     // and immune to later rate changes (NULL when no rate exists — graceful fallback).
-    const snapshot = resolveReportingSnapshot(db, input.amount, input.currency)
+    const snapshot = resolveReportingSnapshot(
+      db,
+      input.amount,
+      input.currency,
+      input.custom_exchange_rate
+    )
     const paymentResult = db
       .prepare(
         `INSERT INTO payments

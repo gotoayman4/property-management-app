@@ -12,6 +12,7 @@ import { Box, Button, TextField } from '@mui/material'
 import React, { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import StandardDialog from '../../components/StandardDialog'
+import { notifyDataChanged } from '../../utils/eventBus'
 
 interface ManualAdjustmentDialogProps {
   open: boolean
@@ -53,6 +54,7 @@ export function ManualAdjustmentDialog({
         amount: parsedAmount,
         currency
       })
+      notifyDataChanged()
       onSuccess('common.saveSuccess')
       onSaved()
     } catch (err: unknown) {

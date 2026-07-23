@@ -151,7 +151,8 @@ const api = {
   },
   dialog: {
     pickFolder: () => ipcRenderer.invoke('dialog:pickFolder'),
-    pickImage: () => ipcRenderer.invoke('dialog:pickImage')
+    pickImage: () => ipcRenderer.invoke('dialog:pickImage'),
+    pickBackupFile: () => ipcRenderer.invoke('dialog:pickBackupFile')
   },
   data: {
     wipeAll: (token: string) => ipcRenderer.invoke('data:wipeAll', token)
@@ -160,7 +161,7 @@ const api = {
     create: () => ipcRenderer.invoke('backup:create'),
     list: () => ipcRenderer.invoke('backup:list'),
     verify: (data: { backupId: number }) => ipcRenderer.invoke('backup:verify', data),
-    restore: (data: { backupId: number; confirm?: boolean }) =>
+    restore: (data: { backupId?: number; filePath?: string; confirm?: boolean }) =>
       ipcRenderer.invoke('backup:restore', data),
     delete: (data: { backupId: number }) => ipcRenderer.invoke('backup:delete', data),
     prune: () => ipcRenderer.invoke('backup:prune'),

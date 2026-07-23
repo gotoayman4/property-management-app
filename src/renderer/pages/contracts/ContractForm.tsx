@@ -21,6 +21,7 @@ import EntityDocumentsTab from '../../components/EntityDocumentsTab'
 import { FormField } from '../../components/FormField'
 import GlobalSnackbar from '../../components/GlobalSnackbar'
 import { useSnackbar } from '../../hooks/useSnackbar'
+import { notifyDataChanged } from '../../utils/eventBus'
 import { ContractIncreaseMode } from './ContractIncreaseMode'
 import type { EscalationRow } from './EscalationScheduleEditor'
 
@@ -240,10 +241,13 @@ export function ContractForm({
       }
       if (isEdit && contract) {
         showSuccess('common.saveSuccess')
+        notifyDataChanged()
         onSuccess()
       } else {
         setCreatedEntity({ id: newId })
         showSuccess('common.saveSuccess')
+        notifyDataChanged()
+        onSuccess()
       }
     } catch (err: unknown) {
       console.error(err)

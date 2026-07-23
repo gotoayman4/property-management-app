@@ -156,9 +156,17 @@ export function getReportingCurrency(db: Database, fallback = 'JOD'): string {
 export function resolveReportingSnapshot(
   db: Database,
   amount: number,
-  currency: string
+  currency: string,
+  customExchangeRate?: number | null
 ): ReportingSnapshot | null {
   const reportingCurrency = getReportingCurrency(db)
+  if (customExchangeRate && customExchangeRate > 0) {
+    return {
+      reportingCurrency,
+      exchangeRate: customExchangeRate,
+      baseAmount: amount * customExchangeRate
+    }
+  }
   const rate = getLatestRate(db, currency, reportingCurrency)
   if (!rate || rate.rate <= 0) {
     return null

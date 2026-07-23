@@ -8,6 +8,7 @@
  */
 import AttachMoneyIcon from '@mui/icons-material/AttachMoney'
 import BusinessIcon from '@mui/icons-material/Business'
+import CurrencyExchangeIcon from '@mui/icons-material/CurrencyExchange'
 import DashboardIcon from '@mui/icons-material/Dashboard'
 import NotificationsIcon from '@mui/icons-material/Notifications'
 import PaletteIcon from '@mui/icons-material/Palette'
@@ -35,6 +36,7 @@ export const SETTINGS_SECTIONS = [
   { id: 'dashboard', icon: <DashboardIcon />, labelKey: 'settings.navDashboard' },
   { id: 'company', icon: <BusinessIcon />, labelKey: 'settings.navCompany' },
   { id: 'financial', icon: <AttachMoneyIcon />, labelKey: 'settings.navFinancial' },
+  { id: 'exchangeRates', icon: <CurrencyExchangeIcon />, labelKey: 'currency.title' },
   { id: 'receipts', icon: <ReceiptIcon />, labelKey: 'settings.navReceipts' },
   { id: 'notifications', icon: <NotificationsIcon />, labelKey: 'settings.navNotifications' },
   { id: 'backup', icon: <StorageIcon />, labelKey: 'settings.navBackup' },

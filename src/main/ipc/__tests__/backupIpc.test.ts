@@ -43,7 +43,14 @@ vi.mock('electron', () => ({
     getPath: () => process.cwd(),
     relaunch: vi.fn(),
     exit: vi.fn()
+  },
+  BrowserWindow: {
+    getAllWindows: vi.fn(() => [])
   }
+}))
+
+vi.mock('@electron-toolkit/utils', () => ({
+  is: { dev: false }
 }))
 
 vi.mock('../../db/database', () => ({
