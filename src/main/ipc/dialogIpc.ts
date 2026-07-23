@@ -82,8 +82,10 @@ export function registerDialogIpcHandlers(): void {
       const options: Electron.OpenDialogOptions = {
         title: 'Select Backup File',
         filters: [
-          { name: 'Database Backup (*.db)', extensions: ['db'] },
-          { name: 'All Files', extensions: ['*'] }
+          { name: 'Backup Archives (*.zip, *.db)', extensions: ['zip', 'db'] },
+          { name: 'ZIP Archives (*.zip)', extensions: ['zip'] },
+          { name: 'Database Files (*.db)', extensions: ['db'] },
+          { name: 'All Files (*)', extensions: ['*'] }
         ],
         properties: ['openFile']
       }

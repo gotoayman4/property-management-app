@@ -2,14 +2,16 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import {
   Box,
   Button,
+  Checkbox,
+  Chip,
   FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
+  FormControlLabel,
   FormHelperText,
   Grid,
-  FormControlLabel,
-  Checkbox,
+  InputLabel,
+  ListItemText,
+  MenuItem,
+  Select,
   Typography
 } from '@mui/material'
 import React, { useEffect, useState } from 'react'
@@ -45,7 +47,8 @@ const paymentSchema = z.object({
   is_partial: z.boolean().default(false),
   related_period_month: z
     .string()
-    .regex(/^\d{4}-\d{2}$/, 'dateRequired')
+    // Single YYYY-MM or comma-separated list e.g. "2026-01,2026-02"
+    .regex(/^\d{4}-\d{2}(,\d{4}-\d{2})*$/, 'dateRequired')
     .optional()
     .nullable(),
   notes: z.string().optional().nullable()
@@ -89,6 +92,33 @@ export function PaymentForm({ onSuccess, onCancel }: PaymentFormProps): React.Re
   const [customRate, setCustomRate] = useState<number | null>(null)
   const [fetching, setFetching] = useState<boolean>(false)
 
+  // Period picker local state — serialised to "YYYY-MM,..." before setting the RHF field.
+  const currentYear = new Date().getFullYear()
+  const [periodYear, setPeriodYear] = useState<number>(currentYear)
+  const [periodMonths, setPeriodMonths] = useState<number[]>([new Date().getMonth() + 1])
+
+  const YEAR_RANGE = 5 // years back + forward
+  const yearOptions = Array.from(
+    { length: YEAR_RANGE * 2 + 1 },
+    (_, i) => currentYear - YEAR_RANGE + i
+  )
+
+  // Month abbreviations are resolved at render time so i18n is respected.
+  const monthKeys = [
+    'Jan',
+    'Feb',
+    'Mar',
+    'Apr',
+    'May',
+    'Jun',
+    'Jul',
+    'Aug',
+    'Sep',
+    'Oct',
+    'Nov',
+    'Dec'
+  ] as const
+
   const defaultValues: PaymentFormValues = {
     property_id: 0,
     contract_id: null,
@@ -99,7 +129,7 @@ export function PaymentForm({ onSuccess, onCancel }: PaymentFormProps): React.Re
     currency: 'JOD',
     payment_method: 'cash',
     is_partial: false,
-    related_period_month: new Date().toISOString().slice(0, 7),
+    related_period_month: null,
     notes: ''
   }
 
@@ -114,6 +144,22 @@ export function PaymentForm({ onSuccess, onCancel }: PaymentFormProps): React.Re
     resolver: zodResolver(paymentSchema),
     defaultValues
   })
+
+  /**
+   * INTENT: Keep the RHF hidden field in sync whenever the user changes the year or months in the
+   *         period picker. Produces null when no months selected, or a sorted comma-separated string.
+   * CAVEAT: We skip the effect when months array is empty to avoid wiping a previous valid value
+   *         while the user is mid-selection.
+   */
+  useEffect(() => {
+    if (periodMonths.length === 0) {
+      setValue('related_period_month', null)
+      return
+    }
+    const sorted = [...periodMonths].sort((a, b) => a - b)
+    const value = sorted.map((m) => `${periodYear}-${String(m).padStart(2, '0')}`).join(',')
+    setValue('related_period_month', value)
+  }, [periodYear, periodMonths, setValue])
 
   useEffect(() => {
     const load = async (): Promise<void> => {
@@ -356,15 +402,80 @@ export function PaymentForm({ onSuccess, onCancel }: PaymentFormProps): React.Re
             </FormControl>
           </Grid>
 
-          <Grid size={{ xs: 12, sm: 6 }}>
-            <FormField
-              name="related_period_month"
-              control={control}
-              errors={errors}
-              label={t('payment.relatedPeriod')}
-              placeholder="2026-07"
-              errorNamespace="payment"
-            />
+          <Grid size={{ xs: 12 }}>
+            {/* ── Covered Period Picker ────────────────────────────────────────── */}
+            <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 1 }}>
+              {t('payment.relatedPeriod')}
+            </Typography>
+            <Box sx={{ display: 'flex', gap: 2, alignItems: 'flex-start' }}>
+              {/* Year selector */}
+              <FormControl sx={{ minWidth: 120 }}>
+                <InputLabel>{t('payment.relatedPeriodYear')}</InputLabel>
+                <Select
+                  label={t('payment.relatedPeriodYear')}
+                  value={periodYear}
+                  onChange={(e) => {
+                    setPeriodYear(Number(e.target.value))
+                    setPeriodMonths([])
+                  }}
+                >
+                  {yearOptions.map((y) => (
+                    <MenuItem key={y} value={y}>
+                      {y}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+
+              {/* Month multi-select chips */}
+              <FormControl fullWidth error={!!errors.related_period_month} sx={{ flex: 1 }}>
+                <InputLabel>{t('payment.relatedPeriodMonths')}</InputLabel>
+                <Select
+                  multiple
+                  label={t('payment.relatedPeriodMonths')}
+                  value={periodMonths}
+                  onChange={(e) => {
+                    const val = e.target.value
+                    setPeriodMonths(
+                      typeof val === 'string' ? val.split(',').map(Number) : (val as number[])
+                    )
+                  }}
+                  renderValue={(selected) => (
+                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                      {(selected as number[])
+                        .slice()
+                        .sort((a, b) => a - b)
+                        .map((m) => (
+                          <Chip
+                            key={m}
+                            label={monthKeys[m - 1]}
+                            size="small"
+                            onMouseDown={(e) => e.stopPropagation()}
+                            onDelete={() => setPeriodMonths((prev) => prev.filter((x) => x !== m))}
+                          />
+                        ))}
+                    </Box>
+                  )}
+                >
+                  {monthKeys.map((label, idx) => {
+                    const monthNum = idx + 1
+                    return (
+                      <MenuItem key={monthNum} value={monthNum}>
+                        <Checkbox checked={periodMonths.includes(monthNum)} size="small" />
+                        <ListItemText primary={label} />
+                      </MenuItem>
+                    )
+                  })}
+                </Select>
+                {errors.related_period_month && (
+                  <FormHelperText>
+                    {t(`payment.${errors.related_period_month.message}`)}
+                  </FormHelperText>
+                )}
+              </FormControl>
+            </Box>
+            {/* Hidden RHF controller — only carries the serialised value; no UI rendered. */}
+            <Controller name="related_period_month" control={control} render={() => <></>} />
           </Grid>
 
           <Grid size={{ xs: 12, sm: 6 }}>

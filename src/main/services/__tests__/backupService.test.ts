@@ -5,9 +5,11 @@
  * CONSTRAINT: Uses Database(':memory:') + fs.mkdtempSync for isolated filesystem tests.
  */
 
-import { mkdtempSync, existsSync, writeFileSync, rmSync } from 'fs'
+import { createHash } from 'crypto'
+import { mkdtempSync, existsSync, writeFileSync, rmSync, mkdirSync, readFileSync } from 'fs'
 import { tmpdir } from 'os'
 import { join } from 'path'
+import AdmZip from 'adm-zip'
 import Database from 'better-sqlite3'
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import { runMigrations } from '../../db/migrations'
@@ -311,14 +313,20 @@ describe('backupService', () => {
    * file actually contains the live database bytes (not an empty/placeholder file).
    */
   describe('path resolution regression (c6556f5 bug)', () => {
-    it('copies the actual database file when dbPath is provided', () => {
+    it('copies the actual database file into the backup ZIP when dbPath is provided', () => {
       const result = createBackup(db, backupDir, 'manual', dbPath)
       expect(result.success).toBe(true)
       expect(result.filePath).toBeTruthy()
 
-      // The backup file must be a valid SQLite database — open it and read a row.
-      // If path resolution were broken, this would either be missing or not a SQLite file.
-      const restored = new Database(result.filePath!)
+      // The backup file must be a valid ZIP archive containing database.db
+      const zip = new AdmZip(result.filePath!)
+      const dbEntry = zip.getEntry('database.db')
+      expect(dbEntry).toBeTruthy()
+
+      const restoredDbPath = join(backupDir, 'extracted_test.db')
+      writeFileSync(restoredDbPath, dbEntry!.getData())
+
+      const restored = new Database(restoredDbPath)
       const row = restored.prepare('SELECT code, name FROM properties LIMIT 1').get() as
         { code: string; name: string } | undefined
       restored.close()
@@ -342,6 +350,70 @@ describe('backupService', () => {
       // The buggy cast assumed `unknown[]` and indexed `[0][2]` to read the path.
       // With `simple: true` the result is the plucked first column — a number, not a row.
       expect(typeof buggyResult).toBe('number')
+    })
+  })
+
+  describe('documents backup & restore', () => {
+    it('packages uploaded document files into the backup archive and restores them', () => {
+      const docsDir = join(backupDir, 'docs')
+      const targetDocsDir = join(backupDir, 'restored_docs')
+      mkdirSync(docsDir, { recursive: true })
+
+      const sampleDocPath = join(docsDir, 'test_contract.pdf')
+      writeFileSync(sampleDocPath, 'PDF-DUMMY-CONTENT')
+
+      db.prepare(
+        `INSERT INTO documents (entity_type, entity_id, file_name, file_path, mime_type, file_size)
+         VALUES ('contract', 1, 'test_contract.pdf', ?, 'application/pdf', 16)`
+      ).run(sampleDocPath)
+
+      const backupResult = createBackup(db, backupDir, 'manual', dbPath, docsDir)
+      expect(backupResult.success).toBe(true)
+
+      const zip = new AdmZip(backupResult.filePath!)
+      expect(zip.getEntry('database.db')).toBeTruthy()
+      expect(zip.getEntry('documents/test_contract.pdf')).toBeTruthy()
+
+      const logs = listBackups(db)
+      const fakeDbPath = join(backupDir, 'current.db')
+      writeFileSync(fakeDbPath, 'fake-db-content')
+
+      const restoreResult = restoreFromBackup(db, logs[0].id, backupDir, fakeDbPath, targetDocsDir)
+      expect(restoreResult.success).toBe(true)
+
+      const restoredDocPath = join(targetDocsDir, 'test_contract.pdf')
+      expect(existsSync(restoredDocPath)).toBe(true)
+      expect(readFileSync(restoredDocPath, 'utf8')).toBe('PDF-DUMMY-CONTENT')
+
+      rmSync(fakeDbPath, { force: true })
+    })
+
+    it('restores legacy .db backups seamlessly', () => {
+      const legacyDbPath = join(backupDir, 'legacy_backup.db')
+      writeFileSync(legacyDbPath, 'LEGACY-DB-DATA')
+
+      const sizeKb = Math.round(16 / 1024)
+      const checksum = createHash('sha256').update('LEGACY-DB-DATA').digest('hex')
+      const info = db
+        .prepare(
+          `INSERT INTO backup_log (backup_file_path, backup_type, file_size_kb, checksum, is_verified, status)
+           VALUES (?, 'manual', ?, ?, 1, 'success')`
+        )
+        .run(legacyDbPath, sizeKb, checksum)
+
+      const fakeDbPath = join(backupDir, 'current.db')
+      writeFileSync(fakeDbPath, 'fake-db-content')
+
+      const restoreResult = restoreFromBackup(
+        db,
+        Number(info.lastInsertRowid),
+        backupDir,
+        fakeDbPath
+      )
+      expect(restoreResult.success).toBe(true)
+      expect(readFileSync(fakeDbPath, 'utf8')).toBe('LEGACY-DB-DATA')
+
+      rmSync(fakeDbPath, { force: true })
     })
   })
 })

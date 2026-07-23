@@ -27,7 +27,8 @@ const paymentCreateSchema = z.object({
   is_partial: z.boolean().default(false),
   related_period_month: z
     .string()
-    .regex(/^\d{4}-\d{2}$/)
+    // Accepts a single YYYY-MM or a comma-separated list e.g. "2026-01,2026-02,2026-03"
+    .regex(/^\d{4}-\d{2}(,\d{4}-\d{2})*$/)
     .optional()
     .nullable(),
   notes: z.string().max(2000).optional().nullable(),

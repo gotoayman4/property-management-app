@@ -15,8 +15,18 @@
  */
 
 import { createHash } from 'crypto'
-import { existsSync, mkdirSync, copyFileSync, unlinkSync, readFileSync, statSync } from 'fs'
-import { join } from 'path'
+import {
+  existsSync,
+  mkdirSync,
+  copyFileSync,
+  unlinkSync,
+  readFileSync,
+  statSync,
+  readdirSync,
+  writeFileSync
+} from 'fs'
+import { join, basename } from 'path'
+import AdmZip from 'adm-zip'
 import { Database } from 'better-sqlite3'
 
 // Reserved for auto-backup interval enforcement (BR-12 guard).
@@ -51,6 +61,26 @@ export interface RestoreResult {
 }
 
 /**
+ * Resolve default documents directory if running in Electron environment.
+ */
+function defaultDocumentsDir(): string | undefined {
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { app } = require('electron')
+    if (app && typeof app.getPath === 'function') {
+      const dir = join(app.getPath('userData'), 'documents')
+      if (!existsSync(dir)) {
+        mkdirSync(dir, { recursive: true })
+      }
+      return dir
+    }
+  } catch {
+    /* non-electron environment or test mode */
+  }
+  return undefined
+}
+
+/**
  * Compute SHA-256 hex digest of a file.
  * Used by FR-BAK-06 for backup integrity verification.
  */
@@ -71,44 +101,23 @@ function fileSizeKB(filePath: string): number {
 }
 
 /**
- * Create a backup of the SQLite database.
+ * Create a backup of the SQLite database and all uploaded documents.
  *
  * 1. Checkpoints the WAL so the .db file is fully self-contained.
- * 2. Copies the .db file to the backup path with a timestamped filename.
+ * 2. Bundles database.db and uploaded documents into a timestamped ZIP archive.
  * 3. Computes SHA-256 checksum.
  * 4. Logs the operation to backup_log.
- *
- * INTENT: `dbPath` is supplied by the caller (the canonical `dbPath` exported from
- *         db/database.ts) so the service never has to ask SQLite where its own file lives.
- * CONSTRAINT: FR-BAK-01, FR-BAK-03, FR-BAK-06, FR-BAK-07.
- * CAVEAT: Earlier versions resolved `dbPath` via `db.pragma('database_list', { simple: true })`,
- *         which returns only the `seq` column (the integer `0`), not the file path — silently
- *         making every backup fail. See regression test "fails when dbPath is missing".
  *
  * FR-BAK-01, FR-BAK-03, FR-BAK-06, FR-BAK-07
  */
 export function createBackup(
   db: Database,
   backupDir: string,
-  type: 'manual' | 'automatic',
-  dbPath: string
+  type: 'manual' | 'automatic' | 'pre_restore',
+  dbPath: string,
+  documentsDir?: string
 ): BackupResult {
   try {
-    // Ensure backup directory exists
-    if (!existsSync(backupDir)) {
-      mkdirSync(backupDir, { recursive: true })
-    }
-
-    // Flush WAL to main DB file so the copy is consistent
-    db.pragma('wal_checkpoint(TRUNCATE)')
-
-    // Build a timestamped filename: Backup_YYYY-MM-DD_HHmmss.db
-    const now = new Date()
-    const pad = (n: number): string => String(n).padStart(2, '0')
-    const timestamp = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}_${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`
-    const fileName = `Backup_${timestamp}.db`
-    const destPath = join(backupDir, fileName)
-
     if (!dbPath) {
       return {
         success: false,
@@ -118,7 +127,58 @@ export function createBackup(
       }
     }
 
-    copyFileSync(dbPath, destPath)
+    // Ensure backup directory exists
+    if (!existsSync(backupDir)) {
+      mkdirSync(backupDir, { recursive: true })
+    }
+
+    // Flush WAL to main DB file so the copy is consistent
+    db.pragma('wal_checkpoint(TRUNCATE)')
+
+    // Build a timestamped filename: Backup_YYYY-MM-DD_HHmmss.zip
+    const now = new Date()
+    const pad = (n: number): string => String(n).padStart(2, '0')
+    const timestamp = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}_${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`
+    const fileName = `Backup_${timestamp}.zip`
+    const destPath = join(backupDir, fileName)
+
+    const zip = new AdmZip()
+
+    // Add SQLite database as database.db
+    zip.addLocalFile(dbPath, '', 'database.db')
+
+    // Add documents folder if it exists
+    const targetDocsDir = documentsDir ?? defaultDocumentsDir()
+    if (targetDocsDir && existsSync(targetDocsDir)) {
+      try {
+        const files = readdirSync(targetDocsDir)
+        if (files.length > 0) {
+          zip.addLocalFolder(targetDocsDir, 'documents')
+        }
+      } catch (err) {
+        console.warn('Failed to add documents folder to backup:', err)
+      }
+    }
+
+    // Add any documents referenced in DB that might live elsewhere
+    try {
+      const docRows = db
+        .prepare('SELECT file_path FROM documents WHERE file_path IS NOT NULL')
+        .all() as { file_path: string }[]
+      for (const row of docRows) {
+        if (row.file_path && existsSync(row.file_path)) {
+          const fileBase = basename(row.file_path)
+          const zipPath = `documents/${fileBase}`
+          if (!zip.getEntry(zipPath)) {
+            zip.addLocalFile(row.file_path, 'documents', fileBase)
+          }
+        }
+      }
+    } catch {
+      /* best-effort */
+    }
+
+    zip.writeZip(destPath)
 
     // Compute checksum
     const checksum = computeChecksum(destPath)
@@ -178,15 +238,11 @@ export function verifyBackup(db: Database, backupId: number): { valid: boolean; 
 }
 
 /**
- * Restore the database from a backup.
+ * Restore database and uploaded documents from a backup.
  *
- * 1. Verifies the backup checksum.
+ * 1. Verifies backup checksum.
  * 2. Creates an emergency backup of the current state.
- * 3. Copies the backup file over the current DB.
- *
- * IMPORTANT: After restore, the caller MUST reinitialize the database connection
- * (close and reopen). This function returns success but the app needs a restart
- * to pick up the new data.
+ * 3. Restores database.db and documents directory (supports ZIP and legacy .db backups).
  *
  * FR-BAK-05, SRS §16 pre-restore safety backup.
  */
@@ -194,7 +250,8 @@ export function restoreFromBackup(
   db: Database,
   backupId: number,
   backupDir: string,
-  dbPath: string
+  dbPath: string,
+  documentsDir?: string
 ): RestoreResult {
   try {
     const row = db.prepare('SELECT * FROM backup_log WHERE id = ?').get(backupId) as
@@ -214,25 +271,53 @@ export function restoreFromBackup(
       }
     }
 
+    const targetDocsDir = documentsDir ?? defaultDocumentsDir()
+
     // Create pre-restore emergency backup
     db.pragma('wal_checkpoint(TRUNCATE)')
-    const now = new Date()
-    const pad = (n: number): string => String(n).padStart(2, '0')
-    const timestamp = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}_${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`
-    const emergencyName = `PreRestore_${timestamp}.db`
-    const emergencyPath = join(backupDir, emergencyName)
+    const emergencyResult = createBackup(db, backupDir, 'pre_restore', dbPath, targetDocsDir)
+    const emergencyPath = emergencyResult.filePath
 
-    if (!existsSync(backupDir)) mkdirSync(backupDir, { recursive: true })
-    copyFileSync(dbPath, emergencyPath)
+    let restoredZip = false
+    try {
+      const zip = new AdmZip(row.backup_file_path)
+      const dbEntry = zip.getEntry('database.db')
+      if (dbEntry) {
+        restoredZip = true
+        // Extract database.db to dbPath
+        const dbData = dbEntry.getData()
+        writeFileSync(dbPath, dbData)
 
-    const emergencyChecksum = computeChecksum(emergencyPath)
-    db.prepare(
-      `INSERT INTO backup_log (backup_file_path, backup_type, file_size_kb, checksum, is_verified, status)
-       VALUES (?, 'pre_restore', ?, ?, 1, 'success')`
-    ).run(emergencyPath, fileSizeKB(emergencyPath), emergencyChecksum)
+        // Extract documents/ if targetDocsDir is available
+        if (targetDocsDir) {
+          if (!existsSync(targetDocsDir)) {
+            mkdirSync(targetDocsDir, { recursive: true })
+          }
+          const entries = zip.getEntries()
+          for (const entry of entries) {
+            const normName = entry.entryName.replace(/\\/g, '/')
+            if (!entry.isDirectory && normName.startsWith('documents/')) {
+              const relName = normName.substring('documents/'.length)
+              if (relName) {
+                const destFilePath = join(targetDocsDir, relName)
+                const destFolder = join(destFilePath, '..')
+                if (!existsSync(destFolder)) {
+                  mkdirSync(destFolder, { recursive: true })
+                }
+                writeFileSync(destFilePath, entry.getData())
+              }
+            }
+          }
+        }
+      }
+    } catch {
+      restoredZip = false
+    }
 
-    // Copy backup over current DB
-    copyFileSync(row.backup_file_path, dbPath)
+    if (!restoredZip) {
+      // Legacy .db file backup
+      copyFileSync(row.backup_file_path, dbPath)
+    }
 
     return { success: true, emergencyBackupPath: emergencyPath }
   } catch (err) {

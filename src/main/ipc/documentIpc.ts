@@ -10,7 +10,7 @@
  * CONSTRAINT (AGENTS.md): all DB queries parameterized; multi-step writes atomic.
  */
 import { existsSync, mkdirSync, writeFileSync, unlinkSync, readFileSync } from 'fs'
-import { join } from 'path'
+import { join, basename } from 'path'
 import { ipcMain, app } from 'electron'
 import { fromBuffer } from 'file-type'
 import { z } from 'zod'
@@ -79,6 +79,20 @@ function getDocumentsDir(): string {
     mkdirSync(dir, { recursive: true })
   }
   return dir
+}
+
+/**
+ * Resolves file_path, falling back to userData/documents if the original path doesn't exist.
+ */
+export function resolveFilePath(filePath: string): string {
+  if (filePath && existsSync(filePath)) {
+    return filePath
+  }
+  const fallback = join(getDocumentsDir(), basename(filePath))
+  if (existsSync(fallback)) {
+    return fallback
+  }
+  return filePath
 }
 
 /** Throws a typed Error with a machine-readable code (NFR-SEC-07) when validation fails. */
@@ -276,10 +290,14 @@ export function registerDocumentIpcHandlers(): void {
       const doc = db.prepare('SELECT file_path, mime_type FROM documents WHERE id = ?').get(id) as
         { file_path: string; mime_type: string } | undefined
 
-      if (!doc || !existsSync(doc.file_path)) {
+      if (!doc) {
         throw new Error('FILE_NOT_FOUND')
       }
-      const buffer = readFileSync(doc.file_path)
+      const actualPath = resolveFilePath(doc.file_path)
+      if (!existsSync(actualPath)) {
+        throw new Error('FILE_NOT_FOUND')
+      }
+      const buffer = readFileSync(actualPath)
       return { data: buffer.toString('base64'), mime_type: doc.mime_type }
     } catch (error: unknown) {
       if (error instanceof z.ZodError) throw new Error('INVALID_INPUT')
@@ -322,10 +340,11 @@ export function registerDocumentIpcHandlers(): void {
         throw new Error('DOCUMENT_NOT_ARCHIVED')
       }
 
+      const actualPath = resolveFilePath(doc.file_path)
       db.transaction(() => {
         db.prepare('DELETE FROM documents WHERE id = ?').run(id)
       })()
-      if (existsSync(doc.file_path)) unlinkSync(doc.file_path)
+      if (existsSync(actualPath)) unlinkSync(actualPath)
       return { success: true }
     } catch (error: unknown) {
       if (error instanceof z.ZodError) throw new Error('INVALID_INPUT')
