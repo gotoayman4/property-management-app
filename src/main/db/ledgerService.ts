@@ -1,4 +1,9 @@
 import { Database } from 'better-sqlite3'
+import {
+  resolveLocaleKey,
+  tryResolveLocaleKey,
+  type ExportLanguage
+} from '../services/exportService/exportUtils'
 
 /**
  * @file ledgerService — the immutable Financial Ledger engine (SRS §5.15, §8.2; BR-20/21/22).
@@ -85,6 +90,41 @@ export interface LedgerSummary {
   row_count: number
 }
 
+const PAYMENT_TYPE_I18N: Record<string, string> = {
+  rent: 'payment.rent',
+  deposit: 'payment.deposit',
+  other_income: 'payment.otherIncome'
+}
+
+/**
+ * Resolve i18n keys embedded in a ledger description string. Ledger descriptions are
+ * denormalized plain-text strings written at creation time. Expense descriptions contain
+ * raw `expense.category.*` name_keys; payment descriptions contain raw payment_type
+ * enum values. This function post-processes the `—`-separated segments and resolves any
+ * known translatable tokens to the user's language.
+ */
+export function localizeLedgerDescription(description: string, lang: ExportLanguage): string {
+  const segments = description.split(' — ')
+  let changed = false
+  const resolved = segments.map((seg) => {
+    const trimmed = seg.trim()
+    if (trimmed.startsWith('expense.category.')) {
+      const translated = tryResolveLocaleKey(trimmed, lang)
+      if (translated !== trimmed) {
+        changed = true
+        return translated
+      }
+    }
+    const i18nKey = PAYMENT_TYPE_I18N[trimmed]
+    if (i18nKey) {
+      changed = true
+      return resolveLocaleKey(i18nKey, lang)
+    }
+    return seg
+  })
+  return changed ? resolved.join(' — ') : description
+}
+
 /**
  * Append a single immutable ledger row. Returns the new row id.
  * MUST be called inside the caller's transaction for atomicity (BR-21).
@@ -155,7 +195,8 @@ export function computeRunningBalances(
   db: Database,
   propertyId: number,
   fromDate?: string,
-  toDate?: string
+  toDate?: string,
+  lang?: ExportLanguage
 ): LedgerRowWithBalance[] {
   // Windowed cumulative sum over the property's entire history, then filter to the window.
   // SQLite supports window functions since 3.25, which better-sqlite3 ships well above.
@@ -185,7 +226,13 @@ export function computeRunningBalances(
   }
   query += ' ORDER BY entry_date ASC, id ASC'
 
-  return db.prepare(query).all(params) as LedgerRowWithBalance[]
+  const rows = db.prepare(query).all(params) as LedgerRowWithBalance[]
+  if (lang) {
+    for (const row of rows) {
+      row.description = localizeLedgerDescription(row.description, lang)
+    }
+  }
+  return rows
 }
 
 /**

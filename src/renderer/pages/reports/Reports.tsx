@@ -330,25 +330,19 @@ export default function Reports(): React.ReactElement {
             </Grid>
             <Grid size={{ xs: 12, sm: 6, md: 2 }}>
               <FormControl fullWidth>
-                <InputLabel>{t('reports.presetPeriod', 'Period Preset')}</InputLabel>
+                <InputLabel>{t('reports.presetPeriod')}</InputLabel>
                 <Select
-                  label={t('reports.presetPeriod', 'Period Preset')}
+                  label={t('reports.presetPeriod')}
                   value={presetPeriod}
                   onChange={(e) => handlePresetChange(e.target.value)}
                   dir={isRtl ? 'rtl' : 'ltr'}
                 >
-                  <MenuItem value="custom">{t('reports.presetCustom', 'Custom Range')}</MenuItem>
-                  <MenuItem value="this_month">
-                    {t('reports.presetThisMonth', 'This Month')}
-                  </MenuItem>
-                  <MenuItem value="last_month">
-                    {t('reports.presetLastMonth', 'Last Month')}
-                  </MenuItem>
-                  <MenuItem value="this_quarter">
-                    {t('reports.presetThisQuarter', 'This Quarter')}
-                  </MenuItem>
-                  <MenuItem value="this_year">{t('reports.presetThisYear', 'This Year')}</MenuItem>
-                  <MenuItem value="last_year">{t('reports.presetLastYear', 'Last Year')}</MenuItem>
+                  <MenuItem value="custom">{t('reports.presetCustom')}</MenuItem>
+                  <MenuItem value="this_month">{t('reports.presetThisMonth')}</MenuItem>
+                  <MenuItem value="last_month">{t('reports.presetLastMonth')}</MenuItem>
+                  <MenuItem value="this_quarter">{t('reports.presetThisQuarter')}</MenuItem>
+                  <MenuItem value="this_year">{t('reports.presetThisYear')}</MenuItem>
+                  <MenuItem value="last_year">{t('reports.presetLastYear')}</MenuItem>
                 </Select>
               </FormControl>
             </Grid>

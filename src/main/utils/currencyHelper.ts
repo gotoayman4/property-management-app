@@ -1,4 +1,9 @@
 import { Database } from 'better-sqlite3'
+import {
+  type ExportLanguage,
+  resolveLocaleKey,
+  formatNumber
+} from '../services/exportService/exportUtils'
 
 /**
  * Shape returned by getLatestRate. Mirrors the exchange_rates row, except for
@@ -181,11 +186,12 @@ export function computeConsolidatedNote(
   db: Database,
   groups: { currency: string; totals: Record<string, number> }[],
   sumKey: string,
-  options?: { preConverted?: boolean }
+  options?: { preConverted?: boolean; lang?: ExportLanguage }
 ): string | undefined {
   if (groups.length <= 1) return undefined
 
   const targetCurrency = getReportingCurrency(db)
+  const lang = options?.lang ?? 'ar'
 
   let totalSum = 0
   const missingPairs: string[] = []
@@ -206,14 +212,14 @@ export function computeConsolidatedNote(
   }
 
   if (missingPairs.length > 0) {
-    return `Consolidated Total (${targetCurrency}): Rate missing for ${missingPairs.join(', ')}`
+    return `${resolveLocaleKey('reports.consolidatedTotal', lang)} (${targetCurrency}): ${resolveLocaleKey('reports.rateMissingFor', lang)} ${missingPairs.join(', ')}`
   }
 
   const suffix = options?.preConverted
-    ? "(Frozen at each transaction's rate snapshot)"
-    : '(Converted using latest saved rates)'
+    ? resolveLocaleKey('reports.frozenSnapshotNote', lang)
+    : resolveLocaleKey('reports.convertedUsingLatest', lang)
 
-  return `Consolidated Total: ${totalSum.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${targetCurrency} ${suffix}`
+  return `${resolveLocaleKey('reports.consolidatedTotal', lang)}: ${formatNumber(totalSum, lang)} ${targetCurrency} ${suffix}`
 }
 
 /**
@@ -310,13 +316,14 @@ export function sumReportingSnapshot(
  * INTENT: Format a ConsolidatedSnapshotTotal as a human-readable report footnote. Mirrors the
  *         shape of computeConsolidatedNote's output so the UI needs no special-casing.
  */
-export function formatConsolidatedSnapshotNote(snap: ConsolidatedSnapshotTotal): string {
-  const total = snap.total.toLocaleString(undefined, {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2
-  })
+export function formatConsolidatedSnapshotNote(
+  snap: ConsolidatedSnapshotTotal,
+  lang: ExportLanguage = 'ar'
+): string {
+  const total = formatNumber(snap.total, lang)
+  const frozenNote = resolveLocaleKey('reports.frozenSnapshotNote', lang)
   if (snap.unconvertedCurrencies.length > 0) {
-    return `Consolidated Total: ${total} ${snap.currency} (Frozen at each transaction's rate snapshot; ${snap.unconvertedCurrencies.join(', ')} had no snapshot and used native amount)`
+    return `${resolveLocaleKey('reports.consolidatedTotal', lang)}: ${total} ${snap.currency} (${frozenNote}; ${snap.unconvertedCurrencies.join(', ')} ${resolveLocaleKey('reports.hadNoSnapshot', lang)})`
   }
-  return `Consolidated Total: ${total} ${snap.currency} (Frozen at each transaction's rate snapshot)`
+  return `${resolveLocaleKey('reports.consolidatedTotal', lang)}: ${total} ${snap.currency} (${frozenNote})`
 }

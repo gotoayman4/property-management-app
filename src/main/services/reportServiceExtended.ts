@@ -11,13 +11,20 @@
 import { Database } from 'better-sqlite3'
 import { getReportingCurrency } from '../utils/currencyHelper'
 import {
-  type ReportFilters,
   type ReportData,
   type ReportColumn,
+  type ExportLanguage,
   groupByCurrency,
   REPORT_ROW_LIMIT,
-  dateRangeClause
-} from './reportService'
+  resolveLocaleKey,
+  tryResolveLocaleKey
+} from './exportService/exportUtils'
+import { type ReportFilters, dateRangeClause } from './reportService'
+
+/** Resolve the language filter once, defaulting to Arabic (BR-30). */
+function langOf(filters: ReportFilters): ExportLanguage {
+  return filters.language === 'en' ? 'en' : 'ar'
+}
 
 /* -------------------------------------------------------------------------- */
 /* Report 6 — Property Profitability (FR-REP-05, SRS §14.4)                  */
@@ -254,16 +261,18 @@ function buildContractExpiryReport(db: Database, filters: ReportFilters): Report
   params.today = today
   const propertyFilter = filters.property_id ? 'AND pr.id = @property_id' : ''
   if (filters.property_id) params.property_id = filters.property_id
+  const lang = langOf(filters)
 
   const rows = db
     .prepare(
       `SELECT c.id, pr.name AS property_name, t.fullname AS tenant_name,
               c.end_date, c.rent_amount AS current_rent, pr.currency,
               CAST(julianday(c.end_date) - julianday(@today) AS INTEGER) AS days_remaining,
-              CASE WHEN res.id IS NOT NULL
-                THEN 'Year ' || res.year_number || ' — ' || res.rent_amount || ' ' || pr.currency || ' (eff. ' || res.effective_start_date || ')'
-                ELSE CAST(c.annual_increase_percent AS TEXT) || '% increase'
-              END AS next_change
+              CASE WHEN res.id IS NOT NULL THEN res.year_number ELSE NULL END AS escalation_year,
+              CASE WHEN res.id IS NOT NULL THEN res.rent_amount ELSE NULL END AS escalation_rent,
+              CASE WHEN res.id IS NOT NULL THEN res.effective_start_date ELSE NULL END AS escalation_date,
+              c.annual_increase_percent,
+              CASE WHEN res.id IS NOT NULL THEN 1 ELSE 0 END AS has_escalation
          FROM contracts c
          JOIN properties pr ON c.property_id = pr.id
          JOIN tenants t ON c.tenant_id = t.id
@@ -276,6 +285,21 @@ function buildContractExpiryReport(db: Database, filters: ReportFilters): Report
          LIMIT ${REPORT_ROW_LIMIT + 1}`
     )
     .all(params) as Record<string, unknown>[]
+
+  for (const row of rows) {
+    if (row.has_escalation) {
+      row['next_change'] = resolveLocaleKey('reports.yearRow', lang, {
+        year: Number(row.escalation_year),
+        amount: Number(row.escalation_rent),
+        currency: String(row.currency),
+        date: String(row.escalation_date)
+      })
+    } else {
+      row['next_change'] = resolveLocaleKey('reports.percentIncrease', lang, {
+        percent: Number(row.annual_increase_percent)
+      })
+    }
+  }
 
   const groups = groupByCurrency(rows, 'currency', ['current_rent'])
   return { titleKey: 'reports.type.contract_expiry', columns: CONTRACT_EXPIRY_COLUMNS, groups }
@@ -301,16 +325,17 @@ function buildRecurringScheduleReport(db: Database, filters: ReportFilters): Rep
   const params: Record<string, unknown> = {}
   const propertyFilter = filters.property_id ? 'AND rt.property_id = @property_id' : ''
   if (filters.property_id) params.property_id = filters.property_id
+  const lang = langOf(filters)
 
   const rows = db
     .prepare(
       `SELECT rt.name AS template_name, pr.name AS property_name,
               ec.name_key AS category_key, rt.vendor_name,
               rt.amount, rt.currency, rt.frequency, rt.next_due_date,
-              CASE WHEN rt.is_active = 1 THEN 'Active'
-                   WHEN rt.end_date IS NOT NULL AND rt.end_date < date('now') THEN 'Ended'
-                   ELSE 'Paused'
-              END AS is_active
+              CASE WHEN rt.is_active = 1 THEN 'active'
+                   WHEN rt.end_date IS NOT NULL AND rt.end_date < date('now') THEN 'ended'
+                   ELSE 'paused'
+              END AS status_code
          FROM recurring_expense_templates rt
          LEFT JOIN properties pr ON rt.property_id = pr.id
          LEFT JOIN expense_categories ec ON rt.category_id = ec.id
@@ -320,6 +345,17 @@ function buildRecurringScheduleReport(db: Database, filters: ReportFilters): Rep
          LIMIT ${REPORT_ROW_LIMIT + 1}`
     )
     .all(params) as Record<string, unknown>[]
+
+  const statusMap: Record<string, string> = {
+    active: resolveLocaleKey('reports.statusActive', lang),
+    ended: resolveLocaleKey('reports.statusEnded', lang),
+    paused: resolveLocaleKey('reports.statusPaused', lang)
+  }
+  for (const row of rows) {
+    row['is_active'] = statusMap[String(row.status_code)] ?? String(row.status_code)
+    row['category_key'] = tryResolveLocaleKey(String(row.category_key), lang)
+    row['frequency'] = resolveLocaleKey(`reports.frequency.${row.frequency}`, lang)
+  }
 
   const groups = groupByCurrency(rows, 'currency', ['amount'])
   return {
@@ -349,6 +385,7 @@ function buildDocumentExpiryReport(db: Database, filters: ReportFilters): Report
   params.today = today
   const propertyFilter = filters.property_id ? 'AND pr.id = @property_id' : ''
   if (filters.property_id) params.property_id = filters.property_id
+  const lang = langOf(filters)
 
   const rows = db
     .prepare(
@@ -358,10 +395,10 @@ function buildDocumentExpiryReport(db: Database, filters: ReportFilters): Report
               d.issue_date, d.expiry_date,
               CAST(julianday(d.expiry_date) - julianday(@today) AS INTEGER) AS days_until_expiry,
               CASE
-                WHEN julianday(d.expiry_date) - julianday(@today) < 0 THEN 'Expired'
-                WHEN julianday(d.expiry_date) - julianday(@today) <= 30 THEN 'Expiring Soon'
-                ELSE 'Valid'
-              END AS status_label
+                WHEN julianday(d.expiry_date) - julianday(@today) < 0 THEN 'expired'
+                WHEN julianday(d.expiry_date) - julianday(@today) <= 30 THEN 'expiring_soon'
+                ELSE 'valid'
+              END AS status_code
          FROM documents d
          JOIN properties pr ON d.entity_type = 'property' AND d.entity_id = pr.id
          WHERE d.is_archived = 0 AND d.expiry_date IS NOT NULL
@@ -370,6 +407,15 @@ function buildDocumentExpiryReport(db: Database, filters: ReportFilters): Report
          LIMIT ${REPORT_ROW_LIMIT + 1}`
     )
     .all(params) as Record<string, unknown>[]
+
+  const statusMap: Record<string, string> = {
+    expired: resolveLocaleKey('reports.statusExpired', lang),
+    expiring_soon: resolveLocaleKey('reports.statusExpiringSoon', lang),
+    valid: resolveLocaleKey('reports.statusValid', lang)
+  }
+  for (const row of rows) {
+    row['status_label'] = statusMap[String(row.status_code)] ?? String(row.status_code)
+  }
 
   return {
     titleKey: 'reports.type.document_expiry',

@@ -5,6 +5,8 @@
  */
 import { ipcMain } from 'electron'
 import { db } from '../db/database'
+import { resolveLocaleKey, tryResolveLocaleKey } from '../services/exportService/exportUtils'
+import type { ExportLanguage } from '../services/exportService/exportUtils'
 
 interface SearchResult {
   entity_type: string
@@ -19,6 +21,15 @@ export function registerSearchIpcHandlers(): void {
   ipcMain.handle('search:global', async (_, query: string) => {
     try {
       if (!query || query.trim().length < 2) return []
+
+      let lang: ExportLanguage = 'ar'
+      try {
+        const row = db.prepare('SELECT app_language FROM settings WHERE id = 1').get() as
+          { app_language?: string } | undefined
+        if (row?.app_language === 'en') lang = 'en'
+      } catch {
+        // Default to Arabic on missing settings
+      }
 
       const pattern = `%${query.trim()}%`
       const results: SearchResult[] = []
@@ -38,12 +49,21 @@ export function registerSearchIpcHandlers(): void {
         status: string
       }>
 
+      const propertyTypeMap: Record<string, string> = {
+        apartment: resolveLocaleKey('property.apartment', lang),
+        shop: resolveLocaleKey('property.shop', lang)
+      }
+      const propertyStatusMap: Record<string, string> = {
+        vacant: resolveLocaleKey('property.statusVacant', lang),
+        rented: resolveLocaleKey('property.statusRented', lang),
+        maintenance: resolveLocaleKey('property.statusMaintenance', lang)
+      }
       for (const p of properties) {
         results.push({
           entity_type: 'property',
           entity_id: p.id,
           title: `${p.name} (${p.code})`,
-          subtitle: `${p.type} — ${p.status}`
+          subtitle: `${propertyTypeMap[p.type] ?? p.type} — ${propertyStatusMap[p.status] ?? p.status}`
         })
       }
 
@@ -90,12 +110,20 @@ export function registerSearchIpcHandlers(): void {
         tenant_name: string
       }>
 
+      const contractStatusMap: Record<string, string> = {
+        draft: resolveLocaleKey('contract.draft', lang),
+        active: resolveLocaleKey('contract.active', lang),
+        expired: resolveLocaleKey('contract.expired', lang),
+        terminated: resolveLocaleKey('contract.terminated', lang),
+        cancelled: resolveLocaleKey('contract.cancelled', lang),
+        renewing: resolveLocaleKey('contract.renewing', lang)
+      }
       for (const c of contracts) {
         results.push({
           entity_type: 'contract',
           entity_id: c.id,
-          title: `Contract ${c.contract_number}`,
-          subtitle: `${c.property_name} → ${c.tenant_name} (${c.status})`
+          title: `${resolveLocaleKey('search.contract', lang)} ${c.contract_number}`,
+          subtitle: `${c.property_name} → ${c.tenant_name} (${contractStatusMap[c.status] ?? c.status})`
         })
       }
 
@@ -123,7 +151,7 @@ export function registerSearchIpcHandlers(): void {
         results.push({
           entity_type: 'payment',
           entity_id: p.id,
-          title: `Payment ${p.receipt_number}`,
+          title: `${resolveLocaleKey('search.payment', lang)} ${p.receipt_number}`,
           subtitle: `${p.amount} ${p.currency} — ${p.property_name} (${p.payment_date})`
         })
       }
@@ -151,14 +179,12 @@ export function registerSearchIpcHandlers(): void {
       }>
 
       for (const e of expenses) {
-        const categoryLabel = e.category_key.startsWith('expense.category.')
-          ? e.category_key.replace('expense.category.', '')
-          : e.category_key
-        const propName = e.property_name ?? 'General Expense'
+        const categoryLabel = tryResolveLocaleKey(e.category_key, lang)
+        const propName = e.property_name ?? resolveLocaleKey('search.generalExpense', lang)
         results.push({
           entity_type: 'expense',
           entity_id: e.id,
-          title: `Expense: ${categoryLabel}`,
+          title: `${resolveLocaleKey('search.expense', lang)}: ${categoryLabel}`,
           subtitle: `${e.amount} ${e.currency} — ${propName} (${e.expense_date})`
         })
       }
@@ -181,11 +207,14 @@ export function registerSearchIpcHandlers(): void {
       }>
 
       for (const d of documents) {
+        const docTypeLabel = d.document_type
+          ? tryResolveLocaleKey(`documents.types.${d.document_type}`, lang)
+          : resolveLocaleKey('search.other', lang)
         results.push({
           entity_type: 'document',
           entity_id: d.id,
           title: d.file_name,
-          subtitle: `Doc: ${d.document_type ?? 'Other'} (${d.entity_type})`,
+          subtitle: `${resolveLocaleKey('search.doc', lang)}: ${docTypeLabel} (${d.entity_type})`,
           parent_type: d.entity_type,
           parent_id: d.entity_id
         })

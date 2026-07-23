@@ -1,5 +1,7 @@
-import { ipcMain } from 'electron'
-import { db } from '../db/database'
+import { join } from 'path'
+import { ipcMain, app } from 'electron'
+import { db, dbPath } from '../db/database'
+import { createBackup } from '../services/backupService'
 
 /**
  * INTENT: IPC handlers for data-level operations — wipe/reset all user data.
@@ -7,19 +9,31 @@ import { db } from '../db/database'
  *             in uppercase — this is checked in BOTH the renderer UI (disabled button) and
  *             the main process (double verification).
  * DECISION: Protected tables (migrations, countries, settings, expense_categories,
- *           notification_templates, users) survive the wipe so the app remains functional
- *           without requiring re-setup of configuration.
+ *           notification_templates, users, backup_log) survive the wipe so the app remains
+ *           functional without requiring re-setup of configuration. An automatic backup is
+ *           created before the wipe so the user can restore if needed.
  */
 
-/** Tables that are preserved during a wipe (system configuration / seed data). */
+/** Tables that are preserved during a wipe (system configuration / seed data + backup history). */
 const PROTECTED_TABLES = [
   'migrations',
   'countries',
   'settings',
   'expense_categories',
   'notification_templates',
-  'users'
+  'users',
+  'backup_log'
 ]
+
+/** Resolve the backup directory: settings.backup_path → Documents/Backups → fallback. */
+function resolveBackupDir(): string {
+  const settings = db.prepare('SELECT backup_path FROM settings WHERE id = 1').get() as
+    { backup_path: string | null } | undefined
+  if (settings?.backup_path && settings.backup_path.trim().length > 0) {
+    return settings.backup_path.trim()
+  }
+  return join(app.getPath('documents'), 'PropertyManager', 'Backups')
+}
 
 export function registerDataIpcHandlers(): void {
   ipcMain.handle('data:wipeAll', async (_, token: string) => {
@@ -29,6 +43,10 @@ export function registerDataIpcHandlers(): void {
     }
 
     try {
+      // Create an automatic backup before wiping so the user can restore if needed.
+      const backupDir = resolveBackupDir()
+      createBackup(db, backupDir, 'automatic', dbPath)
+
       // Get all user-data tables (exclude system/sqlite internals and protected tables).
       const tables = db
         .prepare(

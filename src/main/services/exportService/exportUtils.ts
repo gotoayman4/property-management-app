@@ -215,8 +215,15 @@ function loadLocale(lang: ExportLanguage): Record<string, unknown> {
   return parsed
 }
 
-/** Resolve a dotted i18n key (e.g. 'reports.type.income') against the locale object tree. */
-export function resolveLocaleKey(key: string, lang: ExportLanguage): string {
+/**
+ * Resolve a dotted i18n key (e.g. 'reports.type.income') against the locale object tree.
+ * Optionally interpolate `{{param}}` placeholders with values from `params`.
+ */
+export function resolveLocaleKey(
+  key: string,
+  lang: ExportLanguage,
+  params?: Record<string, string | number>
+): string {
   const root = loadLocale(lang)
   const parts = key.split('.')
   let node: unknown = root
@@ -230,7 +237,28 @@ export function resolveLocaleKey(key: string, lang: ExportLanguage): string {
   if (typeof node !== 'string') {
     throw new Error(`I18N_KEY_NOT_STRING:${key}:${lang}`)
   }
-  return node
+  if (!params) return node
+  let result = node
+  for (const [k, v] of Object.entries(params)) {
+    result = result.replace(new RegExp(`\\{\\{${k}\\}\\}`, 'g'), String(v))
+  }
+  return result
+}
+
+/**
+ * Safe variant of resolveLocaleKey that returns the raw key instead of throwing when
+ * the key is missing. Used for optional translations (e.g. custom expense categories)
+ * where falling back to the raw key is acceptable.
+ */
+export function tryResolveLocaleKey(key: string, lang: ExportLanguage): string {
+  try {
+    return resolveLocaleKey(key, lang)
+  } catch {
+    // Return the last segment of the key as a human-readable fallback.
+    // e.g. 'expense.category.my_custom' → 'my_custom'
+    const parts = key.split('.')
+    return parts[parts.length - 1]
+  }
 }
 
 /** HTML-escape any user-supplied string before interpolation into the HTML report (BR-31). */

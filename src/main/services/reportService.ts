@@ -34,7 +34,9 @@ import {
   type ReportColumn,
   groupByCurrency,
   buildConsolidatedGroup,
-  REPORT_ROW_LIMIT
+  REPORT_ROW_LIMIT,
+  resolveLocaleKey,
+  tryResolveLocaleKey
 } from './exportService/exportUtils'
 import { extendedBuilders } from './reportServiceExtended'
 
@@ -137,6 +139,7 @@ function buildIncomeReport(db: Database, filters: ReportFilters): ReportData {
     conditions.push('p.payment_method = @payment_method')
     params.payment_method = filters.payment_method
   }
+  const lang = langOf(filters)
 
   const rows = db
     .prepare(
@@ -151,6 +154,23 @@ function buildIncomeReport(db: Database, filters: ReportFilters): ReportData {
         LIMIT ${REPORT_ROW_LIMIT + 1}`
     )
     .all(params) as Record<string, unknown>[]
+
+  const paymentTypeMap: Record<string, string> = {
+    rent: resolveLocaleKey('payment.rent', lang),
+    deposit: resolveLocaleKey('payment.deposit', lang),
+    other_income: resolveLocaleKey('payment.otherIncome', lang)
+  }
+  const paymentMethodMap: Record<string, string> = {
+    cash: resolveLocaleKey('payment.methodCash', lang),
+    bank_transfer: resolveLocaleKey('payment.methodBank', lang),
+    cheque: resolveLocaleKey('payment.methodCheque', lang),
+    other: resolveLocaleKey('payment.methodOther', lang)
+  }
+  for (const row of rows) {
+    row['payment_type'] = paymentTypeMap[String(row['payment_type'])] ?? String(row['payment_type'])
+    row['payment_method'] =
+      paymentMethodMap[String(row['payment_method'])] ?? String(row['payment_method'])
+  }
 
   const groups = groupByCurrency(rows, 'currency', ['amount'])
   return {
@@ -187,6 +207,7 @@ function buildExpenseReport(db: Database, filters: ReportFilters): ReportData {
     conditions.push('e.category_id = @category_id')
     params.category_id = filters.category_id
   }
+  const lang = langOf(filters)
 
   const rows = db
     .prepare(
@@ -202,6 +223,10 @@ function buildExpenseReport(db: Database, filters: ReportFilters): ReportData {
         LIMIT ${REPORT_ROW_LIMIT + 1}`
     )
     .all(params) as Record<string, unknown>[]
+
+  for (const row of rows) {
+    row['category_key'] = tryResolveLocaleKey(String(row['category_key']), lang)
+  }
 
   const groups = groupByCurrency(rows, 'currency', ['amount'])
   return {
@@ -298,14 +323,17 @@ function buildProfitLossReport(db: Database, filters: ReportFilters): ReportData
   })
   const consolidatedNote =
     groups.length > 1
-      ? formatConsolidatedSnapshotNote({
-          total: incomeSnap.total - expenseSnap.total,
-          currency: incomeSnap.currency,
-          unconvertedCurrencies: Array.from(
-            new Set([...incomeSnap.unconvertedCurrencies, ...expenseSnap.unconvertedCurrencies])
-          )
-        })
-      : computeConsolidatedNote(db, groups, 'net_profit')
+      ? formatConsolidatedSnapshotNote(
+          {
+            total: incomeSnap.total - expenseSnap.total,
+            currency: incomeSnap.currency,
+            unconvertedCurrencies: Array.from(
+              new Set([...incomeSnap.unconvertedCurrencies, ...expenseSnap.unconvertedCurrencies])
+            )
+          },
+          langOf(filters)
+        )
+      : computeConsolidatedNote(db, groups, 'net_profit', { lang: langOf(filters) })
 
   // Consolidated group: one row per property in the reporting currency, using frozen snapshots.
   // Mirrors the native P&L shape so the same columns render, but amounts are base_amount sums.
@@ -390,6 +418,7 @@ function buildVacancyReport(db: Database, filters: ReportFilters): ReportData {
   const params: Record<string, unknown> = { today }
   const propertyFilter = filters.property_id ? 'AND pr.id = @property_id' : ''
   if (filters.property_id) params.property_id = filters.property_id
+  const lang = langOf(filters)
 
   // Last contract end date per property, used as the "last occupied" date.
   const rows = db
@@ -417,6 +446,14 @@ function buildVacancyReport(db: Database, filters: ReportFilters): ReportData {
         LIMIT ${REPORT_ROW_LIMIT + 1}`
     )
     .all(params) as Record<string, unknown>[]
+
+  const propertyTypeMap: Record<string, string> = {
+    apartment: resolveLocaleKey('property.apartment', lang),
+    shop: resolveLocaleKey('property.shop', lang)
+  }
+  for (const row of rows) {
+    row['type'] = propertyTypeMap[String(row['type'])] ?? String(row['type'])
+  }
 
   // Vacancy has no currency — wrap in a single synthetic group so the exporter's per-currency
   // loop has a consistent shape.
@@ -458,10 +495,13 @@ function buildLedgerReport(db: Database, filters: ReportFilters): ReportData {
 
   // BR-22: reuse the canonical running-balance computation so the report and the Ledger screen
   // can never disagree on a balance.
-  const rows = computeRunningBalances(db, propertyId, filters.from_date, filters.to_date).slice(
-    0,
-    REPORT_ROW_LIMIT
-  ) as unknown as Record<string, unknown>[]
+  const rows = computeRunningBalances(
+    db,
+    propertyId,
+    filters.from_date,
+    filters.to_date,
+    langOf(filters)
+  ).slice(0, REPORT_ROW_LIMIT) as unknown as Record<string, unknown>[]
 
   const groups = groupByCurrency(rows, 'currency', ['debit', 'credit'])
   // DECISION: the ledger report intentionally has NO consolidatedGroup. A ledger is a single-

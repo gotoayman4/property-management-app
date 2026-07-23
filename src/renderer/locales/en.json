@@ -31,8 +31,8 @@
   },
   "sidebar": {
     "dashboard": "Dashboard",
-    "properties": "Properties & Units",
-    "tenants": "Tenants & Owners",
+    "properties": "Properties",
+    "tenants": "Tenants",
     "contracts": "Rental Contracts",
     "payments": "Payments & Income",
     "expenses": "Expenses",
@@ -328,10 +328,10 @@
     "receiptPreview": "Preview",
     "dangerZone": "Danger Zone",
     "wipeAllData": "Wipe All Data",
-    "wipeAllDataDescription": "This will permanently delete all properties, tenants, contracts, payments, expenses, ledger entries, documents, exchange rates, and notifications. System configuration (settings, countries, expense categories, notification templates, and user accounts) will be preserved.",
-    "wipeAllDataWarning": "This action is IRREVERSIBLE. All your entered data will be permanently deleted. Make sure you have a backup before proceeding.",
+    "wipeAllDataDescription": "This will permanently delete all properties, tenants, contracts, payments, expenses, ledger entries, documents, exchange rates, and notifications. An automatic backup will be created before deletion. System configuration and existing backups will be preserved.",
+    "wipeAllDataWarning": "This action is IRREVERSIBLE. All your entered data will be permanently deleted. An automatic backup will be created before wiping, and your existing backups will be preserved.",
     "wipeAllDataTypeConfirm": "Type DELETE to confirm",
-    "wipeAllDataSuccess": "All data has been wiped successfully. The application now contains only system configuration."
+    "wipeAllDataSuccess": "All data has been wiped successfully. An automatic backup was created before deletion, and your existing backups have been preserved."
   },
   "tenant": {
     "title": "Tenant Management",
@@ -1015,6 +1015,42 @@
       "documentType": "Document type",
       "issueDate": "Issue date",
       "expiryDate": "Expiry date"
+    },
+    "presetPeriod": "Period Preset",
+    "presetCustom": "Custom Range",
+    "presetThisMonth": "This Month",
+    "presetLastMonth": "Last Month",
+    "presetThisQuarter": "This Quarter",
+    "presetThisYear": "This Year",
+    "presetLastYear": "Last Year",
+    "consolidatedTotal": "Consolidated Total",
+    "rateMissingFor": "Rate missing for",
+    "frozenSnapshotNote": "Frozen at each transaction's rate snapshot",
+    "convertedUsingLatest": "Converted using latest saved rates",
+    "hadNoSnapshot": "had no snapshot and used native amount",
+    "yearRow": "Year {{year}} — {{amount}} {{currency}} (eff. {{date}})",
+    "percentIncrease": "{{percent}}% increase",
+    "statusActive": "Active",
+    "statusEnded": "Ended",
+    "statusPaused": "Paused",
+    "statusExpired": "Expired",
+    "statusExpiringSoon": "Expiring Soon",
+    "statusValid": "Valid",
+    "frequency": {
+      "daily": "Daily",
+      "weekly": "Weekly",
+      "monthly": "Monthly",
+      "quarterly": "Quarterly",
+      "semi_annual": "Semi-Annual",
+      "annual": "Annual"
     }
+  },
+  "search": {
+    "contract": "Contract",
+    "payment": "Payment",
+    "expense": "Expense",
+    "generalExpense": "General Expense",
+    "doc": "Doc",
+    "other": "Other"
   }
 }

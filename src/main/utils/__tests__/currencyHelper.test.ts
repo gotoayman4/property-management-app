@@ -188,7 +188,8 @@ describe('computeConsolidatedNote', () => {
         { currency: 'JOD', totals: { net: 100 } },
         { currency: 'USD', totals: { net: 100 } } // 100 USD -> 70.9 JOD via direct
       ],
-      'net'
+      'net',
+      { lang: 'en' }
     )
     expect(note).toBeDefined()
     expect(note).toContain('Consolidated Total')
@@ -210,7 +211,8 @@ describe('computeConsolidatedNote', () => {
         { currency: 'JOD', totals: { net: 100 } },
         { currency: 'USD', totals: { net: 100 } }
       ],
-      'net'
+      'net',
+      { lang: 'en' }
     )
     expect(note).toBeDefined()
     expect(note).not.toContain('Rate missing')
@@ -223,7 +225,8 @@ describe('computeConsolidatedNote', () => {
         { currency: 'JOD', totals: { net: 100 } },
         { currency: 'EUR', totals: { net: 100 } }
       ],
-      'net'
+      'net',
+      { lang: 'en' }
     )
     expect(note).toContain('Rate missing')
     expect(note).toContain('EUR -> JOD')
@@ -422,11 +425,14 @@ describe('sumReportingSnapshot', () => {
 
 describe('formatConsolidatedSnapshotNote', () => {
   it('formats a clean total with no unconverted currencies', () => {
-    const note = formatConsolidatedSnapshotNote({
-      total: 1234.56,
-      currency: 'JOD',
-      unconvertedCurrencies: []
-    })
+    const note = formatConsolidatedSnapshotNote(
+      {
+        total: 1234.56,
+        currency: 'JOD',
+        unconvertedCurrencies: []
+      },
+      'en'
+    )
     expect(note).toContain('Consolidated Total')
     expect(note).toContain('JOD')
     expect(note).toContain('Frozen at each transaction')
@@ -434,11 +440,14 @@ describe('formatConsolidatedSnapshotNote', () => {
   })
 
   it('footnotes currencies that lacked snapshots', () => {
-    const note = formatConsolidatedSnapshotNote({
-      total: 500,
-      currency: 'JOD',
-      unconvertedCurrencies: ['USD', 'EUR']
-    })
+    const note = formatConsolidatedSnapshotNote(
+      {
+        total: 500,
+        currency: 'JOD',
+        unconvertedCurrencies: ['USD', 'EUR']
+      },
+      'en'
+    )
     expect(note).toContain('USD, EUR had no snapshot')
   })
 })
@@ -463,7 +472,7 @@ describe('computeConsolidatedNote (preConverted)', () => {
         { currency: 'JOD', totals: { net: 200 } }
       ],
       'net',
-      { preConverted: true }
+      { preConverted: true, lang: 'en' }
     )
     expect(note).toBeDefined()
     expect(note).toContain('Frozen at each transaction')
@@ -480,7 +489,7 @@ describe('computeConsolidatedNote (preConverted)', () => {
         { currency: 'USD', totals: { net: 50 } }
       ],
       'net',
-      { preConverted: true }
+      { preConverted: true, lang: 'en' }
     )
     expect(note).not.toContain('Rate missing')
   })

@@ -94,10 +94,10 @@ describe('reportService', () => {
   })
 
   it('expense report resolves category_key and groups per currency', () => {
-    const report = buildReport(db, 'expense', {})
+    const report = buildReport(db, 'expense', { language: 'en' })
     expect(report.groups).toHaveLength(2)
     const jodRow = report.groups.find((g) => g.currency === 'JOD')?.rows[0]
-    expect(jodRow?.['category_key']).toBe('expense.category.maintenance')
+    expect(jodRow?.['category_key']).toBe('Maintenance')
     expect(report.groups.find((g) => g.currency === 'TRY')?.totals.amount).toBe(2000)
   })
 

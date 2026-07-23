@@ -9,6 +9,7 @@ import {
   appendLedgerEntry,
   LedgerError
 } from '../db/ledgerService'
+import type { ExportLanguage } from '../services/exportService/exportUtils'
 
 /**
  * INTENT: IPC handlers for the Financial Ledger screen (SRS §5.15, §9.8).
@@ -16,6 +17,17 @@ import {
  *             which appends a manual_adjustment ledger row (FR-LED-04). The ledger is append-only;
  *             there is no UPDATE/DELETE handler here or anywhere.
  */
+
+function readLanguage(): ExportLanguage {
+  try {
+    const row = db.prepare('SELECT app_language FROM settings WHERE id = 1').get() as
+      { app_language?: string } | undefined
+    if (row?.app_language === 'en') return 'en'
+  } catch {
+    // Default to Arabic on missing settings
+  }
+  return 'ar'
+}
 
 const ledgerListSchema = z.object({
   property_id: z.number().int().positive(),
@@ -54,7 +66,7 @@ export function registerLedgerIpcHandlers(): void {
   ipcMain.handle('ledger:list', async (_, payload: unknown) => {
     try {
       const v = ledgerListSchema.parse(payload)
-      return computeRunningBalances(db, v.property_id, v.from_date, v.to_date)
+      return computeRunningBalances(db, v.property_id, v.from_date, v.to_date, readLanguage())
     } catch (error: unknown) {
       console.error('Error listing ledger:', error)
       if (error instanceof z.ZodError) throw new Error('INVALID_INPUT')

@@ -110,7 +110,7 @@ describe('reportServiceExtended', () => {
 
   describe('property_profitability', () => {
     it('groups per currency and computes income, expense, net, and margin_percent', () => {
-      const report = buildReport(db, 'property_profitability', {})
+      const report = buildReport(db, 'property_profitability', { language: 'en' })
       expect(report.groups).toHaveLength(2)
 
       const jod = report.groups.find((g) => g.currency === 'JOD')
@@ -124,14 +124,17 @@ describe('reportServiceExtended', () => {
     })
 
     it('filters by property_id', () => {
-      const report = buildReport(db, 'property_profitability', { property_id: propertyJod })
+      const report = buildReport(db, 'property_profitability', {
+        property_id: propertyJod,
+        language: 'en'
+      })
       expect(report.groups).toHaveLength(1)
       expect(report.groups[0].currency).toBe('JOD')
       expect(report.groups[0].totals.total_income).toBe(500)
     })
 
     it('produces a consolidated group for multi-currency portfolios', () => {
-      const report = buildReport(db, 'property_profitability', {})
+      const report = buildReport(db, 'property_profitability', { language: 'en' })
       expect(report.consolidatedGroup).toBeDefined()
       expect(report.consolidatedGroup?.currency).toBeTruthy()
     })
@@ -158,7 +161,7 @@ describe('reportServiceExtended', () => {
 
   describe('tenant_payment_history', () => {
     it('computes total_due, total_paid, and remaining', () => {
-      const report = buildReport(db, 'tenant_payment_history', {})
+      const report = buildReport(db, 'tenant_payment_history', { language: 'en' })
       expect(report.groups.length).toBeGreaterThanOrEqual(1)
 
       const jodGroup = report.groups.find((g) => g.currency === 'JOD')
@@ -169,7 +172,7 @@ describe('reportServiceExtended', () => {
     })
 
     it('remaining is zero when total_paid >= total_due', () => {
-      const report = buildReport(db, 'tenant_payment_history', {})
+      const report = buildReport(db, 'tenant_payment_history', { language: 'en' })
       const jodGroup = report.groups.find((g) => g.currency === 'JOD')
       const row = jodGroup?.rows[0]
       // total_paid (500) >= monthly_rent (500), so remaining = 0
@@ -186,7 +189,7 @@ describe('reportServiceExtended', () => {
     })
 
     it('has no consolidatedGroup (intentional per design)', () => {
-      const report = buildReport(db, 'tenant_payment_history', {})
+      const report = buildReport(db, 'tenant_payment_history', { language: 'en' })
       expect(report.consolidatedGroup).toBeUndefined()
     })
   })
@@ -203,7 +206,7 @@ describe('reportServiceExtended', () => {
         .run(propertyJod, tenantId)
       Number(pastContract.lastInsertRowid)
 
-      const report = buildReport(db, 'outstanding_balances', {})
+      const report = buildReport(db, 'outstanding_balances', { language: 'en' })
       const jodGroup = report.groups.find((g) => g.currency === 'JOD')
       expect(jodGroup).toBeDefined()
 
@@ -214,7 +217,7 @@ describe('reportServiceExtended', () => {
 
     it('does not list contracts still within their term', () => {
       // The seed contract C-1 ends 2027-12-31 — should not appear.
-      const report = buildReport(db, 'outstanding_balances', {})
+      const report = buildReport(db, 'outstanding_balances', { language: 'en' })
       const allRows = report.groups.flatMap((g) => g.rows)
       const currentContractRow = allRows.find(
         (r) => r['amount_due'] === 500 && Number(r['days_overdue']) <= 0
@@ -224,14 +227,14 @@ describe('reportServiceExtended', () => {
     })
 
     it('has no consolidatedGroup', () => {
-      const report = buildReport(db, 'outstanding_balances', {})
+      const report = buildReport(db, 'outstanding_balances', { language: 'en' })
       expect(report.consolidatedGroup).toBeUndefined()
     })
   })
 
   describe('contract_expiry', () => {
     it('lists active contracts with days_remaining and next_change', () => {
-      const report = buildReport(db, 'contract_expiry', {})
+      const report = buildReport(db, 'contract_expiry', { language: 'en' })
       const jodGroup = report.groups.find((g) => g.currency === 'JOD')
       expect(jodGroup).toBeDefined()
 
@@ -243,7 +246,7 @@ describe('reportServiceExtended', () => {
     })
 
     it('shows escalation schedule info in next_change when available', () => {
-      const report = buildReport(db, 'contract_expiry', {})
+      const report = buildReport(db, 'contract_expiry', { language: 'en' })
       const jodGroup = report.groups.find((g) => g.currency === 'JOD')
       const row = jodGroup?.rows[0]
       // The next escalation step is Year 2 — eff. 2027-01-01.
@@ -259,14 +262,14 @@ describe('reportServiceExtended', () => {
 
   describe('recurring_schedule', () => {
     it('lists recurring templates with amount, frequency, and status', () => {
-      const report = buildReport(db, 'recurring_schedule', {})
+      const report = buildReport(db, 'recurring_schedule', { language: 'en' })
       const jodGroup = report.groups.find((g) => g.currency === 'JOD')
       expect(jodGroup).toBeDefined()
       expect(jodGroup?.rows.length).toBeGreaterThanOrEqual(1)
 
       const row = jodGroup?.rows[0]
       expect(row?.['amount']).toBe(100)
-      expect(row?.['frequency']).toBe('monthly')
+      expect(row?.['frequency']).toBe('Monthly')
       expect(row?.['is_active']).toBe('Active')
       expect(row?.['next_due_date']).toBe('2026-08-01')
     })
@@ -277,7 +280,7 @@ describe('reportServiceExtended', () => {
          VALUES (?, ?, 'Old Template', 'Old', 50, 'JOD', 'monthly', 1, '2025-01-01', '2025-06-30', 0)`
       ).run(propertyJod, categoryId)
 
-      const report = buildReport(db, 'recurring_schedule', {})
+      const report = buildReport(db, 'recurring_schedule', { language: 'en' })
       const jodGroup = report.groups.find((g) => g.currency === 'JOD')
       const oldRow = jodGroup?.rows.find((r) => r['template_name'] === 'Old Template')
       expect(oldRow?.['is_active']).toBe('Ended')
@@ -294,7 +297,7 @@ describe('reportServiceExtended', () => {
 
   describe('document_expiry', () => {
     it('lists documents with days_until_expiry and status_label', () => {
-      const report = buildReport(db, 'document_expiry', {})
+      const report = buildReport(db, 'document_expiry', { language: 'en' })
       expect(report.groups).toHaveLength(1)
       expect(report.groups[0].currency).toBe('—')
 
@@ -311,7 +314,7 @@ describe('reportServiceExtended', () => {
          VALUES ('property', ?, 'old.pdf', '/tmp/old.pdf', 'application/pdf', 512, '2020-01-01', 0)`
       ).run(propertyJod)
 
-      const report = buildReport(db, 'document_expiry', {})
+      const report = buildReport(db, 'document_expiry', { language: 'en' })
       const expiredRow = report.groups[0].rows.find((r) => r['description'] === 'old.pdf')
       expect(expiredRow?.['status_label']).toBe('Expired')
       expect(Number(expiredRow?.['days_until_expiry'])).toBeLessThan(0)

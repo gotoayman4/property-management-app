@@ -241,9 +241,8 @@ function buildScript(): string {
 }
 
 function renderSvgChart(data: ReportData): string {
-  if (data.groups.length === 0 || data.groups[0].rows.length === 0) return ''
-
-  const group = data.groups[0]
+  const group = data.consolidatedGroup ?? data.groups[0]
+  if (!group || group.rows.length === 0) return ''
   const rows = group.rows.slice(0, 8)
   const firstRow = rows[0]
 
