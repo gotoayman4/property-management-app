@@ -160,7 +160,12 @@ export default function StandardTable({
         <Typography variant="h6" color="error.dark" gutterBottom sx={{ fontWeight: 600 }}>
           {t('common.error')}
         </Typography>
-        <Typography variant="body2" color="text.secondary" align="center" sx={{ mb: 3, maxW: 400 }}>
+        <Typography
+          variant="body2"
+          color="text.secondary"
+          align="center"
+          sx={{ mb: 3, maxWidth: 400 }}
+        >
           {error}
         </Typography>
         {onRetry && (

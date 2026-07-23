@@ -1,11 +1,14 @@
 import { ipcMain } from 'electron'
 import { z } from 'zod'
+
+const isDev = process.env.NODE_ENV !== 'production'
 import {
   validateEscalationSchedule,
   persistSchedule,
   type EscalationYearInput,
   EscalationValidationError
 } from '../db/contractEscalation'
+import { checkOverlap, syncPropertyStatus, logHistory } from '../db/contractHelpers'
 import { db } from '../db/database'
 import { appendLedgerEntry } from '../db/ledgerService'
 import { createPayment } from '../db/paymentRepository'
@@ -16,125 +19,12 @@ import { createPayment } from '../db/paymentRepository'
  *             and log to contract_history (BR-07). Channels use the domain:verb convention.
  */
 
-const contractCreateSchema = z.object({
-  contract_number: z.string().min(2).max(50),
-  property_id: z.number().int().positive(),
-  tenant_id: z.number().int().positive(),
-  start_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
-  end_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
-  rent_amount: z.number().positive(),
-  currency: z.string().min(3).max(3),
-  payment_frequency: z.enum(['monthly', 'quarterly', 'semi-annual', 'annual']).default('monthly'),
-  security_deposit: z.number().nonnegative().default(0.0),
-  // INTENT: align with the migration 014 enum (active/expired/renewing/cancelled + draft superset).
-  //         'terminated' was removed by migration 014 (rows migrated to 'cancelled').
-  status: z.enum(['draft', 'active', 'expired', 'renewing', 'cancelled']).default('draft'),
-  contract_term_years: z.number().int().min(1).max(20).default(1),
-  has_variable_escalation: z.number().int().min(0).max(1).default(0),
-  annual_increase_percent: z.number().min(0).max(100).optional().nullable(),
-  payment_method: z.string().optional().nullable(),
-  notes: z.string().optional().nullable()
-})
-
-/**
- * INTENT: Validate the payload for contracts:renew (FR-CON-04/13).
- * CONSTRAINT: property/tenant/contract_number are NOT editable in renewal (D5); the schedule
- *             is required when has_variable_escalation = 1 and rejected otherwise.
- * CAVEAT: new_start_date becomes the contract's new start_date (D2); the original inception
- *         date is preserved in the earliest contract_history row.
- */
-const contractRenewSchema = z.object({
-  contract_id: z.number().int().positive(),
-  new_start_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
-  new_end_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
-  rent_amount: z.number().positive(),
-  security_deposit: z.number().nonnegative().default(0.0),
-  has_variable_escalation: z.number().int().min(0).max(1),
-  contract_term_years: z.number().int().min(1).max(20),
-  annual_increase_percent: z.number().min(0).max(100).optional().nullable(),
-  schedule: z
-    .array(
-      z.object({
-        year_number: z.number().int().positive(),
-        effective_start_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
-        rent_amount: z.number().positive(),
-        increase_percent_applied: z.number().min(0).max(100).optional().nullable(),
-        notes: z.string().optional().nullable()
-      })
-    )
-    .optional(),
-  notes: z.string().optional().nullable()
-})
-
-const contractUpdateSchema = contractCreateSchema.extend({
-  id: z.number().int().positive()
-})
-
-const escalationSetSchema = z.object({
-  contract_id: z.number().int().positive(),
-  schedule: z
-    .array(
-      z.object({
-        year_number: z.number().int().positive(),
-        effective_start_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
-        rent_amount: z.number().positive(),
-        increase_percent_applied: z.number().min(0).max(100).optional().nullable(),
-        notes: z.string().optional().nullable()
-      })
-    )
-    .min(1)
-})
-
-// Check for an active overlapping contract on the same property
-function checkOverlap(
-  propertyId: number,
-  startDate: string,
-  endDate: string,
-  excludeId?: number
-): boolean {
-  let query = `
-    SELECT 1 FROM contracts
-    WHERE property_id = ? AND status = 'active' AND is_archived = 0
-      AND NOT (end_date < ? OR start_date > ?)
-  `
-  const params: unknown[] = [propertyId, startDate, endDate]
-  if (excludeId) {
-    query += ' AND id != ?'
-    params.push(excludeId)
-  }
-  return !!db.prepare(query).get(...params)
-}
-
-// Sync property status based on whether it has any active contract
-function syncPropertyStatus(propertyId: number): void {
-  const active = db
-    .prepare(
-      `SELECT 1 FROM contracts WHERE property_id = ? AND status = 'active' AND is_archived = 0`
-    )
-    .get(propertyId)
-  db.prepare('UPDATE properties SET status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?').run(
-    active ? 'rented' : 'vacant',
-    propertyId
-  )
-}
-
-// Append a contract_history row (snapshot the current row before a change)
-function logHistory(
-  contractId: number,
-  actionType: 'created' | 'renewed' | 'amended' | 'cancelled',
-  previousValues: Record<string, unknown> | null,
-  note?: string
-): void {
-  db.prepare(
-    `INSERT INTO contract_history (contract_id, action_type, previous_values_json, changed_by_note)
-     VALUES (?, ?, ?, ?)`
-  ).run(
-    contractId,
-    actionType,
-    previousValues ? JSON.stringify(previousValues) : null,
-    note ?? null
-  )
-}
+import {
+  contractCreateSchema,
+  contractUpdateSchema,
+  contractRenewSchema,
+  escalationSetSchema
+} from './contractSchemas'
 
 export function registerContractIpcHandlers(): void {
   ipcMain.handle(
@@ -168,7 +58,7 @@ export function registerContractIpcHandlers(): void {
         query += ' ORDER BY c.start_date DESC'
         return db.prepare(query).all(...params)
       } catch (error) {
-        console.error('Error listing contracts:', error)
+        if (isDev) console.error('Error listing contracts:', error)
         throw new Error('FAILED_TO_LIST_CONTRACTS')
       }
     }
@@ -187,7 +77,7 @@ export function registerContractIpcHandlers(): void {
         )
         .get(id)
     } catch (error) {
-      console.error('Error getting contract:', error)
+      if (isDev) console.error('Error getting contract:', error)
       throw new Error('FAILED_TO_GET_CONTRACT')
     }
   })
@@ -215,7 +105,7 @@ export function registerContractIpcHandlers(): void {
         .all(id)
       return { contract, schedule, history }
     } catch (error) {
-      console.error('Error getting contract detail:', error)
+      if (isDev) console.error('Error getting contract detail:', error)
       throw new Error('FAILED_TO_GET_CONTRACT_DETAIL')
     }
   })
@@ -253,7 +143,7 @@ export function registerContractIpcHandlers(): void {
       })()
       return { id: insertedId, ...v }
     } catch (error: unknown) {
-      console.error('Error creating contract:', error)
+      if (isDev) console.error('Error creating contract:', error)
       if (error instanceof z.ZodError) throw new Error('INVALID_INPUT')
       throw error
     }
@@ -297,7 +187,7 @@ export function registerContractIpcHandlers(): void {
       })()
       return v
     } catch (error: unknown) {
-      console.error('Error updating contract:', error)
+      if (isDev) console.error('Error updating contract:', error)
       if (error instanceof z.ZodError) throw new Error('INVALID_INPUT')
       throw error
     }
@@ -325,7 +215,7 @@ export function registerContractIpcHandlers(): void {
       })()
       return { success: true, yearCount: v.schedule.length }
     } catch (error: unknown) {
-      console.error('Error setting escalation:', error)
+      if (isDev) console.error('Error setting escalation:', error)
       if (error instanceof EscalationValidationError) throw new Error(error.message)
       if (error instanceof z.ZodError) throw new Error('INVALID_INPUT')
       throw error
@@ -353,7 +243,7 @@ export function registerContractIpcHandlers(): void {
       })()
       return { success: true }
     } catch (error) {
-      console.error('Error terminating contract:', error)
+      if (isDev) console.error('Error terminating contract:', error)
       throw new Error('FAILED_TO_TERMINATE_CONTRACT')
     }
   })
@@ -442,15 +332,16 @@ export function registerContractIpcHandlers(): void {
       })()
       return { success: true, id: v.contract_id }
     } catch (error: unknown) {
-      console.error('Error renewing contract:', error)
+      if (isDev) console.error('Error renewing contract:', error)
       if (error instanceof EscalationValidationError) throw new Error(error.message)
       if (error instanceof z.ZodError) throw new Error('INVALID_INPUT')
       throw error
     }
   })
 
-  ipcMain.handle('contracts:delete', async (_, id: number) => {
+  ipcMain.handle('contracts:delete', async (_, data: unknown) => {
     try {
+      const id = z.number().int().positive().parse(data)
       const old = db.prepare('SELECT property_id FROM contracts WHERE id = ?').get(id) as
         { property_id: number } | undefined
       if (!old) throw new Error('CONTRACT_NOT_FOUND')
@@ -462,7 +353,9 @@ export function registerContractIpcHandlers(): void {
       })()
       return { success: true }
     } catch (error) {
-      console.error('Error deleting contract:', error)
+      if (error instanceof z.ZodError) throw new Error('INVALID_INPUT')
+      if (error instanceof Error && error.message === 'CONTRACT_NOT_FOUND') throw error
+      if (isDev) console.error('Error deleting contract:', error)
       throw new Error('FAILED_TO_DELETE_CONTRACT')
     }
   })
@@ -563,7 +456,7 @@ export function registerContractIpcHandlers(): void {
 
       return { success: true }
     } catch (error: unknown) {
-      console.error('Error updating deposit status:', error)
+      if (isDev) console.error('Error updating deposit status:', error)
       if (error instanceof z.ZodError) throw new Error('INVALID_INPUT')
       throw error
     }

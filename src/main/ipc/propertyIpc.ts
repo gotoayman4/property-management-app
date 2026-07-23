@@ -1,5 +1,7 @@
 import { ipcMain } from 'electron'
 import { z } from 'zod'
+
+const isDev = process.env.NODE_ENV !== 'production'
 import { getNextPropertyCode } from '../db/codeGenerator'
 import { db } from '../db/database'
 
@@ -73,7 +75,7 @@ export function registerPropertyIpcHandlers(): void {
       try {
         return getNextPropertyCode(db, params.country, params.type as 'apartment' | 'shop')
       } catch (error) {
-        console.error('Error generating property code:', error)
+        if (isDev) console.error('Error generating property code:', error)
         throw new Error('FAILED_TO_GENERATE_CODE')
       }
     }
@@ -201,18 +203,20 @@ export function registerPropertyIpcHandlers(): void {
         query += ' ORDER BY created_at DESC'
         return db.prepare(query).all(...params)
       } catch (error) {
-        console.error('Error listing properties:', error)
+        if (isDev) console.error('Error listing properties:', error)
         throw new Error('FAILED_TO_LIST_PROPERTIES')
       }
     }
   )
 
   // Get a single property by ID
-  ipcMain.handle('properties:get', async (_, id: number) => {
+  ipcMain.handle('properties:get', async (_, data: unknown) => {
     try {
+      const id = z.number().int().positive().parse(data)
       return db.prepare('SELECT * FROM properties WHERE id = ? AND is_archived = 0').get(id)
     } catch (error) {
-      console.error('Error getting property:', error)
+      if (error instanceof z.ZodError) throw new Error('INVALID_INPUT')
+      if (isDev) console.error('Error getting property:', error)
       throw new Error('FAILED_TO_GET_PROPERTY')
     }
   })
@@ -239,7 +243,7 @@ export function registerPropertyIpcHandlers(): void {
       const result = stmt.run(validatedData)
       return { id: result.lastInsertRowid, ...validatedData }
     } catch (error: unknown) {
-      console.error('Error creating property:', error)
+      if (isDev) console.error('Error creating property:', error)
       if (error instanceof z.ZodError) {
         throw new Error('INVALID_INPUT')
       }
@@ -279,7 +283,7 @@ export function registerPropertyIpcHandlers(): void {
       stmt.run(validatedData)
       return validatedData
     } catch (error: unknown) {
-      console.error('Error updating property:', error)
+      if (isDev) console.error('Error updating property:', error)
       if (error instanceof z.ZodError) {
         throw new Error('INVALID_INPUT')
       }
@@ -288,8 +292,9 @@ export function registerPropertyIpcHandlers(): void {
   })
 
   // Archive (soft delete) a property
-  ipcMain.handle('properties:delete', async (_, id: number) => {
+  ipcMain.handle('properties:delete', async (_, data: unknown) => {
     try {
+      const id = z.number().int().positive().parse(data)
       // FR-PROP-04 / §8.3: Block archive if the property still has an active contract.
       const activeContract = db
         .prepare(
@@ -314,7 +319,7 @@ export function registerPropertyIpcHandlers(): void {
       ).run(id)
       return { success: true }
     } catch (error: unknown) {
-      console.error('Error deleting property:', error)
+      if (error instanceof z.ZodError) throw new Error('INVALID_INPUT')
       if (
         error instanceof Error &&
         (error.message === 'PROPERTY_HAS_ACTIVE_CONTRACT' ||
@@ -322,6 +327,7 @@ export function registerPropertyIpcHandlers(): void {
       ) {
         throw error
       }
+      if (isDev) console.error('Error deleting property:', error)
       throw new Error('FAILED_TO_DELETE_PROPERTY')
     }
   })

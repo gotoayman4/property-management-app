@@ -9,6 +9,7 @@
 import { ipcMain } from 'electron'
 import { db } from '../db/database'
 import { sumReportingSnapshot } from '../utils/currencyHelper'
+import { toLocalISODate, addDays } from '../utils/dateUtils'
 
 interface CurrencyFinancialRow {
   currency: string
@@ -31,21 +32,6 @@ interface DashboardSummary {
   activeContracts: number
   financialSummary: CurrencyFinancialRow[]
   consolidatedSummary: ConsolidatedSummary
-}
-
-/** Format a Date to YYYY-MM-DD using local timezone. */
-function toLocalISODate(d: Date): string {
-  const y = d.getFullYear()
-  const m = String(d.getMonth() + 1).padStart(2, '0')
-  const day = String(d.getDate()).padStart(2, '0')
-  return `${y}-${m}-${day}`
-}
-
-/** Add N days to a date and return as YYYY-MM-DD. */
-function addDays(d: Date, n: number): string {
-  const r = new Date(d)
-  r.setDate(r.getDate() + n)
-  return toLocalISODate(r)
 }
 
 /**

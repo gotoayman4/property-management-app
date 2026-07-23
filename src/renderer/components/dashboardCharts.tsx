@@ -10,6 +10,7 @@
 
 import { Box, Stack, Typography, useTheme } from '@mui/material'
 import React from 'react'
+import { useTranslation } from 'react-i18next'
 
 interface TrendsData {
   income: { month: string; total: number; currency: string }[]
@@ -21,16 +22,19 @@ interface TrendsData {
 interface OccupiedDonutProps {
   total: number
   rented: number
-  t: (key: string) => string
+  t?: (key: string) => string
 }
 
 interface TrendChartProps {
   trends: TrendsData | null
-  t: (key: string) => string
+  t?: (key: string) => string
 }
 
 /** Occupied vs Vacant donut chart — inline SVG. */
-export function OccupiedDonut({ total, rented, t }: OccupiedDonutProps): React.JSX.Element {
+export function OccupiedDonut({ total, rented, t: propT }: OccupiedDonutProps): React.JSX.Element {
+  const { t: hookT } = useTranslation()
+  const t = propT || hookT
+
   const theme = useTheme()
   const safeTotal = total || 1
   const vacant = safeTotal - rented
@@ -108,21 +112,24 @@ export function OccupiedDonut({ total, rented, t }: OccupiedDonutProps): React.J
 }
 
 /** 12-month income vs expense trend line chart — inline SVG. */
-export function TrendChart({ trends, t }: TrendChartProps): React.JSX.Element | null {
+export function TrendChart({ trends, t: propT }: TrendChartProps): React.JSX.Element | null {
+  const { t: hookT } = useTranslation()
+  const t = propT || hookT
   const theme = useTheme()
   if (!trends) return null
   const allPoints = [...trends.income, ...trends.expense]
   if (allPoints.length === 0) return null
   const maxVal = Math.max(...allPoints.map((p) => p.total), 1)
-  const months = Array.from(
-    new Set([...trends.income.map((p) => p.month), ...trends.expense.map((p) => p.month)])
-  ).sort()
+  const months = [
+    ...new Set([...trends.income.map((p) => p.month), ...trends.expense.map((p) => p.month)])
+  ].sort()
   if (months.length === 0) return null
 
-  const incomeMap = new Map(trends.income.map((p) => [p.month, p.total]))
-  const expenseMap = new Map(trends.expense.map((p) => [p.month, p.total]))
-  const width = 320
-  const height = 120
+  const incMap = new Map(trends.income.map((p) => [p.month, p.total]))
+  const expMap = new Map(trends.expense.map((p) => [p.month, p.total]))
+
+  const width = 360
+  const height = 110
   const padL = 5
   const padR = 5
   const padT = 5
@@ -141,49 +148,51 @@ export function TrendChart({ trends, t }: TrendChartProps): React.JSX.Element | 
       .join(' ')
   }
 
+  const incPoints = linePoints(incMap)
+  const expPoints = linePoints(expMap)
+
   return (
-    <Box sx={{ overflowX: 'auto', pb: 1 }}>
-      <svg width={width} height={height} viewBox={`0 0 ${width} ${height}`}>
-        {[0, 0.25, 0.5, 0.75, 1].map((frac) => (
-          <line
-            key={frac}
-            x1={padL}
-            y1={padT + chartH * (1 - frac)}
-            x2={padL + chartW}
-            y2={padT + chartH * (1 - frac)}
-            stroke={theme.palette.divider}
-            strokeWidth={0.5}
-          />
-        ))}
+    <Box>
+      <svg width="100%" height={height} viewBox={`0 0 ${width} ${height}`}>
         <polyline
-          points={linePoints(incomeMap)}
           fill="none"
           stroke={theme.palette.success.main}
-          strokeWidth={2}
+          strokeWidth="2.5"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          points={incPoints}
         />
         <polyline
-          points={linePoints(expenseMap)}
           fill="none"
           stroke={theme.palette.error.main}
-          strokeWidth={2}
+          strokeWidth="2.5"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          points={expPoints}
         />
         {months.map((m, i) => {
-          if (i % 2 !== 0 && i !== months.length - 1) return null
           const x = padL + (months.length > 1 ? i * stepX : chartW / 2)
           return (
-            <text key={m} x={x} y={height - 2} textAnchor="middle" fontSize={6} fill="currentColor">
+            <text
+              key={m}
+              x={x}
+              y={height - 4}
+              fontSize="9"
+              fill={theme.palette.text.secondary}
+              textAnchor="middle"
+            >
               {m.slice(5)}
             </text>
           )
         })}
       </svg>
-      <Stack direction="row" spacing={2} sx={{ mt: 0.5, justifyContent: 'center' }}>
+      <Stack direction="row" spacing={2} sx={{ justifyContent: 'center', mt: 0.5 }}>
         <Stack direction="row" spacing={0.5} sx={{ alignItems: 'center' }}>
-          <Box sx={{ width: 16, height: 2, bgcolor: 'success.main' }} />
+          <Box sx={{ width: 10, height: 10, borderRadius: '50%', bgcolor: 'success.main' }} />
           <Typography variant="caption">{t('dashboard.incomeLabel')}</Typography>
         </Stack>
         <Stack direction="row" spacing={0.5} sx={{ alignItems: 'center' }}>
-          <Box sx={{ width: 16, height: 2, bgcolor: 'error.main' }} />
+          <Box sx={{ width: 10, height: 10, borderRadius: '50%', bgcolor: 'error.main' }} />
           <Typography variant="caption">{t('dashboard.expensesLabel')}</Typography>
         </Stack>
       </Stack>
@@ -203,11 +212,16 @@ interface ActivityRow {
 
 interface ActivityDescriptionProps {
   row: ActivityRow
-  t: (key: string, params?: Record<string, string | number>) => string
+  t?: (key: string, params?: Record<string, string | number>) => string
 }
 
 /** Build a localized description string for a recent-activity row. */
-export function ActivityDescription({ row, t }: ActivityDescriptionProps): React.JSX.Element {
+export function ActivityDescription({
+  row,
+  t: propT
+}: ActivityDescriptionProps): React.JSX.Element {
+  const { t: hookT } = useTranslation()
+  const t = propT || hookT
   const { entity_type: type } = row
   let text = ''
   switch (type) {

@@ -58,49 +58,105 @@ export function AmountField<T extends FieldValues, N extends FieldPath<T>>({
       name={name}
       control={control}
       render={({ field }) => {
-        const display = field.value === null || field.value === undefined ? '' : String(field.value)
         return (
-          <TextField
-            {...field}
-            value={display}
-            onChange={(e) => {
-              const raw = e.target.value
-              if (raw === '') {
-                field.onChange(allowEmpty ? null : 0)
-                return
-              }
-              const parsed = Number(raw)
-              field.onChange(Number.isNaN(parsed) ? (allowEmpty ? null : 0) : parsed)
-            }}
-            // Block mouse-wheel from accidentally changing the value.
-            onWheel={(e: React.WheelEvent<HTMLInputElement>) => e.currentTarget.blur()}
-            label={displayLabel}
+          <AmountFieldInner
+            field={field}
+            allowEmpty={allowEmpty}
+            displayLabel={displayLabel}
             required={required}
             disabled={disabled}
-            error={!!errorText}
-            helperText={errorText}
-            slotProps={{
-              input: endAdornment
-                ? { endAdornment: <span aria-hidden>{endAdornment}</span> }
-                : undefined,
-              htmlInput: {
-                dir: 'ltr',
-                inputMode: 'decimal',
-                min,
-                sx: {
-                  // Hide the native number spinners across browsers (spinner-less requirement).
-                  '&::-webkit-outer-spin-button, &::-webkit-inner-spin-button': {
-                    WebkitAppearance: 'none',
-                    margin: 0
-                  },
-                  MozAppearance: 'textfield'
-                }
-              }
-            }}
-            fullWidth
+            errorText={errorText}
+            min={min}
+            endAdornment={endAdornment}
           />
         )
       }}
+    />
+  )
+}
+
+interface AmountFieldInnerProps {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  field: any
+  allowEmpty: boolean
+  displayLabel: React.ReactNode
+  required: boolean
+  disabled: boolean
+  errorText?: string
+  min?: number
+  endAdornment?: React.ReactNode
+}
+
+function AmountFieldInner({
+  field,
+  allowEmpty,
+  displayLabel,
+  required,
+  disabled,
+  errorText,
+  min,
+  endAdornment
+}: AmountFieldInnerProps): React.JSX.Element {
+  const [localVal, setLocalVal] = React.useState<string>(
+    field.value === null || field.value === undefined ? '' : String(field.value)
+  )
+  const [prevFieldVal, setPrevFieldVal] = React.useState(field.value)
+
+  if (field.value !== prevFieldVal) {
+    setPrevFieldVal(field.value)
+    const parsedLocal = parseFloat(localVal)
+    if (field.value !== (Number.isNaN(parsedLocal) ? (allowEmpty ? null : 0) : parsedLocal)) {
+      setLocalVal(field.value === null || field.value === undefined ? '' : String(field.value))
+    }
+  }
+
+  return (
+    <TextField
+      {...field}
+      value={localVal}
+      onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+        const raw = e.target.value
+        if (/^[0-9]*[.,]?[0-9]*$/.test(raw)) {
+          setLocalVal(raw)
+          if (raw === '' || raw === '.' || raw === ',') {
+            field.onChange(allowEmpty ? null : 0)
+            return
+          }
+          const normalized = raw.replace(',', '.')
+          const parsed = Number(normalized)
+          if (!Number.isNaN(parsed)) {
+            field.onChange(parsed)
+          }
+        }
+      }}
+      onBlur={() => {
+        field.onBlur()
+        if (localVal === '' || localVal === '.' || localVal === ',') {
+          field.onChange(allowEmpty ? null : 0)
+        }
+      }}
+      onWheel={(e: React.WheelEvent<HTMLInputElement>) => e.currentTarget.blur()}
+      label={displayLabel}
+      required={required}
+      disabled={disabled}
+      error={!!errorText}
+      helperText={errorText}
+      slotProps={{
+        input: endAdornment ? { endAdornment: <span aria-hidden>{endAdornment}</span> } : undefined,
+        htmlInput: {
+          dir: 'ltr',
+          inputMode: 'decimal',
+          min,
+          sx: {
+            '&::-webkit-outer-spin-button, &::-webkit-inner-spin-button': {
+              WebkitAppearance: 'none',
+              margin: 0
+            },
+            MozAppearance: 'textfield'
+          }
+        }
+      }}
+      fullWidth
     />
   )
 }

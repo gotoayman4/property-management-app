@@ -15,7 +15,7 @@ describe('Tenant & Lease Database Queries & Constraints', () => {
 
   it('should apply both initial schema and tenant/lease migrations', () => {
     const migrations = db.prepare('SELECT name FROM migrations ORDER BY id ASC').all()
-    expect(migrations.length).toBe(25)
+    expect(migrations.length).toBe(26)
     expect(migrations[0]).toEqual({ name: '001_initial_schema.sql' })
     expect(migrations[1]).toEqual({ name: '002_tenant_lease_schema.sql' })
   })

@@ -14,6 +14,8 @@ import { join, basename } from 'path'
 import { ipcMain, app } from 'electron'
 import { fromBuffer } from 'file-type'
 import { z } from 'zod'
+
+const isDev = process.env.NODE_ENV !== 'production'
 import { db } from '../db/database'
 
 // FR-DOC-03 / SRS §9.11: PDF, JPG, PNG, DOCX, XLSX.
@@ -83,6 +85,8 @@ function getDocumentsDir(): string {
 
 /**
  * Resolves file_path, falling back to userData/documents if the original path doesn't exist.
+ * CAVEAT: Fallback indicates the stored path is stale (e.g. after a backup restore to a
+ *         different machine). A dev-mode warning is emitted so this can be tracked.
  */
 export function resolveFilePath(filePath: string): string {
   if (filePath && existsSync(filePath)) {
@@ -90,6 +94,9 @@ export function resolveFilePath(filePath: string): string {
   }
   const fallback = join(getDocumentsDir(), basename(filePath))
   if (existsSync(fallback)) {
+    if (isDev) {
+      console.warn(`[documents] resolveFilePath: stale path, using fallback. original=${filePath}`)
+    }
     return fallback
   }
   return filePath

@@ -275,7 +275,11 @@ export default function Layout({ children }: LayoutProps): React.JSX.Element {
             <IconButton
               color="inherit"
               onClick={toggleSidebar}
-              aria-label={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+              aria-label={
+                sidebarCollapsed
+                  ? t('sidebar.expand', { defaultValue: 'Expand sidebar' })
+                  : t('sidebar.collapse', { defaultValue: 'Collapse sidebar' })
+              }
             >
               {sidebarCollapsed ? <MenuIcon /> : <MenuOpenIcon />}
             </IconButton>
@@ -297,12 +301,20 @@ export default function Layout({ children }: LayoutProps): React.JSX.Element {
             <SearchBar onInputMount={handleSearchInputMount} />
             <NotificationBell />
             <Tooltip title={t('sidebar.toggleTheme')} arrow>
-              <IconButton color="inherit" onClick={toggleTheme}>
+              <IconButton
+                color="inherit"
+                onClick={toggleTheme}
+                aria-label={t('sidebar.toggleTheme')}
+              >
                 {themeMode === 'dark' ? <LightModeIcon /> : <DarkModeIcon />}
               </IconButton>
             </Tooltip>
             <Tooltip title={t('sidebar.toggleLanguage')} arrow>
-              <IconButton color="inherit" onClick={toggleLanguage}>
+              <IconButton
+                color="inherit"
+                onClick={toggleLanguage}
+                aria-label={t('sidebar.toggleLanguage')}
+              >
                 <TranslateIcon />
               </IconButton>
             </Tooltip>
@@ -317,7 +329,8 @@ export default function Layout({ children }: LayoutProps): React.JSX.Element {
       >
         <Drawer
           variant="permanent"
-          anchor="left"
+          anchor={direction === 'rtl' ? 'right' : 'left'}
+
           dir={direction}
           sx={{
             display: { xs: 'none', sm: 'block' },

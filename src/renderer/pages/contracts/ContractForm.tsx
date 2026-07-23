@@ -99,8 +99,7 @@ export function ContractForm({
   onSuccess,
   onCancel
 }: ContractFormProps): React.ReactElement {
-  const { t, i18n } = useTranslation()
-  const isRtl = i18n.language === 'ar'
+  const { t } = useTranslation()
   const { snack, showError, showSuccess, hideSnackbar } = useSnackbar()
   const isEdit = !!contract
   const [createdEntity, setCreatedEntity] = useState<{ id: number } | null>(null)
@@ -457,8 +456,7 @@ export function ContractForm({
             display: 'flex',
             justifyContent: 'flex-end',
             gap: 2,
-            mt: 4,
-            flexDirection: isRtl ? 'row-reverse' : 'row'
+            mt: 4
           }}
         >
           {createdEntity ? (

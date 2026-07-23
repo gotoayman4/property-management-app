@@ -139,12 +139,16 @@ export default function SearchBar({ onInputMount }: SearchBarProps): React.JSX.E
           onChange={handleChange}
           inputRef={combinedRef}
           slotProps={{
+            htmlInput: {
+              'aria-label': t('search.placeholder')
+            },
             input: {
               startAdornment: (
                 <SearchIcon fontSize="small" sx={{ color: 'text.secondary', marginInlineEnd: 1 }} />
               )
             }
           }}
+
           sx={{ minWidth: 220, '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
         />
         <Popper

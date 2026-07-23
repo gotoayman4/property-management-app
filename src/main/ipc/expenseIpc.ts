@@ -1,5 +1,7 @@
 import { ipcMain } from 'electron'
 import { z } from 'zod'
+
+const isDev = process.env.NODE_ENV !== 'production'
 import { db } from '../db/database'
 import {
   createExpense,
@@ -66,7 +68,7 @@ export function registerExpenseIpcHandlers(): void {
     try {
       return listExpenseCategories(db)
     } catch (error) {
-      console.error('Error listing expense categories:', error)
+      if (isDev) console.error('Error listing expense categories:', error)
       throw new Error('FAILED_TO_LIST_EXPENSE_CATEGORIES')
     }
   })
@@ -77,7 +79,7 @@ export function registerExpenseIpcHandlers(): void {
       const id = createExpenseCategory(db, v.name_key)
       return { id }
     } catch (error: unknown) {
-      console.error('Error creating expense category:', error)
+      if (isDev) console.error('Error creating expense category:', error)
       if (error instanceof ExpenseError) throw new Error(error.message)
       if (error instanceof z.ZodError) throw new Error('INVALID_INPUT')
       throw new Error('FAILED_TO_CREATE_EXPENSE_CATEGORY')
@@ -90,20 +92,22 @@ export function registerExpenseIpcHandlers(): void {
       updateExpenseCategory(db, v.id, v.name_key)
       return { success: true }
     } catch (error: unknown) {
-      console.error('Error updating expense category:', error)
+      if (isDev) console.error('Error updating expense category:', error)
       if (error instanceof ExpenseError) throw new Error(error.message)
       if (error instanceof z.ZodError) throw new Error('INVALID_INPUT')
       throw new Error('FAILED_TO_UPDATE_EXPENSE_CATEGORY')
     }
   })
 
-  ipcMain.handle('expenseCategories:delete', async (_, id: number) => {
+  ipcMain.handle('expenseCategories:delete', async (_, data: unknown) => {
     try {
+      const id = z.number().int().positive().parse(data)
       deleteExpenseCategory(db, id)
       return { success: true }
     } catch (error: unknown) {
-      console.error('Error deleting expense category:', error)
+      if (error instanceof z.ZodError) throw new Error('INVALID_INPUT')
       if (error instanceof ExpenseError) throw new Error(error.message)
+      if (isDev) console.error('Error deleting expense category:', error)
       throw new Error('FAILED_TO_DELETE_EXPENSE_CATEGORY')
     }
   })
@@ -113,14 +117,15 @@ export function registerExpenseIpcHandlers(): void {
       const parsed = expenseListFiltersSchema.parse(filters)
       return listExpenses(db, parsed)
     } catch (error: unknown) {
-      console.error('Error listing expenses:', error)
+      if (isDev) console.error('Error listing expenses:', error)
       if (error instanceof z.ZodError) throw new Error('INVALID_INPUT')
       throw new Error('FAILED_TO_LIST_EXPENSES')
     }
   })
 
-  ipcMain.handle('expenses:get', async (_, id: number) => {
+  ipcMain.handle('expenses:get', async (_, data: unknown) => {
     try {
+      const id = z.number().int().positive().parse(data)
       return db
         .prepare(
           `SELECT e.*, p.name AS property_name, p.code AS property_code,
@@ -132,7 +137,8 @@ export function registerExpenseIpcHandlers(): void {
         )
         .get(id)
     } catch (error) {
-      console.error('Error getting expense:', error)
+      if (error instanceof z.ZodError) throw new Error('INVALID_INPUT')
+      if (isDev) console.error('Error getting expense:', error)
       throw new Error('FAILED_TO_GET_EXPENSE')
     }
   })

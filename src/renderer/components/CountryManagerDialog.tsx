@@ -335,6 +335,7 @@ export default function CountryManagerDialog({
                                     <IconButton
                                       size="small"
                                       color="primary"
+                                      aria-label={t('common.edit')}
                                       onClick={() =>
                                         setEditingId({
                                           id: c.id,
@@ -351,6 +352,7 @@ export default function CountryManagerDialog({
                                       <IconButton
                                         size="small"
                                         color="error"
+                                        aria-label={t('common.deactivate')}
                                         onClick={() => {
                                           setDeletingCode(c.code)
                                           setDeleteBlocked(false)

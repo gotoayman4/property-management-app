@@ -8,19 +8,24 @@ interface FinancialSummaryCardProps {
   loading: boolean
   financialSummary: CurrencyFinancialRow[]
   consolidatedSummary?: ConsolidatedSummary | null
-  t: ReturnType<typeof useTranslation>['t']
-  i18n: ReturnType<typeof useTranslation>['i18n']
+  t?: ReturnType<typeof useTranslation>['t']
+  i18n?: ReturnType<typeof useTranslation>['i18n']
 }
 
 export default function FinancialSummaryCard({
   loading,
   financialSummary,
   consolidatedSummary,
-  t,
-  i18n
+  t: propT,
+  i18n: propI18n
 }: FinancialSummaryCardProps): React.JSX.Element | null {
+  const { t: hookT, i18n: hookI18n } = useTranslation()
+  const t = propT || hookT
+  const i18n = propI18n || hookI18n
   const locale = i18n.language === 'ar' ? 'ar-u-nu-latn' : 'en'
   const fmt = (v: number): string => v.toLocaleString(locale)
+  const fmtNet = (v: number): string =>
+    v > 0 ? `+${v.toLocaleString(locale)}` : v.toLocaleString(locale)
 
   if (loading) {
     return (
@@ -120,7 +125,7 @@ export default function FinancialSummaryCard({
                     color: consolidatedSummary.total_net_profit >= 0 ? 'success.main' : 'error.main'
                   }}
                 >
-                  {fmt(consolidatedSummary.total_net_profit)}
+                  {fmtNet(consolidatedSummary.total_net_profit)}
                 </Typography>
               </Stack>
             </Stack>
@@ -200,7 +205,7 @@ export default function FinancialSummaryCard({
                       color: row.netProfit >= 0 ? 'success.main' : 'error.main'
                     }}
                   >
-                    {fmt(row.netProfit)}
+                    {fmtNet(row.netProfit)}
                   </Typography>
                 </Stack>
               </Stack>

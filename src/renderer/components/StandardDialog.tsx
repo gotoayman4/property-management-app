@@ -40,8 +40,8 @@ export default function StandardDialog({
   const [confirmCloseOpen, setConfirmCloseOpen] = useState(false)
 
   const handleClose = (_event: unknown, reason: 'backdropClick' | 'escapeKeyDown'): void => {
-    // If the form has unsaved changes, prevent accidental closing by backdrop/escape
-    if (isDirty || reason === 'escapeKeyDown') {
+    if (isDirty && reason === 'backdropClick') {
+      setConfirmCloseOpen(true)
       return
     }
     onClose()

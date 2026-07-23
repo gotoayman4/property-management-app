@@ -109,7 +109,7 @@ export function ReceiptDialog({
           <Box
             sx={{
               display: 'flex',
-              justify: 'space-between',
+              justifyContent: 'space-between',
               alignItems: 'center',
               mb: 3,
               pb: 2,
@@ -122,7 +122,7 @@ export function ReceiptDialog({
                 <Box
                   component="img"
                   src={companySettings.company_logo}
-                  alt="Company Logo"
+                  alt={companySettings?.company_name || t('receipt.defaultCompany')}
                   sx={{ maxHeight: 60, maxWidth: 180, objectFit: 'contain', mb: 1 }}
                 />
               ) : null}
@@ -130,7 +130,7 @@ export function ReceiptDialog({
                 {companySettings?.company_name || t('receipt.defaultCompany')}
               </Typography>
             </Box>
-            <Box sx={{ textAlign: isRtl ? 'left' : 'right' }}>
+            <Box sx={{ textAlign: 'end' }}>
               <Typography variant="subtitle2" color="text.secondary">
                 {t('receipt.receiptNumber')}
               </Typography>
@@ -205,7 +205,7 @@ export function ReceiptDialog({
           <Box
             sx={{
               display: 'flex',
-              justify: 'space-between',
+              justifyContent: 'space-between',
               alignItems: 'center',
               p: 2,
               borderRadius: 1.5,
@@ -257,7 +257,7 @@ export function ReceiptDialog({
           }
           .printable-receipt {
             position: absolute !important;
-            left: 0 !important;
+            inset-inline-start: 0 !important;
             top: 0 !important;
             width: 100% !important;
             border: none !important;

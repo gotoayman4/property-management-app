@@ -31,6 +31,17 @@ const loginSchema = z.object({
   password: z.string().min(1).max(128)
 })
 
+const changePasswordSchema = z.object({
+  userId: z.number().int().positive(),
+  currentPassword: z.string().min(1).max(128),
+  newPassword: z.string().min(6).max(128)
+})
+
+const saveCredentialsSchema = z.object({
+  username: z.string().min(1).max(50),
+  password: z.string().min(1).max(128)
+})
+
 export function registerAuthIpcHandlers(): void {
   // Check if any user exists — determines first-launch vs login flow
   ipcMain.handle('auth:hasUsers', async () => {
@@ -130,39 +141,33 @@ export function registerAuthIpcHandlers(): void {
   })
 
   // Change password (requires current password)
-  ipcMain.handle(
-    'auth:changePassword',
-    async (_, data: { userId: number; currentPassword: string; newPassword: string }) => {
-      try {
-        const user = db
-          .prepare('SELECT id, password_hash FROM users WHERE id = ? AND is_active = 1')
-          .get(data.userId) as { id: number; password_hash: string } | undefined
+  ipcMain.handle('auth:changePassword', async (_, data: unknown) => {
+    try {
+      const parsed = changePasswordSchema.parse(data)
 
-        if (!user) {
-          throw new Error('USER_NOT_FOUND')
-        }
+      const user = db
+        .prepare('SELECT id, password_hash FROM users WHERE id = ? AND is_active = 1')
+        .get(parsed.userId) as { id: number; password_hash: string } | undefined
 
-        const valid = bcrypt.compareSync(data.currentPassword, user.password_hash)
-        if (!valid) {
-          throw new Error('INVALID_CREDENTIALS')
-        }
-
-        if (data.newPassword.length < 6 || data.newPassword.length > 128) {
-          throw new Error('INVALID_INPUT')
-        }
-
-        const newHash = bcrypt.hashSync(data.newPassword, BCRYPT_ROUNDS)
-        db.prepare('UPDATE users SET password_hash = ? WHERE id = ?').run(newHash, data.userId)
-
-        return { success: true }
-      } catch (error: unknown) {
-        if (error instanceof Error) {
-          throw error
-        }
-        throw new Error('FAILED_TO_CHANGE_PASSWORD')
+      if (!user) {
+        throw new Error('USER_NOT_FOUND')
       }
+
+      const valid = bcrypt.compareSync(parsed.currentPassword, user.password_hash)
+      if (!valid) {
+        throw new Error('INVALID_CREDENTIALS')
+      }
+
+      const newHash = bcrypt.hashSync(parsed.newPassword, BCRYPT_ROUNDS)
+      db.prepare('UPDATE users SET password_hash = ? WHERE id = ?').run(newHash, parsed.userId)
+
+      return { success: true }
+    } catch (error: unknown) {
+      if (error instanceof z.ZodError) throw new Error('INVALID_INPUT')
+      if (error instanceof Error) throw error
+      throw new Error('FAILED_TO_CHANGE_PASSWORD')
     }
-  )
+  })
 
   // --- Remember-me: encrypted credential persistence via OS keychain ---
 
@@ -185,22 +190,21 @@ export function registerAuthIpcHandlers(): void {
     }
   })
 
-  ipcMain.handle(
-    'auth:saveCredentials',
-    async (_, data: { username: string; password: string }) => {
-      try {
-        const filePath = getCredentialsFilePath()
-        const payload = {
-          username: safeStorage.encryptString(data.username).toString('base64'),
-          password: safeStorage.encryptString(data.password).toString('base64')
-        }
-        fs.writeFileSync(filePath, JSON.stringify(payload), 'utf-8')
-        return { success: true }
-      } catch {
-        throw new Error('FAILED_TO_SAVE_CREDENTIALS')
+  ipcMain.handle('auth:saveCredentials', async (_, data: unknown) => {
+    try {
+      const parsed = saveCredentialsSchema.parse(data)
+      const filePath = getCredentialsFilePath()
+      const payload = {
+        username: safeStorage.encryptString(parsed.username).toString('base64'),
+        password: safeStorage.encryptString(parsed.password).toString('base64')
       }
+      fs.writeFileSync(filePath, JSON.stringify(payload), 'utf-8')
+      return { success: true }
+    } catch (error: unknown) {
+      if (error instanceof z.ZodError) throw new Error('INVALID_INPUT')
+      throw new Error('FAILED_TO_SAVE_CREDENTIALS')
     }
-  )
+  })
 
   ipcMain.handle('auth:clearSavedCredentials', async () => {
     try {

@@ -435,8 +435,7 @@ export default function Reports(): React.ReactElement {
         <Stack direction="row" spacing={2} sx={{ mb: 3 }}>
           <Button
             variant="outlined"
-            startIcon={isRtl ? undefined : <FileDownloadIcon />}
-            endIcon={isRtl ? <FileDownloadIcon /> : undefined}
+            startIcon={<FileDownloadIcon />}
             onClick={() => handleExport('xlsx')}
             disabled={exporting !== null}
           >
@@ -444,8 +443,7 @@ export default function Reports(): React.ReactElement {
           </Button>
           <Button
             variant="outlined"
-            startIcon={isRtl ? undefined : <CodeIcon />}
-            endIcon={isRtl ? <CodeIcon /> : undefined}
+            startIcon={<CodeIcon />}
             onClick={() => handleExport('html')}
             disabled={exporting !== null}
           >

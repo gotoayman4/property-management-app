@@ -1,5 +1,7 @@
 import { ipcMain } from 'electron'
 import { z } from 'zod'
+
+const isDev = process.env.NODE_ENV !== 'production'
 import { db } from '../db/database'
 import {
   createPayment,
@@ -63,14 +65,15 @@ export function registerPaymentIpcHandlers(): void {
       const parsed = paymentListFiltersSchema.parse(filters)
       return listPayments(db, parsed)
     } catch (error: unknown) {
-      console.error('Error listing payments:', error)
+      if (isDev) console.error('Error listing payments:', error)
       if (error instanceof z.ZodError) throw new Error('INVALID_INPUT')
       throw new Error('FAILED_TO_LIST_PAYMENTS')
     }
   })
 
-  ipcMain.handle('payments:get', async (_, id: number) => {
+  ipcMain.handle('payments:get', async (_, data: unknown) => {
     try {
+      const id = z.number().int().positive().parse(data)
       return db
         .prepare(
           `SELECT pay.*, p.name AS property_name, p.code AS property_code,
@@ -82,7 +85,8 @@ export function registerPaymentIpcHandlers(): void {
         )
         .get(id)
     } catch (error) {
-      console.error('Error getting payment:', error)
+      if (error instanceof z.ZodError) throw new Error('INVALID_INPUT')
+      if (isDev) console.error('Error getting payment:', error)
       throw new Error('FAILED_TO_GET_PAYMENT')
     }
   })
@@ -109,7 +113,7 @@ export function registerPaymentIpcHandlers(): void {
       }
       return createPayment(db, input)
     } catch (error: unknown) {
-      console.error('Error creating payment:', error)
+      if (isDev) console.error('Error creating payment:', error)
       if (error instanceof PaymentError) throw new Error(error.message)
       if (error instanceof z.ZodError) throw new Error('INVALID_INPUT')
       throw error

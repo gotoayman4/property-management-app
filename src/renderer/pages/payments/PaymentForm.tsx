@@ -3,13 +3,11 @@ import {
   Box,
   Button,
   Checkbox,
-  Chip,
   FormControl,
   FormControlLabel,
   FormHelperText,
   Grid,
   InputLabel,
-  ListItemText,
   MenuItem,
   Select,
   Typography
@@ -25,6 +23,7 @@ import GlobalSnackbar from '../../components/GlobalSnackbar'
 import { useCurrencyConversion } from '../../hooks/useCurrencyConversion'
 import { useSnackbar } from '../../hooks/useSnackbar'
 import { notifyDataChanged } from '../../utils/eventBus'
+import { CoveredPeriodPicker } from './components/CoveredPeriodPicker'
 
 /**
  * INTENT: Create a payment (income). Editing/voiding are separate flows — a payment's amount is
@@ -403,77 +402,15 @@ export function PaymentForm({ onSuccess, onCancel }: PaymentFormProps): React.Re
           </Grid>
 
           <Grid size={{ xs: 12 }}>
-            {/* ── Covered Period Picker ────────────────────────────────────────── */}
-            <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 1 }}>
-              {t('payment.relatedPeriod')}
-            </Typography>
-            <Box sx={{ display: 'flex', gap: 2, alignItems: 'flex-start' }}>
-              {/* Year selector */}
-              <FormControl sx={{ minWidth: 120 }}>
-                <InputLabel>{t('payment.relatedPeriodYear')}</InputLabel>
-                <Select
-                  label={t('payment.relatedPeriodYear')}
-                  value={periodYear}
-                  onChange={(e) => {
-                    setPeriodYear(Number(e.target.value))
-                    setPeriodMonths([])
-                  }}
-                >
-                  {yearOptions.map((y) => (
-                    <MenuItem key={y} value={y}>
-                      {y}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-
-              {/* Month multi-select chips */}
-              <FormControl fullWidth error={!!errors.related_period_month} sx={{ flex: 1 }}>
-                <InputLabel>{t('payment.relatedPeriodMonths')}</InputLabel>
-                <Select
-                  multiple
-                  label={t('payment.relatedPeriodMonths')}
-                  value={periodMonths}
-                  onChange={(e) => {
-                    const val = e.target.value
-                    setPeriodMonths(
-                      typeof val === 'string' ? val.split(',').map(Number) : (val as number[])
-                    )
-                  }}
-                  renderValue={(selected) => (
-                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-                      {(selected as number[])
-                        .slice()
-                        .sort((a, b) => a - b)
-                        .map((m) => (
-                          <Chip
-                            key={m}
-                            label={monthKeys[m - 1]}
-                            size="small"
-                            onMouseDown={(e) => e.stopPropagation()}
-                            onDelete={() => setPeriodMonths((prev) => prev.filter((x) => x !== m))}
-                          />
-                        ))}
-                    </Box>
-                  )}
-                >
-                  {monthKeys.map((label, idx) => {
-                    const monthNum = idx + 1
-                    return (
-                      <MenuItem key={monthNum} value={monthNum}>
-                        <Checkbox checked={periodMonths.includes(monthNum)} size="small" />
-                        <ListItemText primary={label} />
-                      </MenuItem>
-                    )
-                  })}
-                </Select>
-                {errors.related_period_month && (
-                  <FormHelperText>
-                    {t(`payment.${errors.related_period_month.message}`)}
-                  </FormHelperText>
-                )}
-              </FormControl>
-            </Box>
+            <CoveredPeriodPicker
+              periodYear={periodYear}
+              onYearChange={setPeriodYear}
+              periodMonths={periodMonths}
+              onMonthsChange={setPeriodMonths}
+              yearOptions={yearOptions}
+              monthKeys={monthKeys}
+              error={errors.related_period_month}
+            />
             {/* Hidden RHF controller — only carries the serialised value; no UI rendered. */}
             <Controller name="related_period_month" control={control} render={() => <></>} />
           </Grid>

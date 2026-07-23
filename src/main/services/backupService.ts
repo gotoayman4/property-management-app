@@ -20,7 +20,9 @@ import {
   mkdirSync,
   copyFileSync,
   unlinkSync,
-  readFileSync,
+  openSync,
+  readSync,
+  closeSync,
   statSync,
   readdirSync,
   writeFileSync
@@ -81,12 +83,22 @@ function defaultDocumentsDir(): string | undefined {
 }
 
 /**
- * Compute SHA-256 hex digest of a file.
- * Used by FR-BAK-06 for backup integrity verification.
+ * Compute SHA-256 hex digest of a file using 64KB chunks.
+ * Used by FR-BAK-06 for backup integrity verification without loading large ZIPs into memory.
  */
 function computeChecksum(filePath: string): string {
-  const data = readFileSync(filePath)
-  return createHash('sha256').update(data).digest('hex')
+  const hash = createHash('sha256')
+  const fd = openSync(filePath, 'r')
+  const buffer = Buffer.alloc(64 * 1024)
+  let bytesRead = 0
+  try {
+    while ((bytesRead = readSync(fd, buffer, 0, buffer.length, null)) > 0) {
+      hash.update(buffer.subarray(0, bytesRead))
+    }
+  } finally {
+    closeSync(fd)
+  }
+  return hash.digest('hex')
 }
 
 /**

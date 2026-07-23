@@ -142,7 +142,7 @@ export function DualCurrencySummary({
           display: 'flex',
           flexWrap: 'wrap',
           alignItems: 'center',
-          justify: 'space-between',
+          justifyContent: 'space-between',
           gap: 1,
           mt: 2,
           pt: 1.5,
@@ -196,21 +196,65 @@ export function DualCurrencySummary({
       {/* Custom Rate Input Field */}
       {useCustom && (
         <Box sx={{ mt: 1.5 }}>
-          <TextField
-            fullWidth
-            size="small"
-            type="text"
-            inputMode="decimal"
-            label={`${t('currency.customRate')} (1 ${nativeCurrency} = ? ${reportingCurrency})`}
-            value={customRate !== null ? String(customRate) : ''}
-            onChange={(e) => {
-              const val = parseFloat(e.target.value)
-              onCustomRateChange(isNaN(val) || val <= 0 ? null : val)
-            }}
-            slotProps={{ htmlInput: { min: 0, step: 'any', sx: SPINNER_LESS } }}
+          <CustomRateInputField
+            nativeCurrency={nativeCurrency}
+            reportingCurrency={reportingCurrency}
+            customRate={customRate}
+            onCustomRateChange={onCustomRateChange}
+            t={t}
           />
         </Box>
       )}
     </Paper>
+  )
+}
+
+function CustomRateInputField({
+  nativeCurrency,
+  reportingCurrency,
+  customRate,
+  onCustomRateChange,
+  t
+}: {
+  nativeCurrency: string
+  reportingCurrency: string
+  customRate: number | null
+  onCustomRateChange: (rate: number | null) => void
+  t: (key: string, options?: Record<string, unknown>) => string
+}): React.JSX.Element {
+  const [localInput, setLocalInput] = useState<string>(
+    customRate !== null ? String(customRate) : ''
+  )
+  const [prevRate, setPrevRate] = useState<number | null>(customRate)
+
+  if (customRate !== prevRate) {
+    setPrevRate(customRate)
+    const parsedLocal = parseFloat(localInput)
+    if (customRate !== parsedLocal) {
+      setLocalInput(customRate !== null ? String(customRate) : '')
+    }
+  }
+
+  return (
+    <TextField
+      fullWidth
+      size="small"
+      type="text"
+      inputMode="decimal"
+      label={`${t('currency.customRate')} (1 ${nativeCurrency} = ? ${reportingCurrency})`}
+      value={localInput}
+      onChange={(e) => {
+        const raw = e.target.value
+        setLocalInput(raw)
+        const val = parseFloat(raw)
+        onCustomRateChange(isNaN(val) || val <= 0 ? null : val)
+      }}
+      onBlur={() => {
+        if (localInput === '' || localInput === '.') {
+          onCustomRateChange(null)
+        }
+      }}
+      slotProps={{ htmlInput: { min: 0, step: 'any', sx: SPINNER_LESS } }}
+    />
   )
 }
