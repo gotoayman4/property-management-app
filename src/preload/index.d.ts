@@ -305,6 +305,7 @@ interface BackupLogRow {
   id: number
   backup_file_path: string
   backup_type: 'manual' | 'automatic' | 'pre_restore'
+  backup_content: 'database-only' | 'full'
   file_size_kb: number | null
   checksum: string | null
   is_verified: number
@@ -340,6 +341,10 @@ interface SystemSettings {
   backup_enabled: number
   backup_frequency: string
   backup_time: string
+  full_backup_enabled: number
+  full_backup_frequency: string
+  full_backup_time: string
+  last_full_backup_at: string | null
   company_name: string | null
   company_logo: string | null
   dashboard_hidden_widgets: string
@@ -961,6 +966,7 @@ declare global {
       }
       backup: {
         create: () => Promise<BackupResult>
+        createDatabaseOnly: () => Promise<BackupResult>
         list: () => Promise<BackupLogRow[]>
         verify: (data: { backupId: number }) => Promise<{ valid: boolean; error?: string }>
         restore: (data: {

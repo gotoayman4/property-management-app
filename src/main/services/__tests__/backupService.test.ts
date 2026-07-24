@@ -73,6 +73,7 @@ describe('backupService', () => {
       const logs = db.prepare('SELECT * FROM backup_log').all() as BackupLogRow[]
       expect(logs).toHaveLength(1)
       expect(logs[0].backup_type).toBe('manual')
+      expect(logs[0].backup_content).toBe('full')
       expect(logs[0].status).toBe('success')
       expect(logs[0].checksum).toBe(result.checksum)
       expect(logs[0].file_size_kb).toBeGreaterThan(0)
@@ -103,6 +104,38 @@ describe('backupService', () => {
 
       const log = db.prepare('SELECT * FROM backup_log').get() as BackupLogRow
       expect(log.backup_type).toBe('automatic')
+    })
+
+    it('creates a database-only backup without documents in the ZIP', () => {
+      const docsDir = join(backupDir, 'docs')
+      mkdirSync(docsDir, { recursive: true })
+      writeFileSync(join(docsDir, 'test.pdf'), 'PDF-CONTENT')
+
+      const result = createBackup(db, backupDir, 'manual', dbPath, docsDir, 'database-only')
+      expect(result.success).toBe(true)
+
+      const zip = new AdmZip(result.filePath!)
+      expect(zip.getEntry('database.db')).toBeTruthy()
+      expect(zip.getEntry('documents/test.pdf')).toBeNull()
+
+      const log = db.prepare('SELECT * FROM backup_log').get() as BackupLogRow
+      expect(log.backup_content).toBe('database-only')
+    })
+
+    it('creates a full backup with documents in the ZIP', () => {
+      const docsDir = join(backupDir, 'docs')
+      mkdirSync(docsDir, { recursive: true })
+      writeFileSync(join(docsDir, 'test.pdf'), 'PDF-CONTENT')
+
+      const result = createBackup(db, backupDir, 'manual', dbPath, docsDir, 'full')
+      expect(result.success).toBe(true)
+
+      const zip = new AdmZip(result.filePath!)
+      expect(zip.getEntry('database.db')).toBeTruthy()
+      expect(zip.getEntry('documents/test.pdf')).toBeTruthy()
+
+      const log = db.prepare('SELECT * FROM backup_log').get() as BackupLogRow
+      expect(log.backup_content).toBe('full')
     })
   })
 
@@ -367,7 +400,7 @@ describe('backupService', () => {
          VALUES ('contract', 1, 'test_contract.pdf', ?, 'application/pdf', 16)`
       ).run(sampleDocPath)
 
-      const backupResult = createBackup(db, backupDir, 'manual', dbPath, docsDir)
+      const backupResult = createBackup(db, backupDir, 'manual', dbPath, docsDir, 'full')
       expect(backupResult.success).toBe(true)
 
       const zip = new AdmZip(backupResult.filePath!)
@@ -396,8 +429,8 @@ describe('backupService', () => {
       const checksum = createHash('sha256').update('LEGACY-DB-DATA').digest('hex')
       const info = db
         .prepare(
-          `INSERT INTO backup_log (backup_file_path, backup_type, file_size_kb, checksum, is_verified, status)
-           VALUES (?, 'manual', ?, ?, 1, 'success')`
+          `INSERT INTO backup_log (backup_file_path, backup_type, backup_content, file_size_kb, checksum, is_verified, status)
+           VALUES (?, 'manual', 'full', ?, ?, 1, 'success')`
         )
         .run(legacyDbPath, sizeKb, checksum)
 
@@ -412,6 +445,73 @@ describe('backupService', () => {
       )
       expect(restoreResult.success).toBe(true)
       expect(readFileSync(fakeDbPath, 'utf8')).toBe('LEGACY-DB-DATA')
+
+      rmSync(fakeDbPath, { force: true })
+    })
+  })
+
+  describe('database-only restore with 2-step document recovery', () => {
+    it('restores documents from the latest full backup when restoring a database-only backup', () => {
+      const docsDir = join(backupDir, 'docs')
+      const targetDocsDir = join(backupDir, 'restored_docs')
+      mkdirSync(docsDir, { recursive: true })
+
+      const sampleDocPath = join(docsDir, 'important_contract.pdf')
+      writeFileSync(sampleDocPath, 'IMPORTANT-DOC-CONTENT')
+
+      // 1. Create a full backup with documents
+      const fullResult = createBackup(db, backupDir, 'manual', dbPath, docsDir, 'full')
+      expect(fullResult.success).toBe(true)
+
+      // 2. Create a database-only backup (no documents)
+      const dbOnlyResult = createBackup(db, backupDir, 'manual', dbPath, undefined, 'database-only')
+      expect(dbOnlyResult.success).toBe(true)
+
+      const logs = listBackups(db)
+      const dbOnlyLog = logs.find((l) => l.backup_content === 'database-only')
+      expect(dbOnlyLog).toBeTruthy()
+
+      // Verify the database-only ZIP has no documents
+      const dbOnlyZip = new AdmZip(dbOnlyLog!.backup_file_path)
+      expect(dbOnlyZip.getEntry('database.db')).toBeTruthy()
+      expect(dbOnlyZip.getEntries().some((e) => e.entryName.startsWith('documents/'))).toBe(false)
+
+      // 3. Restore from the database-only backup
+      const fakeDbPath = join(backupDir, 'current.db')
+      writeFileSync(fakeDbPath, 'fake-db-content')
+
+      const restoreResult = restoreFromBackup(
+        db,
+        dbOnlyLog!.id,
+        backupDir,
+        fakeDbPath,
+        targetDocsDir
+      )
+      expect(restoreResult.success).toBe(true)
+
+      // 4. Verify documents were restored from the latest full backup
+      const restoredDocPath = join(targetDocsDir, 'important_contract.pdf')
+      expect(existsSync(restoredDocPath)).toBe(true)
+      expect(readFileSync(restoredDocPath, 'utf8')).toBe('IMPORTANT-DOC-CONTENT')
+
+      rmSync(fakeDbPath, { force: true })
+    })
+
+    it('restores DB only when no full backup exists for document recovery', () => {
+      // Create only a database-only backup — no full backup exists
+      const result = createBackup(db, backupDir, 'manual', dbPath, undefined, 'database-only')
+      expect(result.success).toBe(true)
+
+      const logs = listBackups(db)
+      const fakeDbPath = join(backupDir, 'current.db')
+      writeFileSync(fakeDbPath, 'fake-db-content')
+
+      const targetDocsDir = join(backupDir, 'restored_docs')
+      const restoreResult = restoreFromBackup(db, logs[0].id, backupDir, fakeDbPath, targetDocsDir)
+      expect(restoreResult.success).toBe(true)
+
+      // No documents directory should be created since no full backup exists
+      expect(existsSync(targetDocsDir)).toBe(false)
 
       rmSync(fakeDbPath, { force: true })
     })

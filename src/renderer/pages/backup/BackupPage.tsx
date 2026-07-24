@@ -11,25 +11,20 @@
  */
 
 import BackupIcon from '@mui/icons-material/Backup'
-import DeleteRowIcon from '@mui/icons-material/Delete'
 import RestoreIcon from '@mui/icons-material/RestorePage'
-import VerifiedIcon from '@mui/icons-material/Verified'
 import {
   Alert,
   Box,
   Button,
-  Chip,
   CircularProgress,
   Dialog,
   DialogActions,
   DialogContent,
   DialogTitle,
-  IconButton,
   TextField,
   Tooltip,
   Typography
 } from '@mui/material'
-import { GridColDef } from '@mui/x-data-grid'
 import React, { useCallback, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import BackupSettingsCard from '../../components/BackupSettingsCard'
@@ -38,19 +33,8 @@ import GlobalSnackbar from '../../components/GlobalSnackbar'
 import PageHeader from '../../components/PageHeader'
 import StandardTable from '../../components/StandardTable'
 import { useSnackbar } from '../../hooks/useSnackbar'
+import { BackupRow, getBackupColumns } from './backupColumns'
 import SelectBackupDialog from './SelectBackupDialog'
-
-interface BackupRow {
-  id: number
-  backup_file_path: string
-  backup_type: 'manual' | 'automatic' | 'pre_restore'
-  file_size_kb: number | null
-  checksum: string | null
-  is_verified: number
-  status: 'success' | 'failed'
-  error_message: string | null
-  created_at: string
-}
 
 export default function BackupPage(): React.ReactElement {
   const { t, i18n } = useTranslation()
@@ -60,6 +44,7 @@ export default function BackupPage(): React.ReactElement {
   const [backups, setBackups] = useState<BackupRow[]>([])
   const [loading, setLoading] = useState(true)
   const [creating, setCreating] = useState(false)
+  const [creatingQuick, setCreatingQuick] = useState(false)
 
   // Select backup selection dialog state (no auto-selection)
   const [selectDialogOpen, setSelectDialogOpen] = useState(false)
@@ -129,6 +114,23 @@ export default function BackupPage(): React.ReactElement {
       showError('backup.createFailed')
     } finally {
       setCreating(false)
+    }
+  }, [showSuccess, showError, fetchBackups])
+
+  const handleCreateQuickBackup = useCallback(async (): Promise<void> => {
+    setCreatingQuick(true)
+    try {
+      const result = await window.api.backup.createDatabaseOnly()
+      if (result.success) {
+        showSuccess('backup.quickBackupSuccess')
+        fetchBackups()
+      } else {
+        showError('backup.quickBackupFailed')
+      }
+    } catch {
+      showError('backup.quickBackupFailed')
+    } finally {
+      setCreatingQuick(false)
     }
   }, [showSuccess, showError, fetchBackups])
 
@@ -247,112 +249,11 @@ export default function BackupPage(): React.ReactElement {
     }
   }, [pendingDeleteId, showSuccess, showError, fetchBackups])
 
-  const typeLabel = (type: string): string => t(`backup.type.${type}`, type)
-  const statusColor = (status: string): 'success' | 'error' =>
-    status === 'success' ? 'success' : 'error'
-  const statusText = (status: string): string =>
-    t(`backup.status.${status === 'success' ? 'success' : 'failed'}`)
-  const formatFileSize = (kb: number | null): string =>
-    kb != null ? `${kb.toLocaleString()} KB` : '—'
-
-  const columns: GridColDef[] = [
-    {
-      field: 'created_at',
-      headerName: t('common.date'),
-      flex: 1,
-      minWidth: 160
-    },
-    {
-      field: 'backup_type',
-      headerName: t('backup.type.label'),
-      flex: 1,
-      minWidth: 100,
-      renderCell: (params: { row: BackupRow }) => (
-        <Chip
-          size="small"
-          label={typeLabel(params.row.backup_type)}
-          color="primary"
-          variant="outlined"
-        />
-      )
-    },
-    {
-      field: 'file_size_kb',
-      headerName: t('backup.size'),
-      flex: 1,
-      minWidth: 90,
-      valueFormatter: (value: number | null) => formatFileSize(value)
-    },
-    {
-      field: 'is_verified',
-      headerName: t('backup.verified'),
-      flex: 1,
-      minWidth: 100,
-      renderCell: (params: { row: BackupRow }) => (
-        <Chip
-          size="small"
-          label={params.row.is_verified ? t('common.yes') : t('common.no')}
-          color={params.row.is_verified ? 'success' : 'default'}
-        />
-      )
-    },
-    {
-      field: 'status',
-      headerName: t('backup.status.label'),
-      flex: 1,
-      minWidth: 90,
-      renderCell: (params: { row: BackupRow }) => (
-        <Chip
-          size="small"
-          label={statusText(params.row.status)}
-          color={statusColor(params.row.status)}
-        />
-      )
-    },
-    {
-      field: 'actions',
-      headerName: t('common.actions'),
-      flex: 1,
-      minWidth: 140,
-      sortable: false,
-      renderCell: (params: { row: BackupRow }) => (
-        <Box sx={{ display: 'flex', gap: 0.5 }}>
-          <Tooltip title={t('backup.verify')}>
-            <IconButton
-              size="small"
-              color="info"
-              onClick={() => handleVerify(params.row.id)}
-              disabled={params.row.status !== 'success'}
-              aria-label={t('backup.verify')}
-            >
-              <VerifiedIcon fontSize="small" />
-            </IconButton>
-          </Tooltip>
-          <Tooltip title={t('backup.restore')}>
-            <IconButton
-              size="small"
-              color="warning"
-              onClick={() => openRestoreDialog(params.row)}
-              disabled={params.row.status !== 'success'}
-              aria-label={t('backup.restore')}
-            >
-              <RestoreIcon fontSize="small" />
-            </IconButton>
-          </Tooltip>
-          <Tooltip title={t('common.delete')}>
-            <IconButton
-              size="small"
-              color="error"
-              onClick={() => handleDeleteClick(params.row.id)}
-              aria-label={t('common.delete')}
-            >
-              <DeleteRowIcon fontSize="small" />
-            </IconButton>
-          </Tooltip>
-        </Box>
-      )
-    }
-  ]
+  const columns = getBackupColumns(t, {
+    onVerify: handleVerify,
+    onRestore: openRestoreDialog,
+    onDelete: handleDeleteClick
+  })
 
   return (
     <Box sx={{ width: '100%' }}>
@@ -362,23 +263,48 @@ export default function BackupPage(): React.ReactElement {
         subtitle={t('backup.subtitle')}
         action={
           <Box sx={{ display: 'flex', gap: 1.5 }}>
-            <Button
-              variant="outlined"
-              color="warning"
-              startIcon={<RestoreIcon />}
-              onClick={handleHeaderRestore}
-              disabled={restoring || creating}
-            >
-              {t('backup.restore')}
-            </Button>
-            <Button
-              variant="contained"
-              startIcon={creating ? <CircularProgress size={18} color="inherit" /> : <BackupIcon />}
-              onClick={handleCreateBackup}
-              disabled={creating}
-            >
-              {creating ? t('backup.creating') : t('backup.createNow')}
-            </Button>
+            <Tooltip title={t('backup.restoreTooltip')}>
+              <span>
+                <Button
+                  variant="outlined"
+                  color="warning"
+                  startIcon={<RestoreIcon />}
+                  onClick={handleHeaderRestore}
+                  disabled={restoring || creating}
+                >
+                  {t('backup.restore')}
+                </Button>
+              </span>
+            </Tooltip>
+            <Tooltip title={t('backup.quickBackupTooltip')}>
+              <span>
+                <Button
+                  variant="outlined"
+                  color="info"
+                  startIcon={
+                    creatingQuick ? <CircularProgress size={18} color="inherit" /> : <BackupIcon />
+                  }
+                  onClick={handleCreateQuickBackup}
+                  disabled={creating || creatingQuick}
+                >
+                  {creatingQuick ? t('backup.quickBackupCreating') : t('backup.quickBackup')}
+                </Button>
+              </span>
+            </Tooltip>
+            <Tooltip title={t('backup.fullBackupTooltip')}>
+              <span>
+                <Button
+                  variant="contained"
+                  startIcon={
+                    creating ? <CircularProgress size={18} color="inherit" /> : <BackupIcon />
+                  }
+                  onClick={handleCreateBackup}
+                  disabled={creating || creatingQuick}
+                >
+                  {creating ? t('backup.creating') : t('backup.createNow')}
+                </Button>
+              </span>
+            </Tooltip>
           </Box>
         }
       />
@@ -419,12 +345,19 @@ export default function BackupPage(): React.ReactElement {
           <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
             {t('backup.restoreConfirmBody', {
               date: selectedBackup?.created_at ?? '',
-              type: selectedBackup ? typeLabel(selectedBackup.backup_type) : ''
+              type: selectedBackup
+                ? t(`backup.type.${selectedBackup.backup_type}`, selectedBackup.backup_type)
+                : ''
             })}
           </Typography>
           <Alert severity="warning" sx={{ mb: 2 }}>
             {t('backup.restoreWarning')}
           </Alert>
+          {selectedBackup?.backup_content === 'database-only' && (
+            <Alert severity="info" sx={{ mb: 2 }}>
+              {t('backup.restoreDatabaseOnlyNote')}
+            </Alert>
+          )}
           <TextField
             fullWidth
             label={t('backup.restoreTypeConfirm')}

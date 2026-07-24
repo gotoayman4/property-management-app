@@ -20,6 +20,7 @@
 import FolderOpenIcon from '@mui/icons-material/FolderOpen'
 import SettingsIcon from '@mui/icons-material/Settings'
 import {
+  Alert,
   Box,
   Card,
   CardContent,
@@ -47,6 +48,9 @@ interface BackupSettings {
   backup_enabled?: number
   backup_frequency?: 'daily' | 'weekly'
   backup_time?: string
+  full_backup_enabled?: number
+  full_backup_frequency?: 'monthly' | 'weekly'
+  full_backup_time?: string
 }
 
 // Spinner-less numeric input styling (AGENTS bans <TextField type="number"> native spinners).
@@ -122,6 +126,10 @@ export default function BackupSettingsCard(): React.ReactElement {
             </Typography>
           </Box>
         </Stack>
+
+        <Alert severity="info" sx={{ mb: 3 }}>
+          {t('backup.autoBackupOnCloseTip')}
+        </Alert>
 
         <Grid container spacing={2}>
           <Grid size={{ xs: 12, md: 8 }}>
@@ -231,6 +239,70 @@ export default function BackupSettingsCard(): React.ReactElement {
                     }
                   }}
                   helperText={t('backup.scheduledTimeHelp')}
+                  slotProps={{ htmlInput: { dir: 'ltr', maxLength: 5 } }}
+                />
+              </Grid>
+            </Grid>
+          )}
+        </Stack>
+
+        {/* Full backup schedule — includes documents, runs less frequently */}
+        <Stack spacing={2} sx={{ mt: 3 }}>
+          <FormControlLabel
+            control={
+              <Switch
+                checked={settings.full_backup_enabled === 1}
+                onChange={(e) =>
+                  updateBackupSetting('full_backup_enabled', e.target.checked ? 1 : 0)
+                }
+              />
+            }
+            label={t('backup.enableFullBackups')}
+          />
+
+          {settings.full_backup_enabled === 1 && (
+            <Grid container spacing={2}>
+              <Grid size={{ xs: 12, md: 6 }}>
+                <FormControl fullWidth>
+                  <InputLabel>{t('backup.fullBackupFrequency')}</InputLabel>
+                  <Select
+                    value={settings.full_backup_frequency ?? 'monthly'}
+                    label={t('backup.fullBackupFrequency')}
+                    onChange={(e) =>
+                      updateBackupSetting(
+                        'full_backup_frequency',
+                        e.target.value as 'monthly' | 'weekly'
+                      )
+                    }
+                  >
+                    <MenuItem value="monthly">{t('backup.monthly')}</MenuItem>
+                    <MenuItem value="weekly">{t('backup.weekly')}</MenuItem>
+                  </Select>
+                </FormControl>
+              </Grid>
+              <Grid size={{ xs: 12, md: 6 }}>
+                <TextField
+                  fullWidth
+                  type="text"
+                  inputMode="numeric"
+                  label={t('backup.fullBackupTime')}
+                  value={settings.full_backup_time ?? '02:00'}
+                  onChange={(e) => {
+                    const val = e.target.value
+                    if (/^\d{0,2}:?\d{0,2}$/.test(val)) {
+                      updateBackupSetting('full_backup_time', val)
+                    }
+                  }}
+                  onBlur={() => {
+                    const val = settings.full_backup_time ?? '02:00'
+                    const parts = val.split(':')
+                    if (parts.length === 2) {
+                      const h = parts[0].padStart(2, '0')
+                      const m = parts[1].padStart(2, '0')
+                      updateBackupSetting('full_backup_time', `${h}:${m}`)
+                    }
+                  }}
+                  helperText={t('backup.fullBackupTimeHelp')}
                   slotProps={{ htmlInput: { dir: 'ltr', maxLength: 5 } }}
                 />
               </Grid>

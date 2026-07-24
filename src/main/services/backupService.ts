@@ -39,6 +39,7 @@ export interface BackupLogRow {
   id: number
   backup_file_path: string
   backup_type: 'manual' | 'automatic' | 'pre_restore'
+  backup_content: 'database-only' | 'full'
   file_size_kb: number | null
   checksum: string | null
   is_verified: number
@@ -113,21 +114,26 @@ function fileSizeKB(filePath: string): number {
 }
 
 /**
- * Create a backup of the SQLite database and all uploaded documents.
+ * Create a backup of the SQLite database, optionally including uploaded documents.
  *
  * 1. Checkpoints the WAL so the .db file is fully self-contained.
- * 2. Bundles database.db and uploaded documents into a timestamped ZIP archive.
+ * 2. Bundles database.db (always) and optionally uploaded documents into a timestamped ZIP.
  * 3. Computes SHA-256 checksum.
- * 4. Logs the operation to backup_log.
+ * 4. Logs the operation to backup_log with backup_content ('database-only' | 'full').
  *
- * FR-BAK-01, FR-BAK-03, FR-BAK-06, FR-BAK-07
+ * FR-BAK-01, FR-BAK-03, FR-BAK-06, FR-BAK-07.
+ * INTENT: 'database-only' backups skip documents for speed (~1s vs potentially minutes).
+ *         'full' backups include documents for complete disaster recovery.
+ *
+ * @param content - 'full' includes documents, 'database-only' skips them (default 'full' for backward compat).
  */
 export function createBackup(
   db: Database,
   backupDir: string,
   type: 'manual' | 'automatic' | 'pre_restore',
   dbPath: string,
-  documentsDir?: string
+  documentsDir?: string,
+  content: 'database-only' | 'full' = 'full'
 ): BackupResult {
   try {
     if (!dbPath) {
@@ -147,10 +153,12 @@ export function createBackup(
     // Flush WAL to main DB file so the copy is consistent
     db.pragma('wal_checkpoint(TRUNCATE)')
 
-    // Build a timestamped filename: Backup_YYYY-MM-DD_HHmmss.zip
+    // Build a timestamped filename: Backup_YYYY-MM-DD_HHmmssmsms.zip
+    // CAVEAT: Without milliseconds, rapid successive backups (e.g. quick-backup + full backup)
+    // within the same second produce identical filenames and silently overwrite each other on disk.
     const now = new Date()
     const pad = (n: number): string => String(n).padStart(2, '0')
-    const timestamp = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}_${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`
+    const timestamp = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}_${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}${String(now.getMilliseconds()).padStart(3, '0')}`
     const fileName = `Backup_${timestamp}.zip`
     const destPath = join(backupDir, fileName)
 
@@ -159,35 +167,38 @@ export function createBackup(
     // Add SQLite database as database.db
     zip.addLocalFile(dbPath, '', 'database.db')
 
-    // Add documents folder if it exists
-    const targetDocsDir = documentsDir ?? defaultDocumentsDir()
-    if (targetDocsDir && existsSync(targetDocsDir)) {
-      try {
-        const files = readdirSync(targetDocsDir)
-        if (files.length > 0) {
-          zip.addLocalFolder(targetDocsDir, 'documents')
+    // Add documents only for full backups — database-only backups skip them for speed
+    if (content === 'full') {
+      // Add documents folder if it exists
+      const targetDocsDir = documentsDir ?? defaultDocumentsDir()
+      if (targetDocsDir && existsSync(targetDocsDir)) {
+        try {
+          const files = readdirSync(targetDocsDir)
+          if (files.length > 0) {
+            zip.addLocalFolder(targetDocsDir, 'documents')
+          }
+        } catch (err) {
+          console.warn('Failed to add documents folder to backup:', err)
         }
-      } catch (err) {
-        console.warn('Failed to add documents folder to backup:', err)
       }
-    }
 
-    // Add any documents referenced in DB that might live elsewhere
-    try {
-      const docRows = db
-        .prepare('SELECT file_path FROM documents WHERE file_path IS NOT NULL')
-        .all() as { file_path: string }[]
-      for (const row of docRows) {
-        if (row.file_path && existsSync(row.file_path)) {
-          const fileBase = basename(row.file_path)
-          const zipPath = `documents/${fileBase}`
-          if (!zip.getEntry(zipPath)) {
-            zip.addLocalFile(row.file_path, 'documents', fileBase)
+      // Add any documents referenced in DB that might live elsewhere
+      try {
+        const docRows = db
+          .prepare('SELECT file_path FROM documents WHERE file_path IS NOT NULL')
+          .all() as { file_path: string }[]
+        for (const row of docRows) {
+          if (row.file_path && existsSync(row.file_path)) {
+            const fileBase = basename(row.file_path)
+            const zipPath = `documents/${fileBase}`
+            if (!zip.getEntry(zipPath)) {
+              zip.addLocalFile(row.file_path, 'documents', fileBase)
+            }
           }
         }
+      } catch {
+        /* best-effort */
       }
-    } catch {
-      /* best-effort */
     }
 
     zip.writeZip(destPath)
@@ -197,9 +208,9 @@ export function createBackup(
 
     // Log to backup_log
     db.prepare(
-      `INSERT INTO backup_log (backup_file_path, backup_type, file_size_kb, checksum, is_verified, status)
-       VALUES (?, ?, ?, ?, 1, 'success')`
-    ).run(destPath, type, fileSizeKB(destPath), checksum)
+      `INSERT INTO backup_log (backup_file_path, backup_type, backup_content, file_size_kb, checksum, is_verified, status)
+       VALUES (?, ?, ?, ?, ?, 1, 'success')`
+    ).run(destPath, type, content, fileSizeKB(destPath), checksum)
 
     return { success: true, filePath: destPath, checksum }
   } catch (err) {
@@ -207,8 +218,8 @@ export function createBackup(
     // Log failure
     try {
       db.prepare(
-        `INSERT INTO backup_log (backup_file_path, backup_type, file_size_kb, checksum, is_verified, status, error_message)
-         VALUES (?, ?, NULL, NULL, 0, 'failed', ?)`
+        `INSERT INTO backup_log (backup_file_path, backup_type, backup_content, file_size_kb, checksum, is_verified, status, error_message)
+         VALUES (?, ?, 'full', NULL, NULL, 0, 'failed', ?)`
       ).run(join(backupDir, 'failed_attempt'), type, msg)
     } catch {
       /* best-effort logging */
@@ -300,8 +311,14 @@ export function restoreFromBackup(
         const dbData = dbEntry.getData()
         writeFileSync(dbPath, dbData)
 
-        // Extract documents/ if targetDocsDir is available
-        if (targetDocsDir) {
+        // Determine if this backup contains documents
+        const hasDocuments = zip.getEntries().some((e) => {
+          const norm = e.entryName.replace(/\\/g, '/')
+          return !e.isDirectory && norm.startsWith('documents/')
+        })
+
+        if (hasDocuments && targetDocsDir) {
+          // Full backup — extract documents directly
           if (!existsSync(targetDocsDir)) {
             mkdirSync(targetDocsDir, { recursive: true })
           }
@@ -318,6 +335,42 @@ export function restoreFromBackup(
                 }
                 writeFileSync(destFilePath, entry.getData())
               }
+            }
+          }
+        } else if (!hasDocuments && targetDocsDir) {
+          // Database-only backup — find the latest full backup for documents
+          const latestFull = db
+            .prepare(
+              `SELECT backup_file_path FROM backup_log
+               WHERE backup_content = 'full' AND status = 'success'
+                 AND backup_type != 'pre_restore'
+                 AND id != ? AND backup_file_path != ?
+               ORDER BY created_at DESC LIMIT 1`
+            )
+            .get(backupId, row.backup_file_path) as { backup_file_path: string } | undefined
+
+          if (latestFull && existsSync(latestFull.backup_file_path)) {
+            try {
+              const fullZip = new AdmZip(latestFull.backup_file_path)
+              if (!existsSync(targetDocsDir)) {
+                mkdirSync(targetDocsDir, { recursive: true })
+              }
+              for (const entry of fullZip.getEntries()) {
+                const normName = entry.entryName.replace(/\\/g, '/')
+                if (!entry.isDirectory && normName.startsWith('documents/')) {
+                  const relName = normName.substring('documents/'.length)
+                  if (relName) {
+                    const destFilePath = join(targetDocsDir, relName)
+                    const destFolder = join(destFilePath, '..')
+                    if (!existsSync(destFolder)) {
+                      mkdirSync(destFolder, { recursive: true })
+                    }
+                    writeFileSync(destFilePath, entry.getData())
+                  }
+                }
+              }
+            } catch {
+              /* best-effort — documents restore is non-critical compared to DB */
             }
           }
         }

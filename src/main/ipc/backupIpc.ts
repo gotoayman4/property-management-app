@@ -39,13 +39,14 @@ function resolveBackupDir(): string {
 
 export function registerBackupIpcHandlers(): void {
   /**
-   * backup:create — Perform a manual backup (FR-BAK-01).
+   * backup:create — Perform a manual full backup (FR-BAK-01).
    * Returns the backup result including file path and checksum.
+   * Includes both database and uploaded documents.
    */
   ipcMain.handle('backup:create', async () => {
     try {
       const backupDir = resolveBackupDir()
-      const result = createBackup(db, backupDir, 'manual', dbPath)
+      const result = createBackup(db, backupDir, 'manual', dbPath, undefined, 'full')
 
       // On success, prune old backups per retention limit
       if (result.success) {
@@ -58,6 +59,30 @@ export function registerBackupIpcHandlers(): void {
     } catch (error) {
       console.error('Backup creation error:', error)
       throw new Error('FAILED_TO_CREATE_BACKUP')
+    }
+  })
+
+  /**
+   * backup:createDatabaseOnly — Perform a quick manual backup (database only, no documents).
+   * INTENT: Fast backup for when the user wants a safety snapshot without the overhead of
+   *         compressing large document files. Documents are still protected by the latest
+   *         full backup.
+   */
+  ipcMain.handle('backup:createDatabaseOnly', async () => {
+    try {
+      const backupDir = resolveBackupDir()
+      const result = createBackup(db, backupDir, 'manual', dbPath, undefined, 'database-only')
+
+      if (result.success) {
+        const settings = db.prepare('SELECT max_backup_count FROM settings WHERE id = 1').get() as
+          { max_backup_count: number } | undefined
+        pruneOldBackups(db, settings?.max_backup_count ?? 10)
+      }
+
+      return result
+    } catch (error) {
+      console.error('Database-only backup creation error:', error)
+      throw new Error('FAILED_TO_CREATE_DATABASE_ONLY_BACKUP')
     }
   })
 

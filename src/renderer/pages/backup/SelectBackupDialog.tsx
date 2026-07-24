@@ -25,6 +25,7 @@ interface BackupRow {
   id: number
   backup_file_path: string
   backup_type: 'manual' | 'automatic' | 'pre_restore'
+  backup_content: 'database-only' | 'full'
   file_size_kb: number | null
   checksum: string | null
   is_verified: number

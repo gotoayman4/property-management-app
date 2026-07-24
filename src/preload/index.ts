@@ -159,6 +159,7 @@ const api = {
   },
   backup: {
     create: () => ipcRenderer.invoke('backup:create'),
+    createDatabaseOnly: () => ipcRenderer.invoke('backup:createDatabaseOnly'),
     list: () => ipcRenderer.invoke('backup:list'),
     verify: (data: { backupId: number }) => ipcRenderer.invoke('backup:verify', data),
     restore: (data: { backupId?: number; filePath?: string; confirm?: boolean }) =>

@@ -50,6 +50,12 @@ const settingsUpdateSchema = z.object({
     .string()
     .regex(/^\d{2}:\d{2}$/)
     .optional(),
+  full_backup_enabled: z.number().int().min(0).max(1).optional(),
+  full_backup_frequency: z.enum(['monthly', 'weekly']).optional(),
+  full_backup_time: z
+    .string()
+    .regex(/^\d{2}:\d{2}$/)
+    .optional(),
   company_name: z.string().max(200).nullable().optional(),
   company_logo: z.string().nullable().optional(),
   dashboard_hidden_widgets: z.string().optional()

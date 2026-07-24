@@ -130,7 +130,7 @@ app.whenReady().then(() => {
     /* best-effort */
   }
 
-  // FR-BAK-02: auto-backup on quit (before-quit is cancellable; this runs before close begins).
+  // FR-BAK-02: auto-backup on quit — database-only for speed (documents protected by latest full backup).
   app.on('before-quit', () => {
     stopBackupScheduler()
     try {
@@ -139,7 +139,7 @@ app.whenReady().then(() => {
       const backupDir = settings?.backup_path?.trim()
         ? settings.backup_path.trim()
         : join(app.getPath('documents'), 'PropManager', 'Backups')
-      createBackup(db, backupDir, 'automatic', dbPath)
+      createBackup(db, backupDir, 'automatic', dbPath, undefined, 'database-only')
     } catch {
       /* best-effort — don't block quit */
     }

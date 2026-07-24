@@ -10,6 +10,12 @@ import { checkOverlap, syncPropertyStatus, logHistory } from '../db/contractHelp
 import { db } from '../db/database'
 import { appendLedgerEntry } from '../db/ledgerService'
 import { createPayment } from '../db/paymentRepository'
+import {
+  contractCreateSchema,
+  contractUpdateSchema,
+  contractRenewSchema,
+  escalationSetSchema
+} from './contractSchemas'
 
 const isDev = process.env.NODE_ENV !== 'production'
 
@@ -18,13 +24,6 @@ const isDev = process.env.NODE_ENV !== 'production'
  * CONSTRAINT: All writes that touch escalation or status changes are atomic (db.transaction)
  *             and log to contract_history (BR-07). Channels use the domain:verb convention.
  */
-
-import {
-  contractCreateSchema,
-  contractUpdateSchema,
-  contractRenewSchema,
-  escalationSetSchema
-} from './contractSchemas'
 
 export function registerContractIpcHandlers(): void {
   ipcMain.handle(
