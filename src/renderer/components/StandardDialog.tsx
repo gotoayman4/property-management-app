@@ -66,13 +66,13 @@ export default function StandardDialog({
       aria-labelledby="standard-dialog-title"
       sx={{
         '& .MuiDialog-paper': {
-          borderRadius: 4,
           p: 0.5,
           boxShadow: (theme) =>
             theme.palette.mode === 'dark'
               ? '0px 16px 32px rgba(0, 0, 0, 0.5)'
               : '0px 16px 32px rgba(15, 23, 42, 0.12)',
-          border: (theme) => `1px solid ${theme.palette.divider}`
+          border: (theme) => `1px solid ${theme.palette.divider}`,
+          borderRadius: 'var(--mui-shape-borderRadius, 12px)'
         }
       }}
     >
@@ -112,7 +112,7 @@ export default function StandardDialog({
       <ConfirmDialog
         open={confirmCloseOpen}
         title={t('common.unsavedChanges')}
-        message={t('common.unsavedChanges')}
+        message={t('common.unsavedChangesMessage')}
         confirmLabel={t('common.close')}
         severity="warning"
         onConfirm={() => {

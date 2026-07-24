@@ -102,7 +102,7 @@ export default function StandardTable({
       <Paper
         elevation={0}
         sx={{
-          p: 3,
+          p: 6,
           display: 'flex',
           flexDirection: 'column',
           gap: 1.5,

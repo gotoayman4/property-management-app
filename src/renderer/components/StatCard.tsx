@@ -50,6 +50,7 @@ export default function StatCard({
       <CardContent sx={{ display: 'flex', alignItems: 'center', p: 2.5 }}>
         <Box
           className="stat-icon-wrapper"
+          aria-hidden="true"
           sx={{
             width: 56,
             height: 56,

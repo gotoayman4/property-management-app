@@ -95,7 +95,7 @@ export const getTheme = (
       MuiButton: {
         styleOverrides: {
           root: {
-            borderRadius: 8,
+            borderRadius: 'var(--mui-shape-borderRadius, 12px)',
             padding: '8px 16px',
             fontSize: '0.875rem',
             boxShadow: 'none',

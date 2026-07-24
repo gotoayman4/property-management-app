@@ -154,6 +154,7 @@ export default function NotificationBell(): React.JSX.Element {
                           label={t(`notifications.type.${n.notification_type}`)}
                           size="small"
                           color={TYPE_COLORS[n.notification_type] ?? 'default'}
+                          aria-hidden="true"
                         />
                         {n.due_date && (
                           <Typography variant="caption" color="text.secondary">

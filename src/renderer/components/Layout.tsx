@@ -168,7 +168,7 @@ export default function Layout({ children }: LayoutProps): React.JSX.Element {
             sx={{
               fontWeight: 700,
               fontSize: '1.15rem',
-              ms: 1.5,
+              marginInlineStart: 1.5,
               overflow: 'hidden',
               textOverflow: 'ellipsis',
               whiteSpace: 'nowrap'
