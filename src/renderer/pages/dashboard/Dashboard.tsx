@@ -8,7 +8,18 @@ import ErrorOutlineIcon from '@mui/icons-material/ErrorOutlineOutlined'
 import EventAvailableIcon from '@mui/icons-material/EventAvailable'
 import GroupsRoundedIcon from '@mui/icons-material/GroupsRounded'
 import WarningAmberIcon from '@mui/icons-material/WarningAmber'
-import { Box, Card, CardContent, Grid, Typography, Button, Stack, Tabs, Tab } from '@mui/material'
+import {
+  Alert,
+  Box,
+  Card,
+  CardContent,
+  Grid,
+  Typography,
+  Button,
+  Stack,
+  Tabs,
+  Tab
+} from '@mui/material'
 import React, { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
@@ -63,6 +74,7 @@ export default function Dashboard(): React.JSX.Element {
   const [countries, setCountries] = useState<CountryOption[]>([])
   const [activeCountry, setActiveCountry] = useState<string>('')
   const [refreshCount, setRefreshCount] = useState(0)
+  const [loadError, setLoadError] = useState(false)
 
   useDataChangedListener(() => {
     setRefreshCount((prev) => prev + 1)
@@ -73,6 +85,7 @@ export default function Dashboard(): React.JSX.Element {
   useEffect(() => {
     let cancelled = false
     async function loadAll(): Promise<void> {
+      setLoadError(false)
       try {
         const country = activeCountry || undefined
         const [s, due, ov, rec, docs, tr, cnt, pay, exp, act] = await Promise.all([
@@ -99,7 +112,7 @@ export default function Dashboard(): React.JSX.Element {
         setRecentExpenses(exp as RecentExpenseRow[])
         setRecentActivities(act as Record<string, unknown>[])
       } catch {
-        /* handled below — loading state will clear */
+        if (!cancelled) setLoadError(true)
       } finally {
         if (!cancelled) setLoading(false)
       }
@@ -145,6 +158,19 @@ export default function Dashboard(): React.JSX.Element {
         title={t('sidebar.dashboard')}
         subtitle={t('dashboard.subtitle')}
       />
+      {loadError && (
+        <Alert
+          severity="error"
+          action={
+            <Button color="inherit" size="small" onClick={() => setLoadError(false)}>
+              {t('common.retry')}
+            </Button>
+          }
+          sx={{ mb: 2 }}
+        >
+          {t('dashboard.loadError')}
+        </Alert>
+      )}
       {countries.length > 1 && (
         <Tabs
           value={activeCountry}

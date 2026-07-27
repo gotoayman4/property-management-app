@@ -650,7 +650,8 @@
       "contract": "Contract: {{number}} — {{property}}",
       "propertyAdded": "Property Added: {{name}} ({{code}})",
       "tenantAdded": "Tenant Added: {{name}} ({{code}})"
-    }
+    },
+    "loadError": "Failed to load dashboard data. Please try again."
   },
   "ledger": {
     "title": "Financial Ledger",

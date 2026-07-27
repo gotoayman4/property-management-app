@@ -650,7 +650,8 @@
       "contract": "عقد: {{number}} — {{property}}",
       "propertyAdded": "تمت إضافة العقار: {{name}} ({{code}})",
       "tenantAdded": "تمت إضافة المستأجر: {{name}} ({{code}})"
-    }
+    },
+    "loadError": "فشل تحميل بيانات لوحة المعلومات. يرجى المحاولة مرة أخرى."
   },
   "ledger": {
     "title": "الدفتر المالي",
