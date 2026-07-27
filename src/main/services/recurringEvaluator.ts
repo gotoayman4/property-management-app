@@ -10,6 +10,7 @@ import {
   toLocalISODate,
   type RecurringScheduleTemplate
 } from '../db/recurringSchedule'
+import { logger } from '../utils/logger'
 
 /** Loads a template and projects it into the pure schedule-math shape. */
 export function loadTemplateForSchedule(row: Record<string, unknown>): RecurringScheduleTemplate {
@@ -161,11 +162,6 @@ export function processDueDateIfReached(
       advanceTemplateCursor(template.id, template, dueDate)
     })()
   } catch (err) {
-    if (process.env.NODE_ENV !== 'production') {
-      console.error(
-        `Failed to process recurring expense for template ${template.id} on ${dueDate}:`,
-        err
-      )
-    }
+    logger.error('recurringEvaluator', err)
   }
 }

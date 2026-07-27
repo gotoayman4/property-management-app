@@ -27,6 +27,7 @@ import * as fs from 'fs'
 import { dialog, BrowserWindow, ipcMain } from 'electron'
 import { fromBuffer } from 'file-type'
 import { showOpenDirectoryDialog } from '../services/fileDialogService'
+import { logger } from '../utils/logger'
 
 /**
  * Magic-byte MIME types accepted for the company logo (a strict subset of the documents whitelist).
@@ -48,7 +49,7 @@ export function registerDialogIpcHandlers(): void {
     try {
       return await showOpenDirectoryDialog()
     } catch (error) {
-      console.error('Folder picker dialog error:', error)
+      logger.error('Folder picker dialog error', error)
       return { filePath: null, canceled: true }
     }
   })
@@ -104,7 +105,7 @@ export function registerDialogIpcHandlers(): void {
       const base64 = `data:${detected.mime};base64,${buffer.toString('base64')}`
       return { base64, canceled: false }
     } catch (error) {
-      console.error('Image picker error:', error)
+      logger.error('Image picker error', error)
       return { base64: null, canceled: true }
     }
   })
@@ -135,7 +136,7 @@ export function registerDialogIpcHandlers(): void {
 
       return { filePath: result.filePaths[0], canceled: false }
     } catch (error) {
-      console.error('Backup file picker error:', error)
+      logger.error('Backup file picker error', error)
       return { filePath: null, canceled: true }
     }
   })

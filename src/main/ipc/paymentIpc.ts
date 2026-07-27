@@ -8,8 +8,7 @@ import {
   PaymentError,
   type CreatePaymentInput
 } from '../db/paymentRepository'
-
-const isDev = process.env.NODE_ENV !== 'production'
+import { logger } from '../utils/logger'
 
 /**
  * INTENT: IPC handlers for the payments (income) domain — channels use the domain:verb convention.
@@ -65,7 +64,7 @@ export function registerPaymentIpcHandlers(): void {
       const parsed = paymentListFiltersSchema.parse(filters)
       return listPayments(db, parsed)
     } catch (error: unknown) {
-      if (isDev) console.error('Error listing payments:', error)
+      logger.error('Error listing payments', error)
       if (error instanceof z.ZodError) throw new Error('INVALID_INPUT')
       throw new Error('FAILED_TO_LIST_PAYMENTS')
     }
@@ -86,7 +85,7 @@ export function registerPaymentIpcHandlers(): void {
         .get(id)
     } catch (error) {
       if (error instanceof z.ZodError) throw new Error('INVALID_INPUT')
-      if (isDev) console.error('Error getting payment:', error)
+      logger.error('Error getting payment', error)
       throw new Error('FAILED_TO_GET_PAYMENT')
     }
   })
@@ -113,7 +112,7 @@ export function registerPaymentIpcHandlers(): void {
       }
       return createPayment(db, input)
     } catch (error: unknown) {
-      if (isDev) console.error('Error creating payment:', error)
+      logger.error('Error creating payment', error)
       if (error instanceof PaymentError) throw new Error(error.message)
       if (error instanceof z.ZodError) throw new Error('INVALID_INPUT')
       throw error
@@ -125,7 +124,7 @@ export function registerPaymentIpcHandlers(): void {
       const v = paymentVoidSchema.parse(payload)
       return voidPayment(db, v.id, v.reason)
     } catch (error: unknown) {
-      console.error('Error voiding payment:', error)
+      logger.error('Error voiding payment', error)
       if (error instanceof PaymentError) throw new Error(error.message)
       if (error instanceof z.ZodError) throw new Error('INVALID_INPUT')
       throw new Error('FAILED_TO_VOID_PAYMENT')

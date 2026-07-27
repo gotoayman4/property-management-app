@@ -20,6 +20,7 @@ import {
   insertLogRow,
   advanceTemplateCursor
 } from '../services/recurringEvaluator'
+import { logger } from '../utils/logger'
 
 export { evaluateRecurringExpenses }
 
@@ -121,7 +122,7 @@ export function registerRecurringExpenseIpcHandlers(): void {
       })
     } catch (err) {
       if (process.env.NODE_ENV !== 'production')
-        console.error('Error listing recurring expenses:', err)
+        logger.error('Error listing recurring expenses', err)
       throw new Error('FAILED_TO_LIST_RECURRING_TEMPLATES')
     }
   })
@@ -207,7 +208,7 @@ export function registerRecurringExpenseIpcHandlers(): void {
 
       return { success: true, id: templateId }
     } catch (err) {
-      console.error('Error in recurringExpenses:create:', err)
+      logger.error('Error in recurringExpenses:create', err)
       if (
         err instanceof Error &&
         (err.message === 'PROPERTY_NOT_FOUND' || err.message === 'CATEGORY_NOT_FOUND')
@@ -498,7 +499,7 @@ export function registerRecurringExpenseIpcHandlers(): void {
       return rows
     } catch (err) {
       if (process.env.NODE_ENV !== 'production')
-        console.error('Error in recurringExpenses:pendingDue:', err)
+        logger.error('Error in recurringExpenses:pendingDue', err)
       throw new Error('FAILED_TO_GET_PENDING_DUE_RECURRING_EXPENSES')
     }
   })

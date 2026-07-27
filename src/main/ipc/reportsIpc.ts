@@ -31,6 +31,7 @@ import {
   type ReportType,
   type ReportFilters
 } from '../services/reportService'
+import { logger } from '../utils/logger'
 
 /** Zod schema for every report request. All filters optional; builder decides which apply. */
 const reportRequestSchema = z.object({
@@ -79,7 +80,7 @@ function safeBuildReport(req: ReportRequest): ReturnType<typeof buildReport> {
     if (err instanceof ReportError) throw new Error(err.code)
     if (err instanceof z.ZodError) throw new Error('INVALID_INPUT')
     // Never leak the raw error message — only a stable code.
-    console.error('Report build failed:', err)
+    logger.error('Report build failed', err)
     throw new Error('REPORT_BUILD_FAILED')
   }
 }
@@ -104,7 +105,7 @@ async function exportToFile(
   try {
     await writeFileAtomic(filePath, buffer)
   } catch (err) {
-    console.error('Export write failed:', err)
+    logger.error('Export write failed', err)
     throw new Error('EXPORT_WRITE_FAILED')
   }
   return { filePath }

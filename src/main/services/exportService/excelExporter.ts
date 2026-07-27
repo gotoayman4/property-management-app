@@ -21,6 +21,7 @@
 
 import ExcelJS from 'exceljs'
 import { db } from '../../db/database'
+import { logger } from '../../utils/logger'
 import {
   type ReportData,
   type ReportColumn,
@@ -150,7 +151,7 @@ function addGroupSheet(
             editAs: 'absolute'
           })
         } catch (err) {
-          console.error('Error adding company logo to Excel sheet:', err)
+          logger.error('Error adding company logo to Excel sheet', err)
         }
       }
     }

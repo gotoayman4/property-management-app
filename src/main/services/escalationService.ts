@@ -17,6 +17,7 @@
  */
 
 import { Database } from 'better-sqlite3'
+import { logger } from '../utils/logger'
 
 interface DueEscalationRow {
   contract_id: number
@@ -98,16 +99,14 @@ export function applyDueEscalations(db: Database): number {
 
       applied++
     } catch (err) {
-      console.error(
-        `[escalationService] Failed to apply escalation for contract ${row.contract_id}:`,
-        err
-      )
+      logger.error('escalationService', err)
     }
   }
 
   if (applied > 0) {
-    console.warn(
-      `[escalationService] Applied rent escalation to ${applied} contract(s) on ${today}.`
+    logger.info(
+      'escalationService',
+      `Applied rent escalation to ${applied} contract(s) on ${today}.`
     )
   }
 

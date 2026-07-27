@@ -2,6 +2,7 @@ import { join } from 'path'
 import { ipcMain, app } from 'electron'
 import { db, dbPath } from '../db/database'
 import { createBackup } from '../services/backupService'
+import { logger } from '../utils/logger'
 
 /**
  * INTENT: IPC handlers for data-level operations — wipe/reset all user data.
@@ -71,7 +72,7 @@ export function registerDataIpcHandlers(): void {
 
       return { success: true }
     } catch (error: unknown) {
-      console.error('Error wiping data:', error)
+      logger.error('Error wiping data', error)
       // Ensure FK checks are re-enabled even on failure.
       try {
         db.pragma('foreign_keys = ON')

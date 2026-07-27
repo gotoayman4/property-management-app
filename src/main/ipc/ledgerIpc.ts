@@ -10,6 +10,7 @@ import {
   LedgerError
 } from '../db/ledgerService'
 import type { ExportLanguage } from '../services/exportService/exportUtils'
+import { logger } from '../utils/logger'
 
 /**
  * INTENT: IPC handlers for the Financial Ledger screen (SRS §5.15, §9.8).
@@ -68,7 +69,7 @@ export function registerLedgerIpcHandlers(): void {
       const v = ledgerListSchema.parse(payload)
       return computeRunningBalances(db, v.property_id, v.from_date, v.to_date, readLanguage())
     } catch (error: unknown) {
-      console.error('Error listing ledger:', error)
+      logger.error('Error listing ledger', error)
       if (error instanceof z.ZodError) throw new Error('INVALID_INPUT')
       throw new Error('FAILED_TO_LIST_LEDGER')
     }
@@ -83,7 +84,7 @@ export function registerLedgerIpcHandlers(): void {
         ? computeSummaryReporting(db, v.property_id, v.from_date, v.to_date)
         : computeSummary(db, v.property_id, v.from_date, v.to_date)
     } catch (error: unknown) {
-      console.error('Error computing ledger summary:', error)
+      logger.error('Error computing ledger summary', error)
       if (error instanceof z.ZodError) throw new Error('INVALID_INPUT')
       throw new Error('FAILED_TO_SUMMARIZE_LEDGER')
     }
@@ -101,7 +102,7 @@ export function registerLedgerIpcHandlers(): void {
         )
       }
     } catch (error: unknown) {
-      console.error('Error reconstructing balance:', error)
+      logger.error('Error reconstructing balance', error)
       if (error instanceof z.ZodError) throw new Error('INVALID_INPUT')
       throw new Error('FAILED_TO_RECONSTRUCT_BALANCE')
     }
@@ -133,7 +134,7 @@ export function registerLedgerIpcHandlers(): void {
       )()
       return { id }
     } catch (error: unknown) {
-      console.error('Error adding manual adjustment:', error)
+      logger.error('Error adding manual adjustment', error)
       if (error instanceof LedgerError) throw new Error(error.message)
       if (error instanceof z.ZodError) {
         // Surface the specific validation code so the UI can map it to a field error.

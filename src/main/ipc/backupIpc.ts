@@ -26,6 +26,7 @@ import {
   pruneOldBackups,
   deleteBackup
 } from '../services/backupService'
+import { logger } from '../utils/logger'
 
 /** Resolve the backup directory: settings.backup_path → Documents/Backups → fallback. */
 function resolveBackupDir(): string {
@@ -57,7 +58,7 @@ export function registerBackupIpcHandlers(): void {
 
       return result
     } catch (error) {
-      console.error('Backup creation error:', error)
+      logger.error('Backup creation error', error)
       throw new Error('FAILED_TO_CREATE_BACKUP')
     }
   })
@@ -81,7 +82,7 @@ export function registerBackupIpcHandlers(): void {
 
       return result
     } catch (error) {
-      console.error('Database-only backup creation error:', error)
+      logger.error('Database-only backup creation error', error)
       throw new Error('FAILED_TO_CREATE_DATABASE_ONLY_BACKUP')
     }
   })
@@ -93,7 +94,7 @@ export function registerBackupIpcHandlers(): void {
     try {
       return listBackups(db)
     } catch (error) {
-      console.error('Backup list error:', error)
+      logger.error('Backup list error', error)
       throw new Error('FAILED_TO_LIST_BACKUPS')
     }
   })
@@ -107,7 +108,7 @@ export function registerBackupIpcHandlers(): void {
       return verifyBackup(db, parsed.backupId)
     } catch (error) {
       if (error instanceof z.ZodError) throw new Error('INVALID_INPUT')
-      console.error('Backup verify error:', error)
+      logger.error('Backup verify error', error)
       throw new Error('FAILED_TO_VERIFY_BACKUP')
     }
   })
@@ -212,7 +213,7 @@ export function registerBackupIpcHandlers(): void {
     } catch (error) {
       if (error instanceof z.ZodError) throw new Error('INVALID_INPUT')
       if (error instanceof Error && error.message === 'BACKUP_NOT_FOUND') throw error
-      console.error('Backup restore error:', error)
+      logger.error('Backup restore error', error)
       throw new Error('FAILED_TO_RESTORE_BACKUP')
     }
   })
@@ -227,7 +228,7 @@ export function registerBackupIpcHandlers(): void {
       const result = pruneOldBackups(db, settings?.max_backup_count ?? 10)
       return result
     } catch (error) {
-      console.error('Backup prune error:', error)
+      logger.error('Backup prune error', error)
       throw new Error('FAILED_TO_PRUNE_BACKUPS')
     }
   })
@@ -246,7 +247,7 @@ export function registerBackupIpcHandlers(): void {
       return deleteBackup(db, parsed.backupId)
     } catch (error) {
       if (error instanceof z.ZodError) throw new Error('INVALID_INPUT')
-      console.error('Backup delete error:', error)
+      logger.error('Backup delete error', error)
       throw new Error('FAILED_TO_DELETE_BACKUP')
     }
   })

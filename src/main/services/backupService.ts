@@ -31,6 +31,7 @@ import {
 import { join, basename, dirname, resolve } from 'path'
 import AdmZip from 'adm-zip'
 import Database from 'better-sqlite3'
+import { logger } from '../utils/logger'
 
 // Reserved for auto-backup interval enforcement (BR-12 guard).
 // const MIN_AUTO_BACKUP_INTERVAL_HOURS = 1
@@ -289,7 +290,11 @@ export function createBackup(
             zip.addLocalFolder(targetDocsDir, 'documents')
           }
         } catch (err) {
-          console.warn('Failed to add documents folder to backup:', err)
+          logger.warn(
+            'backupService',
+            'Failed to add documents folder to backup',
+            err instanceof Error ? err : undefined
+          )
         }
       }
 
@@ -639,9 +644,7 @@ export function deleteBackup(
   } catch (err) {
     // Best-effort: log and continue. We still want to delete the DB row so the list reflects
     // the user's intent — a stranded file on disk is recoverable manually; a stranded row is not.
-    console.warn(
-      `Failed to delete backup file ${row.backup_file_path}: ${err instanceof Error ? err.message : String(err)}`
-    )
+    logger.warn('backupService', `Failed to delete backup file ${row.backup_file_path}`, err)
   }
 
   db.prepare('DELETE FROM backup_log WHERE id = ?').run(backupId)

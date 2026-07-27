@@ -15,6 +15,7 @@ import {
   getFinancialTrends
 } from '../db/dashboardRepository'
 import { db } from '../db/database'
+import { logger } from '../utils/logger'
 
 export function registerDashboardIpcHandlers(): void {
   ipcMain.handle('dashboard:summary', async (_, country?: string) => {
@@ -46,7 +47,7 @@ export function registerDashboardIpcHandlers(): void {
       return getRecentActivities(db, country)
     } catch (err) {
       if (process.env.NODE_ENV !== 'production') {
-        console.error('[dashboard:recentActivities]', err)
+        logger.error('dashboard:recentActivities', err)
       }
       throw new Error('FAILED_TO_LOAD_RECENT_ACTIVITIES')
     }

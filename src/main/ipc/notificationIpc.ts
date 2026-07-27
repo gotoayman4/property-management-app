@@ -12,10 +12,9 @@ import {
   type TemplateLanguage,
   type TemplateRow
 } from '../services/notificationTemplates'
+import { logger } from '../utils/logger'
 
 export { evaluateNotifications }
-
-const isDev = process.env.NODE_ENV !== 'production'
 
 export function registerNotificationIpcHandlers(): void {
   ipcMain.handle('notifications:list', async (_, filters?: { unread_only?: boolean }) => {
@@ -71,7 +70,7 @@ export function registerNotificationIpcHandlers(): void {
       evaluateNotifications()
       return { success: true }
     } catch (err) {
-      if (isDev) console.error('evaluateNotifications failed:', err)
+      logger.error('evaluateNotifications failed', err)
       throw new Error('FAILED_TO_EVALUATE_NOTIFICATIONS')
     }
   })

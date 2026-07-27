@@ -12,8 +12,7 @@ import {
   ExpenseError,
   type CreateExpenseInput
 } from '../db/expenseRepository'
-
-const isDev = process.env.NODE_ENV !== 'production'
+import { logger } from '../utils/logger'
 
 /**
  * INTENT: IPC handlers for the expenses domain. All writes delegate to expenseRepository which
@@ -68,7 +67,7 @@ export function registerExpenseIpcHandlers(): void {
     try {
       return listExpenseCategories(db)
     } catch (error) {
-      if (isDev) console.error('Error listing expense categories:', error)
+      logger.error('Error listing expense categories', error)
       throw new Error('FAILED_TO_LIST_EXPENSE_CATEGORIES')
     }
   })
@@ -79,7 +78,7 @@ export function registerExpenseIpcHandlers(): void {
       const id = createExpenseCategory(db, v.name_key)
       return { id }
     } catch (error: unknown) {
-      if (isDev) console.error('Error creating expense category:', error)
+      logger.error('Error creating expense category', error)
       if (error instanceof ExpenseError) throw new Error(error.message)
       if (error instanceof z.ZodError) throw new Error('INVALID_INPUT')
       throw new Error('FAILED_TO_CREATE_EXPENSE_CATEGORY')
@@ -92,7 +91,7 @@ export function registerExpenseIpcHandlers(): void {
       updateExpenseCategory(db, v.id, v.name_key)
       return { success: true }
     } catch (error: unknown) {
-      if (isDev) console.error('Error updating expense category:', error)
+      logger.error('Error updating expense category', error)
       if (error instanceof ExpenseError) throw new Error(error.message)
       if (error instanceof z.ZodError) throw new Error('INVALID_INPUT')
       throw new Error('FAILED_TO_UPDATE_EXPENSE_CATEGORY')
@@ -107,7 +106,7 @@ export function registerExpenseIpcHandlers(): void {
     } catch (error: unknown) {
       if (error instanceof z.ZodError) throw new Error('INVALID_INPUT')
       if (error instanceof ExpenseError) throw new Error(error.message)
-      if (isDev) console.error('Error deleting expense category:', error)
+      logger.error('Error deleting expense category', error)
       throw new Error('FAILED_TO_DELETE_EXPENSE_CATEGORY')
     }
   })
@@ -117,7 +116,7 @@ export function registerExpenseIpcHandlers(): void {
       const parsed = expenseListFiltersSchema.parse(filters)
       return listExpenses(db, parsed)
     } catch (error: unknown) {
-      if (isDev) console.error('Error listing expenses:', error)
+      logger.error('Error listing expenses', error)
       if (error instanceof z.ZodError) throw new Error('INVALID_INPUT')
       throw new Error('FAILED_TO_LIST_EXPENSES')
     }
@@ -138,7 +137,7 @@ export function registerExpenseIpcHandlers(): void {
         .get(id)
     } catch (error) {
       if (error instanceof z.ZodError) throw new Error('INVALID_INPUT')
-      if (isDev) console.error('Error getting expense:', error)
+      logger.error('Error getting expense', error)
       throw new Error('FAILED_TO_GET_EXPENSE')
     }
   })
@@ -171,7 +170,7 @@ export function registerExpenseIpcHandlers(): void {
       }
       return createExpense(db, input)
     } catch (error: unknown) {
-      console.error('Error creating expense:', error)
+      logger.error('Error creating expense', error)
       if (error instanceof ExpenseError) throw new Error(error.message)
       if (error instanceof z.ZodError) throw new Error('INVALID_INPUT')
       throw error
@@ -183,7 +182,7 @@ export function registerExpenseIpcHandlers(): void {
       const v = expenseVoidSchema.parse(payload)
       return voidExpense(db, v.id, v.reason)
     } catch (error: unknown) {
-      console.error('Error voiding expense:', error)
+      logger.error('Error voiding expense', error)
       if (error instanceof ExpenseError) throw new Error(error.message)
       if (error instanceof z.ZodError) throw new Error('INVALID_INPUT')
       throw new Error('FAILED_TO_VOID_EXPENSE')

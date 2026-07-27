@@ -2,8 +2,7 @@ import { ipcMain } from 'electron'
 import { z } from 'zod'
 import { getNextPropertyCode } from '../db/codeGenerator'
 import { db } from '../db/database'
-
-const isDev = process.env.NODE_ENV !== 'production'
+import { logger } from '../utils/logger'
 
 // Define validation schemas for property creation/update
 const propertyCreateSchema = z.object({
@@ -81,7 +80,7 @@ export function registerPropertyIpcHandlers(): void {
       try {
         return getNextPropertyCode(db, params.country, params.type as 'apartment' | 'shop')
       } catch (error) {
-        if (isDev) console.error('Error generating property code:', error)
+        logger.error('Error generating property code', error)
         throw new Error('FAILED_TO_GENERATE_CODE')
       }
     }
@@ -92,7 +91,7 @@ export function registerPropertyIpcHandlers(): void {
     try {
       return db.prepare('SELECT * FROM countries WHERE is_active = 1 ORDER BY name').all()
     } catch (error) {
-      console.error('Error fetching countries:', error)
+      logger.error('Error fetching countries', error)
       throw new Error('FAILED_TO_FETCH_COUNTRIES')
     }
   })
@@ -109,7 +108,7 @@ export function registerPropertyIpcHandlers(): void {
         )
         .all()
     } catch (error) {
-      console.error('Error fetching countries with properties:', error)
+      logger.error('Error fetching countries with properties', error)
       throw new Error('FAILED_TO_FETCH_COUNTRIES')
     }
   })
@@ -119,7 +118,7 @@ export function registerPropertyIpcHandlers(): void {
     try {
       return db.prepare('SELECT * FROM countries ORDER BY is_active DESC, name').all()
     } catch (error) {
-      console.error('Error fetching all countries:', error)
+      logger.error('Error fetching all countries', error)
       throw new Error('FAILED_TO_FETCH_COUNTRIES')
     }
   })
@@ -137,7 +136,7 @@ export function registerPropertyIpcHandlers(): void {
       )
       return stmt.run(validated)
     } catch (error: unknown) {
-      console.error('Error creating country:', error)
+      logger.error('Error creating country', error)
       if (error instanceof z.ZodError) throw new Error('INVALID_INPUT')
       throw error
     }
@@ -154,7 +153,7 @@ export function registerPropertyIpcHandlers(): void {
       stmt.run(validated)
       return { success: true }
     } catch (error: unknown) {
-      console.error('Error updating country:', error)
+      logger.error('Error updating country', error)
       if (error instanceof z.ZodError) throw new Error('INVALID_INPUT')
       throw error
     }
@@ -174,7 +173,7 @@ export function registerPropertyIpcHandlers(): void {
       db.prepare('UPDATE countries SET is_active = 0 WHERE code = ?').run(code)
       return { success: true }
     } catch (error) {
-      console.error('Error deactivating country:', error)
+      logger.error('Error deactivating country', error)
       throw error
     }
   })
@@ -209,7 +208,7 @@ export function registerPropertyIpcHandlers(): void {
         query += ' ORDER BY created_at DESC'
         return db.prepare(query).all(...params)
       } catch (error) {
-        if (isDev) console.error('Error listing properties:', error)
+        logger.error('Error listing properties', error)
         throw new Error('FAILED_TO_LIST_PROPERTIES')
       }
     }
@@ -222,7 +221,7 @@ export function registerPropertyIpcHandlers(): void {
       return db.prepare('SELECT * FROM properties WHERE id = ? AND is_archived = 0').get(id)
     } catch (error) {
       if (error instanceof z.ZodError) throw new Error('INVALID_INPUT')
-      if (isDev) console.error('Error getting property:', error)
+      logger.error('Error getting property', error)
       throw new Error('FAILED_TO_GET_PROPERTY')
     }
   })
@@ -249,7 +248,7 @@ export function registerPropertyIpcHandlers(): void {
       const result = stmt.run(validatedData)
       return { id: result.lastInsertRowid, ...validatedData }
     } catch (error: unknown) {
-      if (isDev) console.error('Error creating property:', error)
+      logger.error('Error creating property', error)
       if (error instanceof z.ZodError) {
         throw new Error('INVALID_INPUT')
       }
@@ -289,7 +288,7 @@ export function registerPropertyIpcHandlers(): void {
       stmt.run(validatedData)
       return validatedData
     } catch (error: unknown) {
-      if (isDev) console.error('Error updating property:', error)
+      logger.error('Error updating property', error)
       if (error instanceof z.ZodError) {
         throw new Error('INVALID_INPUT')
       }
@@ -333,7 +332,7 @@ export function registerPropertyIpcHandlers(): void {
       ) {
         throw error
       }
-      if (isDev) console.error('Error deleting property:', error)
+      logger.error('Error deleting property', error)
       throw new Error('FAILED_TO_DELETE_PROPERTY')
     }
   })
@@ -343,7 +342,7 @@ export function registerPropertyIpcHandlers(): void {
     try {
       return db.prepare('SELECT * FROM settings WHERE id = 1').get()
     } catch (error) {
-      console.error('Error fetching settings:', error)
+      logger.error('Error fetching settings', error)
       throw new Error('FAILED_TO_FETCH_SETTINGS')
     }
   })
@@ -363,7 +362,7 @@ export function registerPropertyIpcHandlers(): void {
 
       return { success: true, settings: db.prepare('SELECT * FROM settings WHERE id = 1').get() }
     } catch (error) {
-      console.error('Error updating settings:', error)
+      logger.error('Error updating settings', error)
       throw new Error('FAILED_TO_UPDATE_SETTINGS')
     }
   })
@@ -415,7 +414,7 @@ export function registerPropertyIpcHandlers(): void {
           expenseCount: expenseRow.cnt
         }
       } catch (err) {
-        console.error('[propertyIpc] profitability error:', err)
+        logger.error('propertyIpc] profitability error', err)
         throw new Error('FAILED_TO_LOAD_PROFITABILITY')
       }
     }

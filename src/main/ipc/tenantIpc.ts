@@ -2,8 +2,7 @@ import { ipcMain } from 'electron'
 import { z } from 'zod'
 import { getNextTenantCode } from '../db/codeGenerator'
 import { db } from '../db/database'
-
-const isDev = process.env.NODE_ENV !== 'production'
+import { logger } from '../utils/logger'
 
 // Define Zod validation schemas for Tenant (SRS §8 + FR-TEN-01)
 const tenantCreateSchema = z.object({
@@ -38,7 +37,7 @@ export function registerTenantIpcHandlers(): void {
     try {
       return getNextTenantCode(db, params.type as 'individual' | 'company')
     } catch (error) {
-      if (isDev) console.error('Error generating tenant code:', error)
+      logger.error('Error generating tenant code', error)
       throw new Error('FAILED_TO_GENERATE_CODE')
     }
   })
@@ -77,7 +76,7 @@ export function registerTenantIpcHandlers(): void {
         query += ' ORDER BY fullname ASC'
         return db.prepare(query).all(...params)
       } catch (error) {
-        if (isDev) console.error('Error listing tenants:', error)
+        logger.error('Error listing tenants', error)
         throw new Error('FAILED_TO_LIST_TENANTS')
       }
     }
@@ -90,7 +89,7 @@ export function registerTenantIpcHandlers(): void {
       return db.prepare('SELECT * FROM tenants WHERE id = ?').get(id)
     } catch (error) {
       if (error instanceof z.ZodError) throw new Error('INVALID_INPUT')
-      if (isDev) console.error('Error getting tenant:', error)
+      logger.error('Error getting tenant', error)
       throw new Error('FAILED_TO_GET_TENANT')
     }
   })
@@ -129,7 +128,7 @@ export function registerTenantIpcHandlers(): void {
       const result = stmt.run(validatedData)
       return { id: result.lastInsertRowid, ...validatedData }
     } catch (error: unknown) {
-      if (isDev) console.error('Error creating tenant:', error)
+      logger.error('Error creating tenant', error)
       if (error instanceof z.ZodError) {
         throw new Error('INVALID_INPUT')
       }
@@ -184,7 +183,7 @@ export function registerTenantIpcHandlers(): void {
       stmt.run(validatedData)
       return validatedData
     } catch (error: unknown) {
-      if (isDev) console.error('Error updating tenant:', error)
+      logger.error('Error updating tenant', error)
       if (error instanceof z.ZodError) {
         throw new Error('INVALID_INPUT')
       }
@@ -217,7 +216,7 @@ export function registerTenantIpcHandlers(): void {
       if (error instanceof Error && error.message === 'TENANT_HAS_ACTIVE_CONTRACT') {
         throw error
       }
-      if (isDev) console.error('Error deleting tenant:', error)
+      logger.error('Error deleting tenant', error)
       throw new Error('FAILED_TO_DELETE_TENANT')
     }
   })
