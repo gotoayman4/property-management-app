@@ -196,6 +196,8 @@ export function registerBackupIpcHandlers(): void {
           confirmed: true,
           success: true,
           emergencyBackupPath: result.emergencyBackupPath,
+          // The live DB connection was closed during the atomic swap — a restart is mandatory so
+          // the reopened process serves the restored bytes. `closedLive` is false only in tests.
           requiresRestart: true
         }
       }
@@ -203,6 +205,8 @@ export function registerBackupIpcHandlers(): void {
       return {
         confirmed: true,
         success: false,
+        // Preserve the machine-readable code produced by the service (e.g. BACKUP_DB_CORRUPT,
+        // BACKUP_FORMAT_UNKNOWN, BACKUP_MISSING_DATABASE_ENTRY) so the renderer can localize it.
         error: result.error
       }
     } catch (error) {

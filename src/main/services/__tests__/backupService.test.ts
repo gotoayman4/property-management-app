@@ -6,7 +6,16 @@
  */
 
 import { createHash } from 'crypto'
-import { mkdtempSync, existsSync, writeFileSync, rmSync, mkdirSync, readFileSync } from 'fs'
+import {
+  mkdtempSync,
+  existsSync,
+  writeFileSync,
+  rmSync,
+  mkdirSync,
+  readFileSync,
+  copyFileSync,
+  readdirSync
+} from 'fs'
 import { tmpdir } from 'os'
 import { join } from 'path'
 import AdmZip from 'adm-zip'
@@ -20,6 +29,8 @@ import {
   restoreFromBackup,
   pruneOldBackups,
   deleteBackup,
+  detectBackupFormat,
+  verifyFileChecksum,
   type BackupLogRow
 } from '../backupService'
 
@@ -421,12 +432,22 @@ describe('backupService', () => {
       rmSync(fakeDbPath, { force: true })
     })
 
-    it('restores legacy .db backups seamlessly', () => {
+    it('restores legacy .db backups (raw SQLite file) via the integrity-checked path', () => {
+      // INTENT: Legacy backups are raw .db files (no ZIP wrapper). The new safe-restore flow still
+      // supports them via detectBackupFormat === 'sqlite', but now integrity-checks the file before
+      // swapping it in. A real SQLite file passes; arbitrary junk would be rejected (covered by the
+      // B1 'unknown format' and 'integrity check' regression tests).
       const legacyDbPath = join(backupDir, 'legacy_backup.db')
-      writeFileSync(legacyDbPath, 'LEGACY-DB-DATA')
+      const legacyConn = new Database(legacyDbPath)
+      legacyConn.pragma('journal_mode = WAL')
+      legacyConn.exec('CREATE TABLE legacy_marker (id INTEGER PRIMARY KEY, note TEXT)')
+      legacyConn.prepare('INSERT INTO legacy_marker (note) VALUES (?)').run('from-legacy-backup')
+      legacyConn.pragma('wal_checkpoint(TRUNCATE)')
+      legacyConn.close()
 
-      const sizeKb = Math.round(16 / 1024)
-      const checksum = createHash('sha256').update('LEGACY-DB-DATA').digest('hex')
+      const dataBuffer = readFileSync(legacyDbPath)
+      const sizeKb = Math.round(dataBuffer.length / 1024)
+      const checksum = createHash('sha256').update(dataBuffer).digest('hex')
       const info = db
         .prepare(
           `INSERT INTO backup_log (backup_file_path, backup_type, backup_content, file_size_kb, checksum, is_verified, status)
@@ -444,7 +465,13 @@ describe('backupService', () => {
         fakeDbPath
       )
       expect(restoreResult.success).toBe(true)
-      expect(readFileSync(fakeDbPath, 'utf8')).toBe('LEGACY-DB-DATA')
+
+      // The restored file must be the legacy SQLite DB (provable by opening it and reading the marker).
+      const restored = new Database(fakeDbPath)
+      const row = restored.prepare('SELECT note FROM legacy_marker LIMIT 1').get() as
+        { note: string } | undefined
+      restored.close()
+      expect(row?.note).toBe('from-legacy-backup')
 
       rmSync(fakeDbPath, { force: true })
     })
@@ -514,6 +541,184 @@ describe('backupService', () => {
       expect(existsSync(targetDocsDir)).toBe(false)
 
       rmSync(fakeDbPath, { force: true })
+    })
+  })
+
+  /**
+   * REGRESSION: B1 — restore hardening.
+   *
+   * CONTEXT: The previous restoreFromBackup (a) wrote over the open DB file with writeFileSync
+   * (Windows EPERM/torn-write risk), and (b) swallowed ZIP-parse errors into a legacy copyFileSync
+   * fallback that skipped integrity validation. A corrupt-but-identifiable archive could partially
+   * restore documents then overwrite the DB.
+   *
+   * These tests pin the new contract: candidate DB is staged + integrity-checked before any swap,
+   * unknown formats fail loudly, and ZIP errors do NOT silently fall through.
+   */
+  describe('restore hardening (B1 regression)', () => {
+    it('detectBackupFormat identifies zip, sqlite, and unknown by magic bytes', () => {
+      // ZIP archive
+      const zipPath = join(backupDir, 'real.zip')
+      const zip = new AdmZip()
+      zip.addLocalFile(dbPath)
+      zip.writeZip(zipPath)
+      expect(detectBackupFormat(zipPath)).toBe('zip')
+
+      // Raw SQLite file
+      const sqliteCopy = join(backupDir, 'copy.db')
+      copyFileSync(dbPath, sqliteCopy)
+      expect(detectBackupFormat(sqliteCopy)).toBe('sqlite')
+
+      // Arbitrary unknown bytes
+      const junkPath = join(backupDir, 'junk.bin')
+      writeFileSync(junkPath, 'this is not a backup')
+      expect(detectBackupFormat(junkPath)).toBe('unknown')
+    })
+
+    it('verifyFileChecksum returns true when no expected checksum is stored (legacy rows)', () => {
+      const f = join(backupDir, 'legacy.db')
+      writeFileSync(f, 'LEGACY')
+      expect(verifyFileChecksum(f, null)).toBe(true)
+      expect(verifyFileChecksum(f, undefined)).toBe(true)
+    })
+
+    it('verifyFileChecksum detects a mismatch (corruption)', () => {
+      const f = join(backupDir, 'tampered.db')
+      writeFileSync(f, 'ORIGINAL')
+      const checksum = createHash('sha256').update('ORIGINAL').digest('hex')
+      expect(verifyFileChecksum(f, checksum)).toBe(true)
+      // Tamper after computing the checksum
+      writeFileSync(f, 'TAMPERED')
+      expect(verifyFileChecksum(f, checksum)).toBe(false)
+    })
+
+    it('rejects an unknown-format backup file loudly (no silent legacy fallback)', () => {
+      const junkPath = join(backupDir, 'junk.bin')
+      writeFileSync(junkPath, 'definitely not a backup')
+      const checksum = createHash('sha256').update('definitely not a backup').digest('hex')
+      const info = db
+        .prepare(
+          `INSERT INTO backup_log (backup_file_path, backup_type, backup_content, file_size_kb, checksum, is_verified, status)
+           VALUES (?, 'manual', 'full', 1, ?, 1, 'success')`
+        )
+        .run(junkPath, checksum)
+
+      const fakeDbPath = join(backupDir, 'current.db')
+      writeFileSync(fakeDbPath, 'current')
+
+      const result = restoreFromBackup(db, Number(info.lastInsertRowid), backupDir, fakeDbPath)
+      expect(result.success).toBe(false)
+      expect(result.error).toBe('BACKUP_FORMAT_UNKNOWN')
+      // The live file must be untouched
+      expect(readFileSync(fakeDbPath, 'utf8')).toBe('current')
+    })
+
+    it('rejects a ZIP whose database.db is missing (no silent legacy fallback)', () => {
+      // Build a valid ZIP with NO database.db entry
+      const zipPath = join(backupDir, 'no-db.zip')
+      const zip = new AdmZip()
+      zip.addFile('readme.txt', 'this zip has no database.db')
+      zip.writeZip(zipPath)
+      const checksum = createHash('sha256').update(readFileSync(zipPath)).digest('hex')
+
+      const info = db
+        .prepare(
+          `INSERT INTO backup_log (backup_file_path, backup_type, backup_content, file_size_kb, checksum, is_verified, status)
+           VALUES (?, 'manual', 'full', 1, ?, 1, 'success')`
+        )
+        .run(zipPath, checksum)
+
+      const fakeDbPath = join(backupDir, 'current.db')
+      writeFileSync(fakeDbPath, 'current')
+
+      const result = restoreFromBackup(db, Number(info.lastInsertRowid), backupDir, fakeDbPath)
+      expect(result.success).toBe(false)
+      expect(result.error).toBe('BACKUP_MISSING_DATABASE_ENTRY')
+      expect(readFileSync(fakeDbPath, 'utf8')).toBe('current')
+    })
+
+    it('rejects a ZIP whose database.db is not a valid SQLite file (integrity check)', () => {
+      const zipPath = join(backupDir, 'bad-db.zip')
+      const zip = new AdmZip()
+      // database.db present but contents are junk — passes the entry check, fails integrity_check
+      zip.addFile('database.db', 'not a sqlite database')
+      zip.writeZip(zipPath)
+      const checksum = createHash('sha256').update(readFileSync(zipPath)).digest('hex')
+
+      const info = db
+        .prepare(
+          `INSERT INTO backup_log (backup_file_path, backup_type, backup_content, file_size_kb, checksum, is_verified, status)
+           VALUES (?, 'manual', 'full', 1, ?, 1, 'success')`
+        )
+        .run(zipPath, checksum)
+
+      const fakeDbPath = join(backupDir, 'current.db')
+      writeFileSync(fakeDbPath, 'current')
+
+      const result = restoreFromBackup(db, Number(info.lastInsertRowid), backupDir, fakeDbPath)
+      expect(result.success).toBe(false)
+      // The DB cannot even be opened by better-sqlite3; the service surfaces the underlying error.
+      expect(result.error).toBeTruthy()
+      expect(readFileSync(fakeDbPath, 'utf8')).toBe('current')
+
+      // Staging file must be cleaned up — no .restore-staging-* leftovers in the dir
+      const leftovers = readdirSync(backupDir).filter((f) => f.startsWith('.restore-staging-'))
+      expect(leftovers).toHaveLength(0)
+    })
+
+    it('restores a valid ZIP via the staging path and swaps the live file atomically', () => {
+      // Source backup of the real migrated DB
+      const backupResult = createBackup(db, backupDir, 'manual', dbPath)
+      expect(backupResult.success).toBe(true)
+      const logs = listBackups(db)
+
+      // The "live" file we restore into is a SEPARATE path from the connection's own file,
+      // so swapDatabaseFile leaves the connection open (test-mode contract). The swap still
+      // atomically renames the staging file into place.
+      const targetDbPath = join(backupDir, 'current.db')
+      writeFileSync(targetDbPath, 'current')
+
+      const result = restoreFromBackup(db, logs[0].id, backupDir, targetDbPath)
+      expect(result.success).toBe(true)
+      // In test mode the connection is on dbPath, not targetDbPath → closedLive is false.
+      expect(result.closedLive).toBe(false)
+
+      // The restored file is a real SQLite DB containing the seeded property
+      const restored = new Database(targetDbPath)
+      const row = restored.prepare('SELECT code FROM properties LIMIT 1').get() as
+        { code: string } | undefined
+      restored.close()
+      expect(row?.code).toBe('TEST-001')
+
+      // No staging leftovers
+      const leftovers = readdirSync(backupDir).filter((f) => f.startsWith('.restore-staging-'))
+      expect(leftovers).toHaveLength(0)
+    })
+
+    it('reports closedLive=true when restoring into the connection’s own file path', () => {
+      // Create a backup, then restore it back into the connection's OWN file.
+      // After the swap, the live connection is closed — the test reopens the file to assert content.
+      const backupResult = createBackup(db, backupDir, 'manual', dbPath)
+      expect(backupResult.success).toBe(true)
+      const logs = listBackups(db)
+
+      // Mutate the live DB so we can prove the restore reverted it
+      db.prepare("UPDATE properties SET name = 'MUTATED' WHERE code = 'TEST-001'").run()
+
+      const result = restoreFromBackup(db, logs[0].id, backupDir, dbPath)
+      expect(result.success).toBe(true)
+      expect(result.closedLive).toBe(true)
+
+      // The swap closed the original `db`. Reopen the (now swapped) file and confirm the mutation
+      // was reverted by the restore. Reassign the outer-scope `db` so afterEach closes this one
+      // instead of the dead connection.
+      db = new Database(dbPath)
+      const row = db.prepare('SELECT name FROM properties LIMIT 1').get() as
+        { name: string } | undefined
+      expect(row?.name).toBe('Test Property')
+
+      // The original file should have been preserved as dbPath.bak
+      expect(existsSync(`${dbPath}.bak`)).toBe(true)
     })
   })
 })

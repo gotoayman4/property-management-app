@@ -33,6 +33,15 @@ const KNOWN_ERROR_MAP: Record<string, string> = {
   FAILED_TO_LIST_EXPENSES: 'errors.failedToListExpenses',
   FAILED_TO_CREATE_EXPENSE: 'errors.failedToCreateExpense',
 
+  // Backup/restore (FR-BAK-05/06). These codes are returned in the restore result's `error` field,
+  // not thrown — the BackupPage routes them through resolveIpcError for localization. Keys live in
+  // the existing `backup` namespace alongside the other restore strings.
+  FAILED_TO_CREATE_BACKUP: 'backup.createFailed',
+  FAILED_TO_RESTORE_BACKUP: 'backup.restoreFailed',
+  BACKUP_DB_CORRUPT: 'backup.restoreFailedDbCorrupt',
+  BACKUP_FORMAT_UNKNOWN: 'backup.restoreFailedFormatUnknown',
+  BACKUP_MISSING_DATABASE_ENTRY: 'backup.restoreFailedMissingDb',
+
   INVALID_INPUT: 'errors.invalidInput',
   UNAUTHORIZED: 'errors.unauthorized'
 }

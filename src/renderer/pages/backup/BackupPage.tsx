@@ -33,6 +33,7 @@ import GlobalSnackbar from '../../components/GlobalSnackbar'
 import PageHeader from '../../components/PageHeader'
 import StandardTable from '../../components/StandardTable'
 import { useSnackbar } from '../../hooks/useSnackbar'
+import { resolveIpcError } from '../../utils/errorMessages'
 import { BackupRow, getBackupColumns } from './backupColumns'
 import SelectBackupDialog from './SelectBackupDialog'
 
@@ -206,14 +207,16 @@ export default function BackupPage(): React.ReactElement {
         //         Prompt explicitly; "Restart Now" calls window.api.backup.relaunch().
         setRestartDialogOpen(true)
       } else if ('error' in result) {
-        showError(result.error || 'backup.restoreFailed')
+        // `result.error` is a machine-readable code (BACKUP_DB_CORRUPT, BACKUP_FORMAT_UNKNOWN, …)
+        // Resolve it to a localized string; resolveIpcError falls back to a generic message.
+        showError(resolveIpcError(result.error, t))
       }
     } catch {
       showError('backup.restoreFailed')
     } finally {
       setRestoring(false)
     }
-  }, [selectedBackup, showError])
+  }, [selectedBackup, showError, t])
 
   const handleRestartNow = useCallback(async (): Promise<void> => {
     try {
