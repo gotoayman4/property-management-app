@@ -1,9 +1,9 @@
 /**
  * @file recurringExpenseIpc — Recurring expense template IPC handlers.
  * INTENT: Registers IPC channels for CRUD, preview, confirm, and skip of recurring expenses.
+ *         Schemas are centralized in recurringExpenseSchemas.ts.
  */
 import { ipcMain } from 'electron'
-import { z } from 'zod'
 import { db } from '../db/database'
 import { createExpense, ExpenseError } from '../db/expenseRepository'
 import {
@@ -21,64 +21,16 @@ import {
   advanceTemplateCursor
 } from '../services/recurringEvaluator'
 import { logger } from '../utils/logger'
+import {
+  templateCreateSchema,
+  templateUpdateSchema,
+  templateListFiltersSchema,
+  idSchema,
+  skipSchema,
+  confirmSchema
+} from './recurringExpenseSchemas'
 
 export { evaluateRecurringExpenses }
-
-const FREQUENCY_ENUM = z.enum([
-  'daily',
-  'weekly',
-  'monthly',
-  'quarterly',
-  'semi_annual',
-  'semi-annual',
-  'annual'
-])
-
-const templateCreateSchema = z.object({
-  property_id: z.number().int().positive().nullable().optional(),
-  category_id: z.number().int().positive(),
-  name: z.string().min(2).max(150),
-  amount: z.number().positive(),
-  currency: z.string().min(3).max(3),
-  frequency: FREQUENCY_ENUM,
-  day_of_month: z.number().int().min(1).max(31).default(1),
-  start_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
-  end_date: z
-    .string()
-    .regex(/^\d{4}-\d{2}-\d{2}$/)
-    .nullable()
-    .optional(),
-  vendor_name: z.string().max(100).optional().nullable(),
-  notes: z.string().max(500).optional().nullable()
-})
-
-const templateUpdateSchema = templateCreateSchema.extend({
-  id: z.number().int().positive()
-})
-
-const templateListFiltersSchema = z
-  .object({
-    property_id: z.number().int().positive().optional(),
-    is_active: z.boolean().optional(),
-    frequency: FREQUENCY_ENUM.optional()
-  })
-  .optional()
-  .nullable()
-
-const idSchema = z.number().int().positive()
-
-const skipSchema = z.object({
-  template_id: z.number().int().positive(),
-  due_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
-  skip_reason: z.string().min(1).max(500)
-})
-
-const confirmSchema = z.object({
-  template_id: z.number().int().positive(),
-  due_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
-  amount: z.number().positive().optional(),
-  notes: z.string().max(500).optional().nullable()
-})
 
 export function registerRecurringExpenseIpcHandlers(): void {
   ipcMain.handle('recurringExpenses:list', async (_, rawFilters: unknown) => {
