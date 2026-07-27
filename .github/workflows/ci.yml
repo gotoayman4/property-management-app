@@ -1,0 +1,70 @@
+# Continuous Integration — Property Management App
+#
+# INTENT: Enforce the same quality gates that run locally via the husky pre-commit hook
+#         (lint, typecheck, i18n parity, unit tests) on every push and pull request, so a
+#         branch where hooks were skipped (--no-verify) or where a contributor hasn't installed
+#         husky cannot introduce broken code.
+#
+# SCOPE (Phase 1): fast, reliable unit-level gates only. E2E (test:e2e) requires a packaged
+#         Electron build + a display server (xvfb on Linux) and is deferred to a later phase.
+#
+# CONSTRAINT: `npm test` runs `pretest` which rebuilds better-sqlite3 for Node (NOT Electron),
+#             so unit tests run on a standard Linux runner with no Electron toolchain.
+#             build-essential + python3 are required for the native rebuild and are preinstalled
+#             on ubuntu-latest; they are listed explicitly for clarity.
+
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+# Cancel superseded runs on the same ref so force-pushes / follow-up commits don't queue up.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  quality:
+    name: Lint, Typecheck, i18n, Unit Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Configure build tools for native modules
+        # better-sqlite3 rebuild (pretest) needs make + python3 + a C++ compiler.
+        # ubuntu-latest ships these; install explicitly so a base-image change can't silently break CI.
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential python3
+
+      - name: Install dependencies
+        # `npm ci` honors package-lock.json for reproducible installs.
+        # postinstall (electron-builder install-app-deps) may warn on a headless runner; that's fine
+        # for unit tests — the Node rebuild in the next step is what the test suite actually uses.
+        run: npm ci
+
+      - name: i18n key parity
+        run: npm run check:i18n
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Unit tests
+        # `npm test` triggers `pretest` → `npm run rebuild:node`, rebuilding better-sqlite3 against
+        # the runner's Node so the file-backed DB tests work.
+        run: npm test
