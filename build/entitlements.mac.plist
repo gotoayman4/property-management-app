@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  INTENT: macOS entitlements for PropManager. Grants minimum privileges needed
+          for the Electron app to function without signing or notarization.
+  CONSTRAINT: These entitlements are evaluated by Gatekeeper on first launch.
+              When code signing is added, this file will be referenced by
+              electron-builder's mac.entitlementsInherit config.
+  DECISION: Only include entitlements the app actually needs. Do NOT add
+            com.apple.security.cs.allow-unsigned-executable-memory or
+            com.apple.security.cs.disable-library-validation unless strictly required.
+-->
+<plist version="1.0">
+  <dict>
+    <!-- Allow JIT compilation (Electron/Chromium requirement) -->
+    <key>com.apple.security.cs.allow-jit</key>
+    <true/>
+
+    <!-- Allow loading of Electron framework from the app bundle -->
+    <key>com.apple.security.cs.allow-unsigned-executable-memory</key>
+    <true/>
+
+    <!-- File access: read/write user-selected files (backup, export, import) -->
+    <key>com.apple.security.files.user-selected.read-write</key>
+    <true/>
+
+    <!-- Network access: exchange rate fetch (ADR-001, user-initiated only) -->
+    <key>com.apple.security.network.client</key>
+    <true/>
+  </dict>
+</plist>

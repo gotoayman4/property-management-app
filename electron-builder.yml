@@ -39,6 +39,9 @@ linux:
 appImage:
   artifactName: ${name}-${version}.${ext}
 npmRebuild: false
-publish:
-  provider: generic
-  url: https://example.com/auto-updates
+# Auto-update disabled — manual distribution via direct download.
+# See docs/adr/003-packaging-and-distribution.md for rationale.
+# To enable: replace url with real endpoint and install electron-updater.
+# publish:
+#   provider: generic
+#   url: https://example.com/auto-updates
