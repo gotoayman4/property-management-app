@@ -24,6 +24,8 @@ interface AmountFieldProps<T extends FieldValues, N extends FieldPath<T>> {
   errorText?: string
   /** Minimum allowed numeric value (inclusive). */
   min?: number
+  /** Maximum allowed numeric value (inclusive). */
+  max?: number
   /** When true, empty input maps to null instead of 0 (for optional fields). */
   allowEmpty?: boolean
   /** Optional node rendered as an inline-end adornment (e.g. a currency code). */
@@ -38,6 +40,7 @@ export function AmountField<T extends FieldValues, N extends FieldPath<T>>({
   disabled = false,
   errorText,
   min,
+  max,
   allowEmpty = true,
   endAdornment
 }: AmountFieldProps<T, N>): React.JSX.Element {
@@ -68,6 +71,7 @@ export function AmountField<T extends FieldValues, N extends FieldPath<T>>({
             disabled={disabled}
             errorText={errorText}
             min={min}
+            max={max}
             endAdornment={endAdornment}
           />
         )
@@ -85,6 +89,7 @@ interface AmountFieldInnerProps {
   disabled: boolean
   errorText?: string
   min?: number
+  max?: number
   endAdornment?: React.ReactNode
 }
 
@@ -96,6 +101,7 @@ function AmountFieldInner({
   disabled,
   errorText,
   min,
+  max,
   endAdornment
 }: AmountFieldInnerProps): React.JSX.Element {
   const [localVal, setLocalVal] = React.useState<string>(
@@ -148,6 +154,7 @@ function AmountFieldInner({
           dir: 'ltr',
           inputMode: 'decimal',
           min,
+          max,
           sx: numericInputSx
         }
       }}

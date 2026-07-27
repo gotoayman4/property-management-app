@@ -21,6 +21,7 @@ import React, { useEffect, useState } from 'react'
 import { useForm, Controller } from 'react-hook-form'
 import { useTranslation } from 'react-i18next'
 import { z } from 'zod'
+import { AmountField } from '../../components/AmountField'
 import { CurrencyInput } from '../../components/CurrencyInput'
 import ExpenseCategoryManagerDialog from '../../components/ExpenseCategoryManagerDialog'
 import { FormField } from '../../components/FormField'
@@ -350,20 +351,14 @@ export function RecurringExpenseForm({
           </Grid>
 
           <Grid size={{ xs: 12, sm: 6 }}>
-            <Controller
+            <AmountField
               name="day_of_month"
               control={control}
-              render={({ field }) => (
-                <TextField
-                  {...field}
-                  label={t('recurringExpense.dayOfMonth')}
-                  type="number"
-                  fullWidth
-                  slotProps={{ htmlInput: { dir: 'ltr', min: 1, max: 28 } }}
-                  error={!!errors.day_of_month}
-                  helperText={errors.day_of_month ? t('recurringExpense.dayOfMonthInvalid') : ''}
-                />
-              )}
+              label={t('recurringExpense.dayOfMonth')}
+              min={1}
+              max={28}
+              allowEmpty={false}
+              errorText={errors.day_of_month ? t('recurringExpense.dayOfMonthInvalid') : undefined}
             />
           </Grid>
 
