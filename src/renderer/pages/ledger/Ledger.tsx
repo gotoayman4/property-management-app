@@ -82,7 +82,6 @@ const ENTRY_TYPE_LABEL: Record<LedgerRow['entry_type'], string> = {
 
 export default function Ledger(): React.ReactElement {
   const { t, i18n } = useTranslation()
-  const isRtl = i18n.language === 'ar'
   const { snack, showError, showSuccess, hideSnackbar } = useSnackbar()
 
   const [properties, setProperties] = useState<Property[]>([])
@@ -457,7 +456,6 @@ export default function Ledger(): React.ReactElement {
           onOpenAdjustment={() => setAdjustOpen(true)}
           reconstructResult={reconstructResult}
           displayCurrency={displayCurrency}
-          isRtl={isRtl}
         />
       )}
 

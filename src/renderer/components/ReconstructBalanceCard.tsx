@@ -10,7 +10,6 @@ export interface ReconstructBalanceCardProps {
   onOpenAdjustment: () => void
   reconstructResult: number | null
   displayCurrency: string
-  isRtl: boolean
 }
 
 export default function ReconstructBalanceCard({
@@ -19,8 +18,7 @@ export default function ReconstructBalanceCard({
   onReconstruct,
   onOpenAdjustment,
   reconstructResult,
-  displayCurrency,
-  isRtl
+  displayCurrency
 }: ReconstructBalanceCardProps): React.ReactElement {
   const { t } = useTranslation()
 
@@ -45,7 +43,7 @@ export default function ReconstructBalanceCard({
             {t('ledger.reconstruct')}
           </Button>
         </Grid>
-        <Grid size={{ xs: 12, sm: 5 }} sx={{ textAlign: isRtl ? 'left' : 'right' }}>
+        <Grid size={{ xs: 12, sm: 5 }} sx={{ textAlign: 'end' }}>
           <Button variant="contained" startIcon={<AddIcon />} onClick={onOpenAdjustment}>
             {t('ledger.addManualAdjustment')}
           </Button>

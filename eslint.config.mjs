@@ -54,9 +54,9 @@ export default defineConfig(
         },
         {
           selector:
-            'Property[key.name=/^marginLeft$|^marginRight$|^paddingLeft$|^paddingRight$|^textAlign$/]',
+            'Property[key.name=/^marginLeft$|^marginRight$|^paddingLeft$|^paddingRight$/]',
           message:
-            'Use logical CSS properties (marginInlineStart, paddingInlineEnd, textAlign: "start"/"end") instead of physical direction properties (AGENTS.md: Logical CSS Properties).'
+            'Use logical CSS properties (marginInlineStart, paddingInlineEnd) instead of physical direction properties (AGENTS.md: Logical CSS Properties).'
         },
         {
           selector:

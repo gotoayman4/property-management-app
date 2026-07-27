@@ -337,7 +337,7 @@ Consequences applied throughout this document:
 
 **Dependencies:** Phase 1.
 
-- [ ] **Task 2.1 — `dialog:pickImage` magic-byte validation + SVG rejection**
+- [x] **Task 2.1 — `dialog:pickImage` magic-byte validation + SVG rejection**
   - **Objective:** Make the logo uploader consistent with the document uploader (hardening, not a
     security blocker under this threat model).
   - **Outcome:** Image picker validates MIME by magic bytes (mirrors `documentIpc.ts`); SVG rejected

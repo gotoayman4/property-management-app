@@ -44,7 +44,9 @@
     "recurringExpenses": "Recurring Expenses",
     "notifications": "Notifications",
     "toggleTheme": "Toggle theme",
-    "toggleLanguage": "Toggle language"
+    "toggleLanguage": "Toggle language",
+    "expand": "Expand sidebar",
+    "collapse": "Collapse sidebar"
   },
   "common": {
     "save": "Save",

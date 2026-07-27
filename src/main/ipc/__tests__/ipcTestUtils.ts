@@ -44,6 +44,9 @@ export async function invoke(
  */
 export function resetDb(db: Database.Database): void {
   db.pragma('foreign_keys = OFF')
+  // Drop immutability triggers temporarily so DELETE can clear ledger_entries during test cleanup.
+  db.exec('DROP TRIGGER IF EXISTS ledger_immutable_no_update')
+  db.exec('DROP TRIGGER IF EXISTS ledger_immutable_no_delete')
   const tables = db
     .prepare(
       `SELECT name FROM sqlite_master
@@ -55,4 +58,11 @@ export function resetDb(db: Database.Database): void {
     db.prepare(`DELETE FROM ${name}`).run()
   }
   db.pragma('foreign_keys = ON')
+  // Re-create immutability triggers after cleanup.
+  db.exec(`CREATE TRIGGER IF NOT EXISTS ledger_immutable_no_update
+    BEFORE UPDATE ON ledger_entries
+    BEGIN SELECT RAISE(ABORT, 'Ledger entries are immutable. Use a reversal entry instead.'); END`)
+  db.exec(`CREATE TRIGGER IF NOT EXISTS ledger_immutable_no_delete
+    BEFORE DELETE ON ledger_entries
+    BEGIN SELECT RAISE(ABORT, 'Ledger entries are immutable. Use a reversal entry instead.'); END`)
 }

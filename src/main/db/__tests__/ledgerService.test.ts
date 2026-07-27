@@ -287,4 +287,54 @@ describe('ledgerService', () => {
       }
     })
   })
+
+  describe('DB-level immutability trigger (028)', () => {
+    it('rejects UPDATE on ledger_entries with ABORT error', () => {
+      const entryId = append({
+        entryDate: '2026-07-01',
+        entryType: 'income',
+        description: 'Rent payment',
+        debit: 500,
+        credit: 0
+      })
+
+      expect(() => {
+        db.prepare('UPDATE ledger_entries SET debit = 999 WHERE id = ?').run(entryId)
+      }).toThrow(/immutable/i)
+    })
+
+    it('rejects DELETE on ledger_entries with ABORT error', () => {
+      const entryId = append({
+        entryDate: '2026-07-01',
+        entryType: 'income',
+        description: 'Rent payment',
+        debit: 500,
+        credit: 0
+      })
+
+      expect(() => {
+        db.prepare('DELETE FROM ledger_entries WHERE id = ?').run(entryId)
+      }).toThrow(/immutable/i)
+    })
+
+    it('allows INSERT (reversal entries work)', () => {
+      const entryId = append({
+        entryDate: '2026-07-01',
+        entryType: 'income',
+        description: 'Original payment',
+        debit: 500,
+        credit: 0
+      })
+      expect(entryId).toBeGreaterThan(0)
+
+      const reversalId = append({
+        entryDate: '2026-07-02',
+        entryType: 'income_void',
+        description: 'Reversal of original',
+        debit: 0,
+        credit: 500
+      })
+      expect(reversalId).toBeGreaterThan(0)
+    })
+  })
 })

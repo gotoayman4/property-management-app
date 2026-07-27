@@ -44,7 +44,9 @@
     "recurringExpenses": "المصروفات الدورية",
     "notifications": "الإشعارات",
     "toggleTheme": "تبديل المظهر",
-    "toggleLanguage": "تبديل اللغة"
+    "toggleLanguage": "تبديل اللغة",
+    "expand": "توسيع الشريط الجانبي",
+    "collapse": "طي الشريط الجانبي"
   },
   "common": {
     "save": "حفظ",

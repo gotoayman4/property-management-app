@@ -275,11 +275,7 @@ export default function Layout({ children }: LayoutProps): React.JSX.Element {
             <IconButton
               color="inherit"
               onClick={toggleSidebar}
-              aria-label={
-                sidebarCollapsed
-                  ? t('sidebar.expand', { defaultValue: 'Expand sidebar' })
-                  : t('sidebar.collapse', { defaultValue: 'Collapse sidebar' })
-              }
+              aria-label={sidebarCollapsed ? t('sidebar.expand') : t('sidebar.collapse')}
             >
               {sidebarCollapsed ? <MenuIcon /> : <MenuOpenIcon />}
             </IconButton>
