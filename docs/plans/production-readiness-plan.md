@@ -313,7 +313,7 @@ Consequences applied throughout this document:
 
 **Dependencies:** None.
 
-- [ ] **Task 1.1 — Backup restore hardening**
+- [x] **Task 1.1 — Backup restore hardening** ✅ committed `8a5cfdf`
   - **Objective:** Make restore reliable and fail-loud on corruption (the one true must-fix).
   - **Outcome:** DB connection closed/reopened around restore (or writes blocked); SHA-256 verified
     on all restore paths (including legacy `.db`); ZIP-extraction errors abort instead of falling
@@ -325,7 +325,7 @@ Consequences applied throughout this document:
   - **Validation:** new tests for corrupted-zip abort and legacy-path checksum failure; existing
     backup tests (36 cases) still green; manual end-to-end restore smoke test.
 
-- [ ] **Task 1.2 — CI pipeline**
+- [x] **Task 1.2 — CI pipeline** ✅ committed `2e15e4d`
   - **Objective:** Enforce all quality gates on every PR/push, not just locally.
   - **Outcome:** GitHub Actions workflow runs lint, typecheck, i18n parity, and `vitest run`.
   - **Files:** `.github/workflows/ci.yml` (~60).
