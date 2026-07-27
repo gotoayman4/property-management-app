@@ -33,6 +33,7 @@ import {
 } from '@mui/material'
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { useDirection } from '../hooks/useDirection'
 import ConfirmDialog from './ConfirmDialog'
 
 type TriggerType =
@@ -134,8 +135,8 @@ export default function NotificationTemplateManager({
   open,
   onClose
 }: NotificationTemplateManagerProps): React.JSX.Element {
-  const { t, i18n } = useTranslation()
-  const isRtl = i18n.language === 'ar'
+  const { t } = useTranslation()
+  const isRtl = useDirection()
 
   const [templates, setTemplates] = useState<TemplateRow[]>([])
   const [loading, setLoading] = useState(true)

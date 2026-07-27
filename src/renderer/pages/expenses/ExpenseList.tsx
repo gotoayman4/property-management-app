@@ -16,12 +16,13 @@ import {
   Tooltip
 } from '@mui/material'
 import { GridColDef } from '@mui/x-data-grid'
-import React, { useCallback, useEffect, useState } from 'react'
+import React, { useCallback, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import GlobalSnackbar from '../../components/GlobalSnackbar'
 import PageHeader from '../../components/PageHeader'
 import StandardDialog from '../../components/StandardDialog'
 import StandardTable from '../../components/StandardTable'
+import { useFetch } from '../../hooks/useFetch'
 import { useSnackbar } from '../../hooks/useSnackbar'
 import { ExpenseForm } from './ExpenseForm'
 
@@ -49,32 +50,14 @@ export function ExpenseList(): React.ReactElement {
   const { t, i18n } = useTranslation()
   const isRtl = i18n.language === 'ar'
   const { snack, showError, showSuccess, hideSnackbar } = useSnackbar()
-  const [expenses, setExpenses] = useState<Expense[]>([])
-  const [loading, setLoading] = useState<boolean>(true)
-  const [error, setError] = useState<string | null>(null)
-
   const [openDialog, setOpenDialog] = useState<boolean>(false)
   const [voidTarget, setVoidTarget] = useState<Expense | null>(null)
   const [voidReason, setVoidReason] = useState<string>('')
 
-  const fetchExpenses = useCallback(async (): Promise<void> => {
-    try {
-      setLoading(true)
-      setError(null)
-      const data = (await window.api.expenses.list()) as Expense[]
-      setExpenses(data)
-    } catch (err: unknown) {
-      console.error(err)
-      setError(t('common.error'))
-    } finally {
-      setLoading(false)
-    }
-  }, [t])
+  const fetchExpenses = useCallback(() => window.api.expenses.list(), [])
 
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    fetchExpenses()
-  }, [fetchExpenses])
+  const { data, loading, error, refetch } = useFetch(fetchExpenses)
+  const expenses = data ?? []
 
   const handleVoidClick = (expense: Expense): void => {
     setVoidTarget(expense)
@@ -90,7 +73,7 @@ export function ExpenseList(): React.ReactElement {
     try {
       await window.api.expenses.void({ id: target.id, reason })
       showSuccess('common.saveSuccess')
-      fetchExpenses()
+      refetch()
     } catch (err: unknown) {
       console.error(err)
       const msg = err instanceof Error ? err.message : ''
@@ -195,7 +178,7 @@ export function ExpenseList(): React.ReactElement {
         rows={expenses}
         loading={loading}
         error={error ?? undefined}
-        onRetry={fetchExpenses}
+        onRetry={refetch}
         emptyMessage={t('expense.noExpenses')}
         tableId="expense-list"
       />
@@ -209,7 +192,7 @@ export function ExpenseList(): React.ReactElement {
         <ExpenseForm
           onSuccess={() => {
             setOpenDialog(false)
-            fetchExpenses()
+            refetch()
           }}
           onCancel={() => setOpenDialog(false)}
         />

@@ -17,13 +17,14 @@ import {
   Tooltip
 } from '@mui/material'
 import { GridColDef } from '@mui/x-data-grid'
-import React, { useCallback, useEffect, useState } from 'react'
+import React, { useCallback, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import GlobalSnackbar from '../../components/GlobalSnackbar'
 import PageHeader from '../../components/PageHeader'
 import ReceiptDialog from '../../components/ReceiptDialog'
 import StandardDialog from '../../components/StandardDialog'
 import StandardTable from '../../components/StandardTable'
+import { useFetch } from '../../hooks/useFetch'
 import { useSnackbar } from '../../hooks/useSnackbar'
 import { PaymentForm } from './PaymentForm'
 
@@ -56,33 +57,15 @@ export function PaymentList(): React.ReactElement {
   const { t, i18n } = useTranslation()
   const isRtl = i18n.language === 'ar'
   const { snack, showError, showSuccess, hideSnackbar } = useSnackbar()
-  const [payments, setPayments] = useState<Payment[]>([])
-  const [loading, setLoading] = useState<boolean>(true)
-  const [error, setError] = useState<string | null>(null)
-
   const [openDialog, setOpenDialog] = useState<boolean>(false)
   const [voidTarget, setVoidTarget] = useState<Payment | null>(null)
   const [voidReason, setVoidReason] = useState<string>('')
   const [receiptTarget, setReceiptTarget] = useState<Payment | null>(null)
 
-  const fetchPayments = useCallback(async (): Promise<void> => {
-    try {
-      setLoading(true)
-      setError(null)
-      const data = (await window.api.payments.list()) as Payment[]
-      setPayments(data)
-    } catch (err: unknown) {
-      console.error(err)
-      setError(t('common.error'))
-    } finally {
-      setLoading(false)
-    }
-  }, [t])
+  const fetchPayments = useCallback(() => window.api.payments.list(), [])
 
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    fetchPayments()
-  }, [fetchPayments])
+  const { data, loading, error, refetch } = useFetch(fetchPayments)
+  const payments = data ?? []
 
   const handleVoidClick = (payment: Payment): void => {
     setVoidTarget(payment)
@@ -98,7 +81,7 @@ export function PaymentList(): React.ReactElement {
     try {
       await window.api.payments.void({ id: target.id, reason })
       showSuccess('common.saveSuccess')
-      fetchPayments()
+      refetch()
     } catch (err: unknown) {
       console.error(err)
       const msg = err instanceof Error ? err.message : ''
@@ -222,7 +205,7 @@ export function PaymentList(): React.ReactElement {
         rows={payments}
         loading={loading}
         error={error ?? undefined}
-        onRetry={fetchPayments}
+        onRetry={refetch}
         emptyMessage={t('payment.noPayments')}
         tableId="payment-list"
       />
@@ -236,7 +219,7 @@ export function PaymentList(): React.ReactElement {
         <PaymentForm
           onSuccess={() => {
             setOpenDialog(false)
-            fetchPayments()
+            refetch()
           }}
           onCancel={() => setOpenDialog(false)}
         />

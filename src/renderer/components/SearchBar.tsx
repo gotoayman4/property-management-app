@@ -24,6 +24,7 @@ import {
 import React, { useState, useCallback, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
+import { useDirection } from '../hooks/useDirection'
 
 interface SearchResult {
   entity_type: string
@@ -57,8 +58,8 @@ const ENTITY_ROUTES: Record<string, (id: number) => string> = {
 }
 
 export default function SearchBar({ onInputMount }: SearchBarProps): React.JSX.Element {
-  const { t, i18n } = useTranslation()
-  const isRtl = i18n.language === 'ar'
+  const { t } = useTranslation()
+  const isRtl = useDirection()
   const navigate = useNavigate()
   const [query, setQuery] = useState('')
   const [results, setResults] = useState<SearchResult[]>([])

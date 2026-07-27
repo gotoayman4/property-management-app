@@ -26,6 +26,7 @@ import ConfirmDialog from '../../components/ConfirmDialog'
 import GlobalSnackbar from '../../components/GlobalSnackbar'
 import PageHeader from '../../components/PageHeader'
 import StandardTable from '../../components/StandardTable'
+import { useFetch } from '../../hooks/useFetch'
 import { useSnackbar } from '../../hooks/useSnackbar'
 import { getLocalizedCountryName } from '../../utils/countryUtils'
 import PropertyForm from './PropertyForm'
@@ -58,10 +59,7 @@ export default function PropertyList(): React.JSX.Element {
   const { snack, showError, showSuccess, hideSnackbar } = useSnackbar()
 
   // State
-  const [properties, setProperties] = useState<Property[]>([])
   const [countries, setCountries] = useState<Country[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
 
   // Filters
   const [search, setSearch] = useState('')
@@ -75,24 +73,19 @@ export default function PropertyList(): React.JSX.Element {
   // Property awaiting deletion confirmation (null = dialog closed)
   const [pendingDeleteId, setPendingDeleteId] = useState<number | null>(null)
 
-  const fetchProperties = useCallback(async (): Promise<void> => {
-    setLoading(true)
-    setError(null)
-    try {
-      const data = await window.api.properties.list({
+  const fetchProperties = useCallback(
+    () =>
+      window.api.properties.list({
         search: search || undefined,
         type: type || undefined,
         status: status || undefined,
         country: country || undefined
-      })
-      setProperties(data as Property[])
-    } catch (err: unknown) {
-      console.error(err)
-      setError(t('common.error'))
-    } finally {
-      setLoading(false)
-    }
-  }, [search, type, status, country, t])
+      }),
+    [search, type, status, country]
+  )
+
+  const { data, loading, error, refetch } = useFetch(fetchProperties)
+  const properties = data ?? []
 
   const fetchCountries = useCallback(async (): Promise<void> => {
     try {
@@ -107,11 +100,6 @@ export default function PropertyList(): React.JSX.Element {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchCountries()
   }, [fetchCountries])
-
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    fetchProperties()
-  }, [fetchProperties])
 
   const handleAddClick = (): void => {
     setEditingProperty(null)
@@ -136,7 +124,7 @@ export default function PropertyList(): React.JSX.Element {
     try {
       await window.api.properties.delete(id)
       showSuccess('common.deleteSuccess')
-      fetchProperties()
+      refetch()
     } catch (err: unknown) {
       console.error('Failed to delete property:', err)
       // FR-PROP-04: surface specific guard errors with localized messages
@@ -152,12 +140,12 @@ export default function PropertyList(): React.JSX.Element {
   }
 
   const handleFormSuccess = (): void => {
-    fetchProperties()
+    refetch()
   }
 
   const handleFormClose = (): void => {
     setDialogOpen(false)
-    fetchProperties()
+    refetch()
   }
 
   // DataGrid Columns Definition
@@ -375,7 +363,7 @@ export default function PropertyList(): React.JSX.Element {
         rows={properties}
         loading={loading}
         error={error}
-        onRetry={fetchProperties}
+        onRetry={refetch}
         emptyMessage={
           search || type || status || country
             ? t('property.noPropertiesFiltered')

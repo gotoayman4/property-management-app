@@ -11,6 +11,7 @@ import {
 } from '@mui/material'
 import React, { useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { useDirection } from '../hooks/useDirection'
 import ConfirmDialog from './ConfirmDialog'
 
 interface StandardDialogProps {
@@ -34,8 +35,8 @@ export default function StandardDialog({
   maxWidth = 'sm',
   fullWidth = true
 }: StandardDialogProps): React.JSX.Element {
-  const { t, i18n } = useTranslation()
-  const isRtl = i18n.language === 'ar'
+  const { t } = useTranslation()
+  const isRtl = useDirection()
   // Tracks whether the unsaved-changes sub-confirmation is open (2-level dialog max).
   const [confirmCloseOpen, setConfirmCloseOpen] = useState(false)
 

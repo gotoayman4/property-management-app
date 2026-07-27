@@ -9,6 +9,7 @@ import { Card, CardContent, Alert, TextField, Typography } from '@mui/material'
 import React, { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useSnackbar } from '../hooks/useSnackbar'
+import { numericInputSx } from '../utils/numericInputSx'
 
 interface ReminderSettings {
   reminder_days_before_due: number
@@ -21,14 +22,6 @@ interface ReminderSettingsCardProps {
   /** When true, renders content without Card/CardContent wrapper (for embedding in SettingsSection). */
   compact?: boolean
 }
-
-const SPINNER_LESS = {
-  '&::-webkit-outer-spin-button, &::-webkit-inner-spin-button': {
-    WebkitAppearance: 'none',
-    margin: 0
-  },
-  MozAppearance: 'textfield'
-} as const
 
 export default function ReminderSettingsCard({
   compact = false
@@ -83,7 +76,7 @@ export default function ReminderSettingsCard({
             dir: 'ltr',
             min: 0,
             max: 90,
-            sx: SPINNER_LESS
+            sx: numericInputSx
           }
         }}
         sx={{ mb: 2 }}
@@ -100,7 +93,7 @@ export default function ReminderSettingsCard({
             dir: 'ltr',
             min: 0,
             max: 365,
-            sx: SPINNER_LESS
+            sx: numericInputSx
           }
         }}
         sx={{ mb: 2 }}
@@ -119,7 +112,7 @@ export default function ReminderSettingsCard({
             dir: 'ltr',
             min: 0,
             max: 365,
-            sx: SPINNER_LESS
+            sx: numericInputSx
           }
         }}
         sx={{ mb: 2 }}
@@ -138,7 +131,7 @@ export default function ReminderSettingsCard({
             dir: 'ltr',
             min: 0,
             max: 30,
-            sx: SPINNER_LESS
+            sx: numericInputSx
           }
         }}
       />

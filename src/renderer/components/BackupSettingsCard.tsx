@@ -40,6 +40,7 @@ import {
 import React, { useCallback, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useSnackbar } from '../hooks/useSnackbar'
+import { numericInputSx } from '../utils/numericInputSx'
 
 /** Subset of the settings singleton row consumed by this card. */
 interface BackupSettings {
@@ -52,17 +53,6 @@ interface BackupSettings {
   full_backup_frequency?: 'monthly' | 'weekly'
   full_backup_time?: string
 }
-
-// Spinner-less numeric input styling (AGENTS bans <TextField type="number"> native spinners).
-// Mirrors the SPINNER_LESS constant in Settings.tsx — inlining avoids a new shared module for
-// one declaration; both call sites are kept in sync by grep.
-const SPINNER_LESS = {
-  '&::-webkit-outer-spin-button, &::-webkit-inner-spin-button': {
-    WebkitAppearance: 'none',
-    margin: 0
-  },
-  MozAppearance: 'textfield'
-} as const
 
 export default function BackupSettingsCard(): React.ReactElement {
   const { t } = useTranslation()
@@ -180,7 +170,7 @@ export default function BackupSettingsCard(): React.ReactElement {
                   dir: 'ltr',
                   min: 1,
                   max: 100,
-                  sx: SPINNER_LESS
+                  sx: numericInputSx
                 }
               }}
             />

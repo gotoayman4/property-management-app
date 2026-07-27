@@ -9,6 +9,7 @@ import { Box, Card, CardContent, Stack, TextField, Typography } from '@mui/mater
 import React, { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useSnackbar } from '../hooks/useSnackbar'
+import { numericInputSx } from '../utils/numericInputSx'
 
 interface ReceiptSettings {
   receipt_prefix?: string
@@ -19,14 +20,6 @@ interface ReceiptSettingsCardProps {
   /** When true, renders content without Card/CardContent wrapper (for embedding in SettingsSection). */
   compact?: boolean
 }
-
-const SPINNER_LESS = {
-  '&::-webkit-outer-spin-button, &::-webkit-inner-spin-button': {
-    WebkitAppearance: 'none',
-    margin: 0
-  },
-  MozAppearance: 'textfield'
-} as const
 
 export default function ReceiptSettingsCard({
   compact = false
@@ -95,7 +88,7 @@ export default function ReceiptSettingsCard({
         }}
         helperText={t('settings.receiptStartingSequenceHelp')}
         slotProps={{
-          htmlInput: { dir: 'ltr', min: 1, max: 999999, sx: SPINNER_LESS }
+          htmlInput: { dir: 'ltr', min: 1, max: 999999, sx: numericInputSx }
         }}
         sx={{ mb: 2.5 }}
       />

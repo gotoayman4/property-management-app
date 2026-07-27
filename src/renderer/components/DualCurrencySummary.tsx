@@ -13,14 +13,7 @@ import {
 import React, { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { ConversionResult } from '../hooks/useCurrencyConversion'
-
-const SPINNER_LESS = {
-  '&::-webkit-outer-spin-button, &::-webkit-inner-spin-button': {
-    WebkitAppearance: 'none',
-    margin: 0
-  },
-  MozAppearance: 'textfield'
-} as const
+import { numericInputSx } from '../utils/numericInputSx'
 
 interface DualCurrencySummaryProps {
   amount: number
@@ -254,7 +247,7 @@ function CustomRateInputField({
           onCustomRateChange(null)
         }
       }}
-      slotProps={{ htmlInput: { min: 0, step: 'any', sx: SPINNER_LESS } }}
+      slotProps={{ htmlInput: { min: 0, step: 'any', sx: numericInputSx } }}
     />
   )
 }

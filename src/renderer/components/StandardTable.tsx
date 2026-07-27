@@ -9,6 +9,7 @@ import {
 } from '@mui/x-data-grid'
 import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
+import { useDirection } from '../hooks/useDirection'
 import { getGridLocaleText } from '../utils/dataGridLocale'
 
 const STORAGE_PREFIX = 'table-state:'
@@ -66,8 +67,8 @@ export default function StandardTable({
   pageSizeOptions = [10, 25, 50],
   tableId
 }: StandardTableProps): React.JSX.Element {
-  const { t, i18n } = useTranslation()
-  const isRtl = i18n.language === 'ar'
+  const { t } = useTranslation()
+  const isRtl = useDirection()
   const localeText = getGridLocaleText(t)
 
   // --- Column visibility persistence ---

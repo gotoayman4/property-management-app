@@ -32,6 +32,7 @@ import {
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { worldCountries, type WorldCountry } from '../data/worldCountries'
+import { useDirection } from '../hooks/useDirection'
 import { getLocalizedCountryName } from '../utils/countryUtils'
 import ConfirmDialog from './ConfirmDialog'
 import { CountryFormCard } from './CountryFormCard'
@@ -57,7 +58,7 @@ export default function CountryManagerDialog({
   onChange
 }: CountryManagerDialogProps): React.JSX.Element {
   const { t, i18n } = useTranslation()
-  const isRtl = i18n.language === 'ar'
+  const isRtl = useDirection()
 
   // Data state
   const [countries, setCountries] = useState<CountryRow[]>([])

@@ -2,6 +2,7 @@ import { TextField, Box, Typography } from '@mui/material'
 import React from 'react'
 import { Controller, type ControllerProps, type FieldPath, type FieldValues } from 'react-hook-form'
 import { useTranslation } from 'react-i18next'
+import { numericInputSx } from '../utils/numericInputSx'
 
 /**
  * INTENT: Spinner-less numeric input bound to React Hook Form.
@@ -147,13 +148,7 @@ function AmountFieldInner({
           dir: 'ltr',
           inputMode: 'decimal',
           min,
-          sx: {
-            '&::-webkit-outer-spin-button, &::-webkit-inner-spin-button': {
-              WebkitAppearance: 'none',
-              margin: 0
-            },
-            MozAppearance: 'textfield'
-          }
+          sx: numericInputSx
         }
       }}
       fullWidth

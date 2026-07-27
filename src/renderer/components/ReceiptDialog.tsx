@@ -17,6 +17,7 @@ import {
 } from '@mui/material'
 import React, { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { useDirection } from '../hooks/useDirection'
 
 export interface ReceiptPaymentData {
   id: number
@@ -48,8 +49,8 @@ export function ReceiptDialog({
   onClose,
   payment
 }: ReceiptDialogProps): React.ReactElement | null {
-  const { t, i18n } = useTranslation()
-  const isRtl = i18n.language === 'ar'
+  const { t } = useTranslation()
+  const isRtl = useDirection()
   const [companySettings, setCompanySettings] = useState<CompanySettings | null>(null)
 
   useEffect(() => {

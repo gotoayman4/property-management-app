@@ -9,7 +9,7 @@ import {
 } from '@mui/icons-material'
 import { Box, Typography, Button, IconButton, TextField, Chip, Tooltip } from '@mui/material'
 import { GridColDef } from '@mui/x-data-grid'
-import React, { useCallback, useEffect, useState } from 'react'
+import React, { useCallback, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 import ConfirmDialog from '../../components/ConfirmDialog'
@@ -17,6 +17,7 @@ import GlobalSnackbar from '../../components/GlobalSnackbar'
 import PageHeader from '../../components/PageHeader'
 import StandardDialog from '../../components/StandardDialog'
 import StandardTable from '../../components/StandardTable'
+import { useFetch } from '../../hooks/useFetch'
 import { useSnackbar } from '../../hooks/useSnackbar'
 import { buildWhatsAppUrl } from '../../utils/whatsappUtils'
 import { TenantForm } from './TenantForm'
@@ -40,10 +41,6 @@ export function TenantList(): React.ReactElement {
   const navigate = useNavigate()
   const isRtl = i18n.language === 'ar'
   const { snack, showError, showSuccess, hideSnackbar } = useSnackbar()
-  const [tenants, setTenants] = useState<Tenant[]>([])
-  const [loading, setLoading] = useState<boolean>(true)
-  const [error, setError] = useState<string | null>(null)
-
   // Filters
   const [search, setSearch] = useState<string>('')
 
@@ -53,27 +50,10 @@ export function TenantList(): React.ReactElement {
   // Tenant id awaiting archive confirmation (null = dialog closed)
   const [pendingDeleteId, setPendingDeleteId] = useState<number | null>(null)
 
-  const fetchTenants = useCallback(async (): Promise<void> => {
-    try {
-      setLoading(true)
-      setError(null)
-      const data = await window.api.tenants.list({ search })
-      setTenants(data as Tenant[])
-    } catch (err: unknown) {
-      console.error(err)
-      setError(t('common.error'))
-    } finally {
-      setLoading(false)
-    }
-  }, [search, t])
+  const fetchTenants = useCallback(() => window.api.tenants.list({ search }), [search])
 
-  // Refetch when the search filter changes. fetchTenants calls setLoading/setTenants internally,
-  // so the react-hooks/set-state-in-effect rule flags it — this is the canonical data-fetch
-  // pattern with a stable useCallback dependency, so the warning is a known false positive here.
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    fetchTenants()
-  }, [fetchTenants])
+  const { data, loading, error, refetch } = useFetch(fetchTenants)
+  const tenants = data ?? []
 
   const handleAddClick = (): void => {
     setSelectedTenant(null)
@@ -98,7 +78,7 @@ export function TenantList(): React.ReactElement {
     try {
       await window.api.tenants.delete(id)
       showSuccess('common.deleteSuccess')
-      fetchTenants()
+      refetch()
     } catch (err) {
       console.error(err)
       const msg = err instanceof Error ? err.message : ''
@@ -279,7 +259,7 @@ export function TenantList(): React.ReactElement {
         rows={tenants}
         loading={loading}
         error={error ?? undefined}
-        onRetry={fetchTenants}
+        onRetry={refetch}
         emptyMessage={search ? t('tenant.noTenantsFiltered') : t('tenant.noTenants')}
         tableId="tenant-list"
       />
@@ -288,7 +268,7 @@ export function TenantList(): React.ReactElement {
         open={openDialog}
         onClose={() => {
           setOpenDialog(false)
-          fetchTenants()
+          refetch()
         }}
         title={selectedTenant ? t('tenant.editTitle') : t('tenant.add')}
         maxWidth="md"
@@ -296,11 +276,11 @@ export function TenantList(): React.ReactElement {
         <TenantForm
           tenant={selectedTenant}
           onSuccess={() => {
-            fetchTenants()
+            refetch()
           }}
           onCancel={() => {
             setOpenDialog(false)
-            fetchTenants()
+            refetch()
           }}
         />
       </StandardDialog>

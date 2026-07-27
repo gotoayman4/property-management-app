@@ -22,6 +22,7 @@ import {
 } from '@mui/material'
 import React, { useCallback, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { useDirection } from '../hooks/useDirection'
 import { useSnackbar } from '../hooks/useSnackbar'
 import ConfirmDialog from './ConfirmDialog'
 import GlobalSnackbar from './GlobalSnackbar'
@@ -43,8 +44,8 @@ export default function ExpenseCategoryManagerDialog({
   onClose,
   onChange
 }: ExpenseCategoryManagerDialogProps): React.JSX.Element {
-  const { t, i18n } = useTranslation()
-  const isRtl = i18n.language === 'ar'
+  const { t } = useTranslation()
+  const isRtl = useDirection()
   const { snack, showSuccess, showError, hideSnackbar } = useSnackbar()
 
   const [categories, setCategories] = useState<CategoryRow[]>([])

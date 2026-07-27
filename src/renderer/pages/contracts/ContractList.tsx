@@ -9,7 +9,7 @@ import {
 } from '@mui/icons-material'
 import { Box, Button, Chip, IconButton, Link, Tooltip } from '@mui/material'
 import { GridColDef } from '@mui/x-data-grid'
-import React, { useCallback, useEffect, useState } from 'react'
+import React, { useCallback, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 import ConfirmDialog from '../../components/ConfirmDialog'
@@ -17,6 +17,7 @@ import GlobalSnackbar from '../../components/GlobalSnackbar'
 import PageHeader from '../../components/PageHeader'
 import StandardDialog from '../../components/StandardDialog'
 import StandardTable from '../../components/StandardTable'
+import { useFetch } from '../../hooks/useFetch'
 import { useSnackbar } from '../../hooks/useSnackbar'
 import { ContractForm } from './ContractForm'
 import {
@@ -53,10 +54,6 @@ export function ContractList(): React.ReactElement {
   const { t } = useTranslation()
   const navigate = useNavigate()
   const { snack, showError, showSuccess, hideSnackbar } = useSnackbar()
-  const [contracts, setContracts] = useState<Contract[]>([])
-  const [loading, setLoading] = useState<boolean>(true)
-  const [error, setError] = useState<string | null>(null)
-
   const [openDialog, setOpenDialog] = useState<boolean>(false)
   const [selectedContract, setSelectedContract] = useState<Contract | null>(null)
   const [pendingAction, setPendingAction] = useState<PendingAction>(null)
@@ -65,24 +62,10 @@ export function ContractList(): React.ReactElement {
     schedule: RenewalSourceScheduleRow[]
   } | null>(null)
 
-  const fetchContracts = useCallback(async (): Promise<void> => {
-    try {
-      setLoading(true)
-      setError(null)
-      const data = await window.api.contracts.list()
-      setContracts(data as Contract[])
-    } catch (err: unknown) {
-      console.error(err)
-      setError(t('common.error'))
-    } finally {
-      setLoading(false)
-    }
-  }, [t])
+  const fetchContracts = useCallback(() => window.api.contracts.list(), [])
 
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    fetchContracts()
-  }, [fetchContracts])
+  const { data, loading, error, refetch } = useFetch(fetchContracts)
+  const contracts = data ?? []
 
   const handleAddClick = (): void => {
     setSelectedContract(null)
@@ -130,7 +113,7 @@ export function ContractList(): React.ReactElement {
         await window.api.contracts.delete(id)
         showSuccess('common.deleteSuccess')
       }
-      fetchContracts()
+      refetch()
     } catch (err) {
       console.error(err)
       showError('common.deleteError')
@@ -308,7 +291,7 @@ export function ContractList(): React.ReactElement {
         rows={contracts}
         loading={loading}
         error={error ?? undefined}
-        onRetry={fetchContracts}
+        onRetry={refetch}
         emptyMessage={t('contract.noContracts')}
         tableId="contract-list"
       />
@@ -317,7 +300,7 @@ export function ContractList(): React.ReactElement {
         open={openDialog}
         onClose={() => {
           setOpenDialog(false)
-          fetchContracts()
+          refetch()
         }}
         title={selectedContract ? t('contract.editTitle') : t('contract.add')}
         maxWidth="lg"
@@ -325,11 +308,11 @@ export function ContractList(): React.ReactElement {
         <ContractForm
           contract={selectedContract}
           onSuccess={() => {
-            fetchContracts()
+            refetch()
           }}
           onCancel={() => {
             setOpenDialog(false)
-            fetchContracts()
+            refetch()
           }}
         />
       </StandardDialog>
@@ -347,7 +330,7 @@ export function ContractList(): React.ReactElement {
             sourceSchedule={renewalSource.schedule}
             onSuccess={() => {
               setRenewalSource(null)
-              fetchContracts()
+              refetch()
               showSuccess('contract.renewSuccess')
             }}
             onCancel={() => setRenewalSource(null)}

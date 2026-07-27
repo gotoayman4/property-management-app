@@ -1,6 +1,7 @@
 import { Dialog, DialogTitle, DialogContent, DialogActions, Button } from '@mui/material'
 import React from 'react'
 import { useTranslation } from 'react-i18next'
+import { useDirection } from '../hooks/useDirection'
 
 /**
  * INTENT: Shared confirmation dialog for destructive/irreversible actions.
@@ -31,8 +32,8 @@ export default function ConfirmDialog({
   onCancel,
   severity = 'error'
 }: ConfirmDialogProps): React.JSX.Element {
-  const { t, i18n } = useTranslation()
-  const isRtl = i18n.language === 'ar'
+  const { t } = useTranslation()
+  const isRtl = useDirection()
 
   return (
     <Dialog

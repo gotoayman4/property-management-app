@@ -18,6 +18,7 @@ import {
 } from '@mui/material'
 import React, { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
+import { useDirection } from '../hooks/useDirection'
 
 interface Notification {
   id: number
@@ -39,8 +40,8 @@ const TYPE_COLORS: Record<string, 'warning' | 'error' | 'info' | 'success'> = {
 }
 
 export default function NotificationBell(): React.JSX.Element {
-  const { t, i18n } = useTranslation()
-  const isRtl = i18n.language === 'ar'
+  const { t } = useTranslation()
+  const isRtl = useDirection()
   const [notifications, setNotifications] = useState<Notification[]>([])
   const [unreadCount, setUnreadCount] = useState(0)
   const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null)

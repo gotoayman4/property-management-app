@@ -28,6 +28,7 @@ import GlobalSnackbar from '../../components/GlobalSnackbar'
 import PageHeader from '../../components/PageHeader'
 import StandardTable from '../../components/StandardTable'
 import { useSnackbar } from '../../hooks/useSnackbar'
+import { numericInputSx } from '../../utils/numericInputSx'
 
 interface ExchangeRateRow {
   id: number
@@ -41,15 +42,6 @@ interface ExchangeRateRow {
 }
 
 const CURRENCIES = ['JOD', 'TRY', 'QAR', 'USD', 'EUR', 'SAR']
-
-// Spinner-less numeric input styling (AGENTS bans <TextField type="number"> native spinners).
-const SPINNER_LESS = {
-  '&::-webkit-outer-spin-button, &::-webkit-inner-spin-button': {
-    WebkitAppearance: 'none',
-    margin: 0
-  },
-  MozAppearance: 'textfield'
-} as const
 
 export default function ExchangeRateManager(): React.JSX.Element {
   const { t, i18n } = useTranslation()
@@ -210,7 +202,7 @@ export default function ExchangeRateManager(): React.JSX.Element {
                     label={t('currency.rate')}
                     value={rateValue}
                     onChange={(e) => setRateValue(e.target.value)}
-                    slotProps={{ htmlInput: { min: 0, step: 'any', sx: SPINNER_LESS } }}
+                    slotProps={{ htmlInput: { min: 0, step: 'any', sx: numericInputSx } }}
                   />
                 </Grid>
                 <Grid size={{ xs: 12 }}>
