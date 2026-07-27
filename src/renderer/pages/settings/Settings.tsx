@@ -33,6 +33,7 @@ import {
 import React, { useCallback, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useSearchParams } from 'react-router-dom'
+import AboutUpdatesCard from '../../components/AboutUpdatesCard'
 import AppearanceSettingsCard from '../../components/AppearanceSettingsCard'
 import CompanyInfoCard from '../../components/CompanyInfoCard'
 import CountryManagerDialog from '../../components/CountryManagerDialog'
@@ -71,6 +72,7 @@ interface SettingsData {
   receipt_starting_sequence: number
   company_name?: string | null
   company_logo?: string | null
+  auto_update_check?: number
 }
 
 const CURRENCIES = ['JOD', 'TRY', 'QAR', 'USD', 'EUR', 'SAR']
@@ -304,6 +306,14 @@ export default function Settings(): React.JSX.Element {
 
           {/* ── Backup & Data ── */}
           {activeSection === 'backup' && <BackupPage />}
+
+          {/* ── About & Updates ── */}
+          {activeSection === 'about' && (
+            <AboutUpdatesCard
+              autoUpdateCheck={settings.auto_update_check ?? 1}
+              onUpdateField={updateField}
+            />
+          )}
 
           {/* ── Danger Zone ── */}
           {activeSection === 'danger' && (

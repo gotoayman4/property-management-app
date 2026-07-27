@@ -167,6 +167,24 @@ const api = {
     delete: (data: { backupId: number }) => ipcRenderer.invoke('backup:delete', data),
     prune: () => ipcRenderer.invoke('backup:prune'),
     relaunch: () => ipcRenderer.invoke('app:relaunch')
+  },
+  app: {
+    getInfo: () => ipcRenderer.invoke('app:getInfo')
+  },
+  updates: {
+    check: () => ipcRenderer.invoke('updates:check'),
+    download: () => ipcRenderer.invoke('updates:download'),
+    install: () => ipcRenderer.invoke('updates:install'),
+    getState: () => ipcRenderer.invoke('updates:getState'),
+    // Push channel: main broadcasts every updater state transition (download progress etc.).
+    // Returns an unsubscribe function so React effects can clean up on unmount.
+    onState: (callback: (state: unknown) => void): (() => void) => {
+      const listener = (_event: unknown, state: unknown): void => callback(state)
+      ipcRenderer.on('updates:state', listener)
+      return () => {
+        ipcRenderer.removeListener('updates:state', listener)
+      }
+    }
   }
 }
 

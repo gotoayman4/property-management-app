@@ -1,5 +1,47 @@
 import { ElectronAPI } from '@electron-toolkit/preload'
 
+/** Static app/runtime metadata returned by `app:getInfo` (About dialog). */
+export interface AppInfo {
+  version: string
+  electron: string
+  chrome: string
+  node: string
+  platform: string
+  arch: string
+  repoUrl: string
+}
+
+/** Latest-release metadata surfaced by the updater when an update exists. */
+export interface UpdateInfo {
+  version: string
+  releaseName: string
+  releaseNotes: string
+  publishedAt: string
+  setupUrl: string
+  setupName: string
+  setupSize: number
+  shaSumsUrl: string | null
+}
+
+export type UpdatePhase =
+  | 'idle'
+  | 'checking'
+  | 'update-available'
+  | 'up-to-date'
+  | 'downloading'
+  | 'verifying'
+  | 'ready'
+  | 'error'
+
+/** Updater state machine snapshot pushed on the `updates:state` channel. */
+export interface UpdateState {
+  phase: UpdatePhase
+  info: UpdateInfo | null
+  progress: number
+  errorCode: string | null
+  downloadedPath: string | null
+}
+
 export interface CountryItem {
   id: number
   code: string
@@ -982,6 +1024,17 @@ declare global {
         delete: (data: { backupId: number }) => Promise<{ success: boolean; error?: string }>
         prune: () => Promise<{ deleted: number; errors: string[] }>
         relaunch: () => Promise<void>
+      }
+      app: {
+        getInfo: () => Promise<AppInfo>
+      }
+      updates: {
+        check: () => Promise<UpdateState>
+        download: () => Promise<UpdateState>
+        install: () => Promise<boolean>
+        getState: () => Promise<UpdateState>
+        /** Subscribe to updater state pushes; returns an unsubscribe function. */
+        onState: (callback: (state: UpdateState) => void) => () => void
       }
     }
   }

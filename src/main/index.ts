@@ -23,6 +23,7 @@ import {
 import { registerReportsIpcHandlers } from './ipc/reportsIpc'
 import { registerSearchIpcHandlers } from './ipc/searchIpc'
 import { registerTenantIpcHandlers } from './ipc/tenantIpc'
+import { registerUpdateIpcHandlers, startAutoUpdateChecks } from './ipc/updateIpc'
 import { startBackupScheduler, stopBackupScheduler } from './services/backupScheduler'
 import { createBackup, pruneOldBackups } from './services/backupService'
 import { applyDueEscalations } from './services/escalationService'
@@ -91,6 +92,10 @@ app.whenReady().then(() => {
 
   // Data management: wipe all user data (destructive, token-protected)
   registerDataIpcHandlers()
+
+  // Auto-update (ADR-003 §4 amendment): version metadata + GitHub Releases update checks.
+  registerUpdateIpcHandlers()
+  startAutoUpdateChecks()
 
   // Evaluate notifications on startup - check for rent due, contract expiry, etc.
   evaluateNotifications()

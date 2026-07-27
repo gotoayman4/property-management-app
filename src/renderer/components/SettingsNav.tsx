@@ -10,6 +10,7 @@ import AttachMoneyIcon from '@mui/icons-material/AttachMoney'
 import BusinessIcon from '@mui/icons-material/Business'
 import CurrencyExchangeIcon from '@mui/icons-material/CurrencyExchange'
 import DashboardIcon from '@mui/icons-material/Dashboard'
+import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined'
 import NotificationsIcon from '@mui/icons-material/Notifications'
 import PaletteIcon from '@mui/icons-material/Palette'
 import ReceiptIcon from '@mui/icons-material/Receipt'
@@ -40,6 +41,7 @@ export const SETTINGS_SECTIONS = [
   { id: 'receipts', icon: <ReceiptIcon />, labelKey: 'settings.navReceipts' },
   { id: 'notifications', icon: <NotificationsIcon />, labelKey: 'settings.navNotifications' },
   { id: 'backup', icon: <StorageIcon />, labelKey: 'settings.navBackup' },
+  { id: 'about', icon: <InfoOutlinedIcon />, labelKey: 'settings.navAbout' },
   { id: 'danger', icon: <WarningAmberIcon />, labelKey: 'settings.navDangerZone' }
 ] as const
 

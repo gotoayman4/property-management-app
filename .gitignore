@@ -50,6 +50,16 @@ coverage/
 # Lint cache
 .eslintcache
 
+# TypeScript incremental build cache
+*.tsbuildinfo
+
+# Installer build output
+installer/output/
+
+# Website build output
+propmanager-website/dist/
+propmanager-website/.astro/
+
 # Mirrored global guidelines and skills (do commit these if desired, but we keep guidelines and skills as local references)
 _guidelines/
 _skills/

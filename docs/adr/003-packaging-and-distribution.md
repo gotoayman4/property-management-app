@@ -56,16 +56,20 @@ privileges needed for the app to function.
 - Even without signing, the entitlements file documents the app's privilege requirements.
 - If signing is added later, the entitlements are already correct and tested.
 
-### 4. Auto-Updates — Disabled
+### 4. Auto-Updates — Enabled via Custom Updater + GitHub Releases (Amended 2026-07-28)
 
-**Decision:** The `publish.url` in electron-builder.yml is set to a placeholder
-(`https://example.com/auto-updates`). Auto-update functionality is not enabled.
+**Decision (amended):** Auto-update is implemented with a custom main-process update service
+(`src/main/services/updateService.ts`) that checks GitHub Releases, verifies SHA-256, and runs
+the Inno Setup installer silently. `electron-updater` is NOT used.
 
 **Rationale:**
 
-- Auto-update requires a hosting endpoint and update server (e.g., electron-updater + S3/GitHub).
-- For a single-user desktop app, manual updates (download new installer) are sufficient.
-- When auto-updates are needed, the `publish` section can be pointed to a real endpoint.
+- `electron-updater` only services NSIS/Squirrel/MSI installs on Windows — incompatible with
+  the Inno Setup decision in §2 of this ADR.
+- GitHub Releases provides free, immutable, CDN-backed hosting with a public JSON API.
+- Update checks are the second sanctioned network exception (after ADR-001 FX rates):
+  main-process only, HTTPS to github.com/api.github.com only, user-disableable in Settings.
+- Full design: `docs/deployment-architecture.md` §5.
 
 ### 5. Sandbox — Context Isolation Enabled, Node Integration Disabled
 
@@ -86,4 +90,4 @@ implemented). No Electron sandbox override is applied.
 - Windows installer (Inno Setup) is a separate concern from the electron-builder config.
 - The electron-builder config remains useful for `npm run build` (packages the app) even
   though the final Windows installer uses Inno Setup.
-- Auto-update can be enabled later by changing one URL in `electron-builder.yml`.
+- Auto-update ships in-app via the custom updater; disabling it is a Settings toggle.
