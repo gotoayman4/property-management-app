@@ -958,7 +958,12 @@ declare global {
       }
       dialog: {
         pickFolder: () => Promise<{ filePath: string | null; canceled: boolean }>
-        pickImage: () => Promise<{ base64: string | null; canceled: boolean }>
+        pickImage: () => Promise<{
+          base64: string | null
+          canceled: boolean
+          /** Machine-readable code when the selected image failed magic-byte validation. */
+          error?: string
+        }>
         pickBackupFile: () => Promise<{ filePath: string | null; canceled: boolean }>
       }
       data: {

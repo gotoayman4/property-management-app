@@ -58,6 +58,17 @@ export default function CompanyInfoCard({
   const handlePickLogo = async (): Promise<void> => {
     try {
       const result = await window.api.dialog.pickImage()
+      if (result.error) {
+        // The file failed magic-byte validation in the main process. Map the machine code to a
+        // localized message so the user understands why their selection was rejected.
+        const errorKey: Record<string, string> = {
+          IMAGE_EMPTY: 'settings.logoErrorEmpty',
+          IMAGE_TOO_LARGE: 'settings.logoErrorTooLarge',
+          INVALID_IMAGE_TYPE: 'settings.logoErrorInvalidType'
+        }
+        showError(errorKey[result.error] ?? 'common.saveError')
+        return
+      }
       if (!result.canceled && result.base64) {
         await updateField('company_logo', result.base64)
       }
