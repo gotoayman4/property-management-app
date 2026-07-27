@@ -13,7 +13,19 @@ export default defineConfig({
   // Exclude Playwright E2E specs and config from Vitest discovery — they use
   // @playwright/test, not vitest, and must not be collected here.
   test: {
-    exclude: ['**/node_modules/**', '**/dist/**', '**/out/**', 'e2e/**', 'playwright.config.ts']
+    exclude: ['**/node_modules/**', '**/dist/**', '**/out/**', 'e2e/**', 'playwright.config.ts'],
+    testTimeout: 15_000,
+    coverage: {
+      provider: 'v8',
+      reporter: ['text', 'lcov'],
+      include: ['src/main/db/**/*.ts', 'src/main/services/**/*.ts'],
+      thresholds: {
+        statements: 60,
+        branches: 50,
+        functions: 60,
+        lines: 60
+      }
+    }
   },
   resolve: {
     alias: {
