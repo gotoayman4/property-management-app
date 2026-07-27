@@ -2,11 +2,16 @@
  * INTENT: Global search across all entities — properties, tenants, contracts, payments, expenses.
  *         Returns grouped results with entity type, ID, title, and snippet.
  * CONSTRAINT: SQL parameterized queries only. Search is case-insensitive LIKE.
+ *             Query validated via Zod at IPC boundary (max 100 chars, non-empty).
  */
 import { ipcMain } from 'electron'
+import { z } from 'zod'
 import { db } from '../db/database'
 import { resolveLocaleKey, tryResolveLocaleKey } from '../services/exportService/exportUtils'
 import type { ExportLanguage } from '../services/exportService/exportUtils'
+
+/** Zod schema for search:global query — non-empty, max 100 chars to prevent ReDoS-like abuse. */
+const searchQuerySchema = z.string().min(1).max(100)
 
 interface SearchResult {
   entity_type: string
@@ -18,9 +23,17 @@ interface SearchResult {
 }
 
 export function registerSearchIpcHandlers(): void {
-  ipcMain.handle('search:global', async (_, query: string) => {
+  ipcMain.handle('search:global', async (_, data: unknown) => {
+    // Validate query at IPC boundary — reject non-string, empty, or overly long values.
+    let query: string
     try {
-      if (!query || query.trim().length < 2) return []
+      query = searchQuerySchema.parse(data)
+    } catch {
+      throw new Error('INVALID_INPUT')
+    }
+
+    try {
+      if (query.trim().length < 2) return []
 
       let lang: ExportLanguage = 'ar'
       try {

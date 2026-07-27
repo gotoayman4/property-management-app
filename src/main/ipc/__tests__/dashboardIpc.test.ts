@@ -302,4 +302,26 @@ describe('dashboardIpc', () => {
       expect(result.map((r) => r.receipt_number)).not.toContain('RCT-REC-000003')
     })
   })
+
+  describe('input validation', () => {
+    it('rejects non-string country filter with INVALID_INPUT', async () => {
+      await expect(invoke(registry, 'dashboard:summary', 123)).rejects.toThrow('INVALID_INPUT')
+    })
+
+    it('rejects overly long country filter with INVALID_INPUT', async () => {
+      await expect(invoke(registry, 'dashboard:summary', 'x'.repeat(101))).rejects.toThrow(
+        'INVALID_INPUT'
+      )
+    })
+
+    it('accepts valid country filter', async () => {
+      const result = await invoke(registry, 'dashboard:summary', 'JO')
+      expect(result).toBeDefined()
+    })
+
+    it('accepts undefined filter (no argument)', async () => {
+      const result = await invoke(registry, 'dashboard:summary')
+      expect(result).toBeDefined()
+    })
+  })
 })

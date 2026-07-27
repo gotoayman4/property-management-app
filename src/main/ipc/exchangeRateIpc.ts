@@ -26,36 +26,42 @@ const ratePairSchema = z.object({
   currency_to: z.string().min(3).max(3)
 })
 
+/** Zod schema for exchangeRates:list optional filters. */
+const rateListFilterSchema = z.object({
+  currency_from: z.string().max(3).optional(),
+  currency_to: z.string().max(3).optional()
+})
+
 export function registerExchangeRateIpcHandlers(): void {
   // List all exchange rates, optionally filtered by pair
-  ipcMain.handle(
-    'exchangeRates:list',
-    async (_, filters?: { currency_from?: string; currency_to?: string }) => {
-      try {
-        let query = 'SELECT * FROM exchange_rates'
-        const conditions: string[] = []
-        const params: string[] = []
+  ipcMain.handle('exchangeRates:list', async (_, data?: unknown) => {
+    try {
+      const filters = data !== undefined ? rateListFilterSchema.parse(data) : undefined
 
-        if (filters?.currency_from) {
-          conditions.push('currency_from = ?')
-          params.push(filters.currency_from)
-        }
-        if (filters?.currency_to) {
-          conditions.push('currency_to = ?')
-          params.push(filters.currency_to)
-        }
+      let query = 'SELECT * FROM exchange_rates'
+      const conditions: string[] = []
+      const params: string[] = []
 
-        if (conditions.length > 0) {
-          query += ' WHERE ' + conditions.join(' AND ')
-        }
-        query += ' ORDER BY effective_date DESC, fetched_at DESC'
-
-        return db.prepare(query).all(...params)
-      } catch {
-        throw new Error('FAILED_TO_LIST_RATES')
+      if (filters?.currency_from) {
+        conditions.push('currency_from = ?')
+        params.push(filters.currency_from)
       }
+      if (filters?.currency_to) {
+        conditions.push('currency_to = ?')
+        params.push(filters.currency_to)
+      }
+
+      if (conditions.length > 0) {
+        query += ' WHERE ' + conditions.join(' AND ')
+      }
+      query += ' ORDER BY effective_date DESC, fetched_at DESC'
+
+      return db.prepare(query).all(...params)
+    } catch (err) {
+      if (err instanceof z.ZodError) throw new Error('INVALID_INPUT')
+      throw new Error('FAILED_TO_LIST_RATES')
     }
-  )
+  })
 
   // Get the latest rate for a specific pair (most recent effective_date).
   // Falls back to the reciprocal pair (1/rate) when only the reverse direction exists (BR-15),
