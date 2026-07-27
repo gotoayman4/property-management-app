@@ -1,10 +1,63 @@
 import { createTheme, Theme } from '@mui/material/styles'
 
-// Primary design tokens for property management app (premium, elegant theme)
+/**
+ * @file Design tokens and theme factory for the property management app.
+ *
+ * INTENT: Centralize all colors, typography, and component overrides. Each palette color
+ *         exposes mode-specific main/light/dark/contrastText shades so light and dark modes
+ *         are visually distinct (not just a brightness flip).
+ *
+ * DECISION: Colors live here (the only sanctioned hex location per AGENTS). Components
+ *           consume them via theme.palette.* tokens — never raw hex.
+ */
+
+// Base brand colors — the anchor for each palette scale
 const primaryColor = '#1e3a8a' // Deep Blue
 const secondaryColor = '#b45309' // Warm Amber
 const successColor = '#0f766e' // Teal
 const errorColor = '#be123c' // Rose/Crimson
+
+interface PaletteShades {
+  main: string
+  light: string
+  dark: string
+  contrastText: string
+}
+
+/**
+ * Per-mode palette shades. Light mode uses the deep, saturated brand tones; dark mode lifts
+ * main toward a brighter tint so it reads on dark surfaces, with light/dark shades adjusted
+ * to stay within the visible gamut on each background.
+ */
+const primaryShades: Record<'light' | 'dark', PaletteShades> = {
+  light: { main: primaryColor, light: '#3b82f6', dark: '#172554', contrastText: '#ffffff' },
+  dark: { main: '#60a5fa', light: '#93c5fd', dark: '#2563eb', contrastText: '#0b1329' }
+}
+
+const secondaryShades: Record<'light' | 'dark', PaletteShades> = {
+  light: { main: secondaryColor, light: '#f59e0b', dark: '#78350f', contrastText: '#ffffff' },
+  dark: { main: '#fbbf24', light: '#fcd34d', dark: '#d97706', contrastText: '#0b1329' }
+}
+
+const successShades: Record<'light' | 'dark', PaletteShades> = {
+  light: { main: successColor, light: '#14b8a6', dark: '#115e59', contrastText: '#ffffff' },
+  dark: { main: '#2dd4bf', light: '#5eead4', dark: '#0d9488', contrastText: '#0b1329' }
+}
+
+const errorShades: Record<'light' | 'dark', PaletteShades> = {
+  light: { main: errorColor, light: '#f43f5e', dark: '#881337', contrastText: '#ffffff' },
+  dark: { main: '#fb7185', light: '#fda4af', dark: '#e11d48', contrastText: '#0b1329' }
+}
+
+const warningShades: Record<'light' | 'dark', PaletteShades> = {
+  light: { main: '#d97706', light: '#fbbf24', dark: '#92400e', contrastText: '#ffffff' },
+  dark: { main: '#fbbf24', light: '#fcd34d', dark: '#b45309', contrastText: '#0b1329' }
+}
+
+const infoShades: Record<'light' | 'dark', PaletteShades> = {
+  light: { main: '#0284c7', light: '#38bdf8', dark: '#075985', contrastText: '#ffffff' },
+  dark: { main: '#38bdf8', light: '#7dd3fc', dark: '#0ea5e9', contrastText: '#0b1329' }
+}
 
 // FR-SET-04/05: Font size scale factors (applied to base typography sizes).
 const FONT_SCALE: Record<string, number> = {
@@ -25,36 +78,12 @@ export const getTheme = (
     direction,
     palette: {
       mode,
-      primary: {
-        main: mode === 'dark' ? '#3b82f6' : primaryColor,
-        light: '#3b82f6',
-        dark: '#172554'
-      },
-      secondary: {
-        main: mode === 'dark' ? '#f59e0b' : secondaryColor,
-        light: '#f59e0b',
-        dark: '#78350f'
-      },
-      success: {
-        main: mode === 'dark' ? '#2dd4bf' : successColor,
-        light: '#14b8a6',
-        dark: '#115e59'
-      },
-      error: {
-        main: mode === 'dark' ? '#fb7185' : errorColor,
-        light: '#f43f5e',
-        dark: '#881337'
-      },
-      warning: {
-        main: mode === 'dark' ? '#fbbf24' : '#d97706',
-        light: '#fbbf24',
-        dark: '#92400e'
-      },
-      info: {
-        main: mode === 'dark' ? '#38bdf8' : '#0284c7',
-        light: '#38bdf8',
-        dark: '#075985'
-      },
+      primary: primaryShades[mode],
+      secondary: secondaryShades[mode],
+      success: successShades[mode],
+      error: errorShades[mode],
+      warning: warningShades[mode],
+      info: infoShades[mode],
       background: {
         default: mode === 'dark' ? '#0b1329' : '#f8fafc',
         paper: mode === 'dark' ? '#131f37' : '#ffffff'
