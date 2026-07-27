@@ -42,7 +42,29 @@ export default defineConfig(
           alphabetize: { order: 'asc', caseInsensitive: true }
         }
       ],
-      'import-x/no-duplicates': 'warn'
+      'import-x/no-duplicates': 'warn',
+      // AGENTS.md: Use design tokens (theme.palette.*) — no raw hex in renderer code.
+      // Excludes locale JSON, test files, and theme definition files.
+      'no-restricted-syntax': [
+        'warn',
+        {
+          selector: 'Literal[value=/^#(?:[0-9a-fA-F]{3,4}){1,2}$/]',
+          message:
+            'Use theme.palette.* or design tokens instead of raw hex colors (AGENTS.md: Visual Consistency).'
+        },
+        {
+          selector:
+            'Property[key.name=/^marginLeft$|^marginRight$|^paddingLeft$|^paddingRight$|^textAlign$/]',
+          message:
+            'Use logical CSS properties (marginInlineStart, paddingInlineEnd, textAlign: "start"/"end") instead of physical direction properties (AGENTS.md: Logical CSS Properties).'
+        },
+        {
+          selector:
+            'Property[key.name="style"] > ObjectExpression > Property[key.name=/^left$|^right$|^top$|^bottom$/]',
+          message:
+            'Use logical CSS properties (insetInlineStart, insetInlineEnd) or MUI sx with start/end instead of physical positioning (AGENTS.md: Logical CSS Properties).'
+        }
+      ]
     }
   },
   {
