@@ -348,7 +348,7 @@ Consequences applied throughout this document:
   - **Validation:** regression test rejecting an SVG payload and an extension-spoofed file; existing
     `dialogIpc` tests (3 cases) still pass.
 
-- [ ] **Task 2.2 — Production logging hygiene**
+- [x] **Task 2.2 — Production logging hygiene**
   - **Objective:** Stop leaking full error objects to stdout in production.
   - **Outcome:** All `console.error` in `src/main` gated behind `isDev` or routed through a
     structured logger; `no-console` clean in prod build.
@@ -357,7 +357,7 @@ Consequences applied throughout this document:
   - **Dependencies:** None.
   - **Validation:** `grep -rn "console.error" src/main` shows only `isDev`-guarded calls; lint clean.
 
-- [ ] **Task 2.3 — Test coverage config + critical-flow E2E**
+- [x] **Task 2.3 — Test coverage config + critical-flow E2E**
   - **Objective:** Enforce coverage on financial logic and add mandated E2E.
   - **Outcome:** Vitest `coverage` block with thresholds on `src/main/db` + `src/main/services`; new
     `e2e/financial.spec.ts` (record payment → ledger) and `e2e/backup.spec.ts` (backup → restore),
@@ -367,7 +367,7 @@ Consequences applied throughout this document:
   - **Dependencies:** Task 1.1 (restore behavior must be stable before E2E exercises it).
   - **Validation:** `vitest run --coverage` meets thresholds; new E2E green in both directions.
 
-- [ ] **Task 2.4 — Zod on read-side IPC handlers**
+- [x] **Task 2.4 — Zod on read-side IPC handlers**
   - **Objective:** Make validation discipline uniform across reads.
   - **Outcome:** `dashboardIpc`, `exchangeRates:list`, `search:global` parse args through Zod
     (incl. `query` max-length cap).
@@ -377,7 +377,7 @@ Consequences applied throughout this document:
   - **Validation:** malformed-payload tests throw `INVALID_INPUT`; existing dashboard/search tests
     green.
 
-- [ ] **Task 2.5 — ESLint: enforce design-token + logical-CSS rules**
+- [x] **Task 2.5 — ESLint: enforce design-token + logical-CSS rules**
   - **Objective:** Make `eslint.config.mjs` match what ADR-002 (`docs/adr/002-…md:147`) claims.
   - **Outcome:** `no-restricted-syntax` entries banning raw hex literals, pixel values in `sx`, and
     physical CSS direction properties; surfaced violations fixed.
@@ -385,7 +385,7 @@ Consequences applied throughout this document:
   - **Dependencies:** None (but expect a batch of lint fixes).
   - **Validation:** `npm run lint` clean; dual-direction E2E still green.
 
-- [ ] **Task 2.6 — Packaging hardening**
+- [x] **Task 2.6 — Packaging hardening**
   - **Objective:** Production-grade build artifacts.
   - **Outcome:** Code signing wired (CI secrets), `build/entitlements.mac.plist` created, auto-update
     URL real or removed, `sandbox:false` justified via ADR or resolved.
@@ -394,7 +394,7 @@ Consequences applied throughout this document:
   - **Dependencies:** Task 1.2 (CI hosts signing).
   - **Validation:** signed build produced in CI; referenced files exist; ADR present.
 
-- [ ] **Task 2.7 — Documentation set**
+- [x] **Task 2.7 — Documentation set**
   - **Objective:** Onboarding and deployment from docs alone.
   - **Outcome:** `README.md` (install/build/run), `docs/deployment.md` (packaging/signing/distribution),
     `docs/developer-onboarding.md`, `docs/IPC.md` (channel catalog).
@@ -404,7 +404,7 @@ Consequences applied throughout this document:
   - **Validation:** a fresh clone builds and runs using only the README; IPC catalog covers all 115
     handlers.
 
-- [ ] **Task 2.8 — MUI stabilization / ADR**
+- [x] **Task 2.8 — MUI stabilization / ADR**
   - **Objective:** Resolve the `9.0.0-alpha.0` pre-release pin.
   - **Outcome:** Either pin to the first stable 9.x or record an ADR justifying the alpha.
   - **Files:** `package.json` (modify), `docs/adr/004-mui-version.md` (~40, if staying on alpha).
