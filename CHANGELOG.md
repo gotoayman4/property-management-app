@@ -5,6 +5,14 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 Release notes on GitHub Releases are generated from this file (`scripts/extract-changelog.mjs`), so every release MUST have a section here before tagging.
 
+## [1.1.2] - 2026-07-28
+
+### Fixed
+
+- Property dropdown in the new-contract form now lists all properties — previously it only showed vacant ones, so it appeared empty once properties were rented or under maintenance
+- Saving a tenant without a national ID no longer fails after the first such tenant (blank national IDs are now stored correctly, existing records are repaired automatically)
+- Tenant save errors now explain the actual problem (duplicate code, duplicate national ID, invalid fields) instead of a generic "Failed to save" message
+
 ## [1.1.1] - 2026-07-28
 
 ### Changed
