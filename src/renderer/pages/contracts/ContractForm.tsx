@@ -111,6 +111,9 @@ export function ContractForm({
   const [tenants, setTenants] = useState<Tenant[]>([])
   const [increaseMode, setIncreaseMode] = useState<IncreaseMode>('flat')
   const [schedule, setSchedule] = useState<EscalationRow[]>([])
+  // Tracks user edits to the escalation mode/schedule — these live outside RHF,
+  // so isDirty alone cannot detect them for the Save-button disabled state.
+  const [escalationTouched, setEscalationTouched] = useState(false)
 
   const defaultValues: Partial<ContractFormValues> = contract
     ? {
@@ -144,7 +147,8 @@ export function ContractForm({
     watch,
     setValue,
     setError,
-    formState: { errors, isSubmitting }
+    reset,
+    formState: { errors, isDirty, isSubmitting }
   } = useForm<ContractFormValues, unknown, ContractFormOutput>({
     resolver: zodResolver(contractSchema),
     defaultValues
@@ -239,12 +243,17 @@ export function ContractForm({
         })
       }
       if (isEdit && contract) {
+        reset(data)
+        setEscalationTouched(false)
         showSuccess('common.saveSuccess')
         notifyDataChanged()
         onSuccess()
       } else {
         setCreatedEntity({ id: newId })
-        showSuccess('common.saveSuccess')
+        // Re-baseline so isDirty clears; point the user at the new Documents tab.
+        reset(data)
+        setEscalationTouched(false)
+        showSuccess('common.saveSuccessWithDocuments')
         notifyDataChanged()
         onSuccess()
       }
@@ -429,9 +438,15 @@ export function ContractForm({
 
           <ContractIncreaseMode
             increaseMode={increaseMode}
-            onIncreaseModeChange={setIncreaseMode}
+            onIncreaseModeChange={(mode) => {
+              setIncreaseMode(mode)
+              setEscalationTouched(true)
+            }}
             schedule={schedule}
-            onScheduleChange={setSchedule}
+            onScheduleChange={(rows) => {
+              setSchedule(rows)
+              setEscalationTouched(true)
+            }}
             startDate={startDate}
             rentAmount={rentAmount}
             currency={currency}
@@ -460,20 +475,20 @@ export function ContractForm({
           }}
         >
           {createdEntity ? (
-            <>
-              <Button variant="outlined" onClick={onCancel} disabled={isSubmitting}>
-                {t('common.cancel')}
-              </Button>
-              <Button variant="contained" onClick={onSuccess} disabled={isSubmitting}>
-                {t('common.close')}
-              </Button>
-            </>
+            // Record already saved — a single Close button dismisses the dialog (same path as Cancel).
+            <Button variant="contained" onClick={onCancel}>
+              {t('common.close')}
+            </Button>
           ) : (
             <>
               <Button variant="outlined" onClick={onCancel} disabled={isSubmitting}>
                 {t('common.cancel')}
               </Button>
-              <Button type="submit" variant="contained" disabled={isSubmitting}>
+              <Button
+                type="submit"
+                variant="contained"
+                disabled={isSubmitting || (!isDirty && !escalationTouched)}
+              >
                 {t('common.save')}
               </Button>
             </>

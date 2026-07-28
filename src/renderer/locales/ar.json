@@ -72,6 +72,7 @@
     "status": "الحالة",
     "success": "تمت العملية بنجاح",
     "saveSuccess": "تم الحفظ بنجاح",
+    "saveSuccessWithDocuments": "تم الحفظ بنجاح! يمكنك الآن رفع المستندات ذات الصلة من تبويب المستندات.",
     "saveError": "فشل الحفظ",
     "deleteSuccess": "تم الحذف بنجاح",
     "deleteError": "فشل الحذف",

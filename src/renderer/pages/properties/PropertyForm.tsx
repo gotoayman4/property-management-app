@@ -98,6 +98,7 @@ export default function PropertyForm({
     setValue,
     watch,
     setError,
+    reset,
     formState: { errors, isDirty, isSubmitting }
   } = useForm<PropertyFormData>({
     resolver: zodResolver(propertySchema),
@@ -158,13 +159,18 @@ export default function PropertyForm({
     try {
       if (isEdit) {
         await window.api.properties.update({ id: property.id, ...data })
+        // Re-baseline so isDirty clears — the dialog X closes without a spurious
+        // unsaved-changes prompt and Save stays disabled until the next change.
+        reset(data)
         showSuccess('common.saveSuccess')
         notifyDataChanged()
         onSuccess()
       } else {
         const result = (await window.api.properties.create(data)) as Property
         setCreatedEntity(result)
-        showSuccess('common.saveSuccess')
+        reset(data)
+        // Point the user at the Documents tab that just appeared (create only).
+        showSuccess('common.saveSuccessWithDocuments')
         notifyDataChanged()
         onSuccess()
       }
@@ -180,14 +186,10 @@ export default function PropertyForm({
   }
 
   const actions = createdEntity ? (
-    <>
-      <Button onClick={onClose} disabled={isSubmitting}>
-        {t('common.cancel')}
-      </Button>
-      <Button variant="contained" color="primary" onClick={onSuccess} disabled={isSubmitting}>
-        {t('common.close')}
-      </Button>
-    </>
+    // Record already saved — a single Close button dismisses the dialog (same path as X).
+    <Button variant="contained" color="primary" onClick={onClose}>
+      {t('common.close')}
+    </Button>
   ) : (
     <>
       <Button onClick={onClose} disabled={isSubmitting}>
@@ -198,7 +200,7 @@ export default function PropertyForm({
         variant="contained"
         color="primary"
         onClick={handleSubmit(onSubmit)}
-        disabled={isSubmitting}
+        disabled={isSubmitting || !isDirty}
       >
         {t('common.save')}
       </Button>

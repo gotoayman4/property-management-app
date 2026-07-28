@@ -72,6 +72,7 @@
     "status": "Status",
     "success": "Operation completed successfully",
     "saveSuccess": "Saved successfully",
+    "saveSuccessWithDocuments": "Saved successfully! You can now upload related documents from the Documents tab.",
     "saveError": "Failed to save",
     "deleteSuccess": "Deleted successfully",
     "deleteError": "Failed to delete",

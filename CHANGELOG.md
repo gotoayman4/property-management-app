@@ -5,6 +5,17 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 Release notes on GitHub Releases are generated from this file (`scripts/extract-changelog.mjs`), so every release MUST have a section here before tagging.
 
+## [1.1.1] - 2026-07-28
+
+### Changed
+
+- Save button in the property, tenant and contract dialogs is now disabled until there are actual changes to save, and disables again right after saving
+- After creating a property, tenant or contract, the success message now points out that related documents can be uploaded from the Documents tab
+
+### Fixed
+
+- Close button (X and footer) now reliably closes the property, tenant and contract dialogs after saving — previously only Cancel worked and a spurious “unsaved changes” prompt could appear
+
 ## [1.1.0] - 2026-07-28
 
 ### Added
@@ -50,6 +61,7 @@ Release notes on GitHub Releases are generated from this file (`scripts/extract-
 - In-app auto-update system: checks GitHub Releases, verifies SHA-256 integrity, silent Inno Setup upgrade (Settings → About)
 - Bilingual (English/Arabic) Windows installer with per-user install, upgrade/downgrade handling and user-data preservation
 
+[1.1.1]: https://github.com/gotoayman4/property-management-app/releases/tag/v1.1.1
 [1.1.0]: https://github.com/gotoayman4/property-management-app/releases/tag/v1.1.0
 [1.0.2]: https://github.com/gotoayman4/property-management-app/releases/tag/v1.0.2
 [1.0.1]: https://github.com/gotoayman4/property-management-app/releases/tag/v1.0.1

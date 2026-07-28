@@ -129,7 +129,8 @@ export function TenantForm({ tenant, onSuccess, onCancel }: TenantFormProps): Re
     watch,
     setValue,
     setError,
-    formState: { errors, isSubmitting }
+    reset,
+    formState: { errors, isDirty, isSubmitting }
   } = useForm<TenantFormValues, unknown, TenantFormOutput>({
     resolver: zodResolver(tenantFormSchema),
     defaultValues
@@ -155,13 +156,17 @@ export function TenantForm({ tenant, onSuccess, onCancel }: TenantFormProps): Re
     try {
       if (isEdit && tenant) {
         await window.api.tenants.update({ id: tenant.id, ...data })
+        // Re-baseline so isDirty clears and Save stays disabled until the next change.
+        reset(data)
         showSuccess('common.saveSuccess')
         notifyDataChanged()
         onSuccess()
       } else {
         const result = (await window.api.tenants.create(data)) as { id: number }
         setCreatedEntity(result)
-        showSuccess('common.saveSuccess')
+        reset(data)
+        // Point the user at the Documents tab that just appeared (create only).
+        showSuccess('common.saveSuccessWithDocuments')
         notifyDataChanged()
         onSuccess()
       }
@@ -426,20 +431,16 @@ export function TenantForm({ tenant, onSuccess, onCancel }: TenantFormProps): Re
           }}
         >
           {createdEntity ? (
-            <>
-              <Button variant="outlined" onClick={onCancel} disabled={isSubmitting}>
-                {t('common.cancel')}
-              </Button>
-              <Button variant="contained" onClick={onSuccess} disabled={isSubmitting}>
-                {t('common.close')}
-              </Button>
-            </>
+            // Record already saved — a single Close button dismisses the dialog (same path as Cancel).
+            <Button variant="contained" onClick={onCancel}>
+              {t('common.close')}
+            </Button>
           ) : (
             <>
               <Button variant="outlined" onClick={onCancel} disabled={isSubmitting}>
                 {t('common.cancel')}
               </Button>
-              <Button type="submit" variant="contained" disabled={isSubmitting}>
+              <Button type="submit" variant="contained" disabled={isSubmitting || !isDirty}>
                 {t('common.save')}
               </Button>
             </>
