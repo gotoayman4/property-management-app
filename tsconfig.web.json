@@ -1,5 +1,8 @@
 {
-  "extends": "@electron-toolkit/tsconfig/tsconfig.web.json",
+  "$schema": "https://json.schemastore.org/tsconfig",
+  // CAVEAT: options inlined from @electron-toolkit/tsconfig/tsconfig.web.json.
+  // See tsconfig.node.json — the Netlify website build parses this file
+  // without repo-root node_modules, so it must not `extends` a package.
   "include": [
     "src/renderer/env.d.ts",
     "src/renderer/**/*",
@@ -7,13 +10,26 @@
     "src/preload/*.d.ts"
   ],
   "compilerOptions": {
+    "target": "esnext",
+    "module": "esnext",
+    "sourceMap": false,
+    "strict": true,
+    "esModuleInterop": true,
+    "moduleResolution": "bundler",
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "forceConsistentCasingInFileNames": true,
+    "skipLibCheck": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noImplicitAny": false,
+    "noImplicitReturns": true,
+    "lib": ["ESNext", "DOM", "DOM.Iterable"],
     "composite": true,
     "jsx": "react-jsx",
     "baseUrl": ".",
     "paths": {
-      "@renderer/*": [
-        "src/renderer/*"
-      ]
+      "@renderer/*": ["src/renderer/*"]
     }
   }
 }

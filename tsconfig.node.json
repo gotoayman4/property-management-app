@@ -1,7 +1,27 @@
 {
-  "extends": "@electron-toolkit/tsconfig/tsconfig.node.json",
+  "$schema": "https://json.schemastore.org/tsconfig",
+  // CAVEAT: options inlined from @electron-toolkit/tsconfig/tsconfig.node.json.
+  // The website (propmanager-website) builds on Netlify with dependencies
+  // installed ONLY in its base directory; Astro's bundler (rolldown) still
+  // parses the repo-root tsconfigs, so an `extends` into node_modules breaks
+  // the deploy. Keep this file self-contained.
   "include": ["electron.vite.config.*", "src/main/**/*", "src/preload/**/*"],
   "compilerOptions": {
+    "target": "esnext",
+    "module": "esnext",
+    "sourceMap": false,
+    "strict": true,
+    "jsx": "preserve",
+    "esModuleInterop": true,
+    "moduleResolution": "bundler",
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "forceConsistentCasingInFileNames": true,
+    "skipLibCheck": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noImplicitAny": false,
+    "noImplicitReturns": true,
     "composite": true,
     "types": ["electron-vite/node"]
   }
