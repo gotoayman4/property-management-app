@@ -5,6 +5,13 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 Release notes on GitHub Releases are generated from this file (`scripts/extract-changelog.mjs`), so every release MUST have a section here before tagging.
 
+## [1.0.2] - 2026-07-28
+
+### Fixed
+
+- App now restarts automatically after installing an in-app update (silent installer relaunch)
+- Release/CI build pipelines updated to current GitHub Actions versions (Node 24 — removes deprecation warning)
+
 ## [1.0.1] - 2026-07-28
 
 ### Added
@@ -31,5 +38,6 @@ Release notes on GitHub Releases are generated from this file (`scripts/extract-
 - In-app auto-update system: checks GitHub Releases, verifies SHA-256 integrity, silent Inno Setup upgrade (Settings → About)
 - Bilingual (English/Arabic) Windows installer with per-user install, upgrade/downgrade handling and user-data preservation
 
+[1.0.2]: https://github.com/gotoayman4/property-management-app/releases/tag/v1.0.2
 [1.0.1]: https://github.com/gotoayman4/property-management-app/releases/tag/v1.0.1
 [1.0.0]: https://github.com/gotoayman4/property-management-app/releases/tag/v1.0.0
