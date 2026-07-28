@@ -11,6 +11,8 @@ export type TriggerType =
   | 'recurring_expense_due'
   | 'document_expiring'
   | 'backup_failed'
+  | 'auto_renew_upcoming'
+  | 'contract_auto_renewed'
 
 export type TemplateLanguage = 'ar' | 'tr' | 'en'
 
@@ -58,5 +60,15 @@ export const DEFAULT_TEMPLATES: Record<TriggerType, Record<TemplateLanguage, str
     ar: 'فشلت عملية النسخ الاحتياطي التلقائي بتاريخ {due_date}. يرجى فحص المساحة وإعدادات النسخ الاحتياطي.',
     en: 'Automatic backup failed on {due_date}. Please verify disk space and backup configuration.',
     tr: '{due_date} tarihindeki otomatik yedekleme başarısız oldu. Lütfen disk alanını ve yedekleme ayarlarını kontrol edin.'
+  },
+  auto_renew_upcoming: {
+    ar: 'عقد إيجار العقار "{property_name}" ({tenant_name}) سيتم تجديده تلقائياً في {due_date}.',
+    en: 'The lease for "{property_name}" ({tenant_name}) will auto-renew on {due_date}.',
+    tr: '"{property_name}" ({tenant_name}) adresindeki kira sözleşmesi {due_date} tarihinde otomatik olarak yenilenecektir.'
+  },
+  contract_auto_renewed: {
+    ar: 'تم تجديد عقد إيجار العقار "{property_name}" ({tenant_name}) تلقائياً حتى {due_date} بقيمة {rent}.',
+    en: 'The lease for "{property_name}" ({tenant_name}) was auto-renewed to {due_date} at {rent}.',
+    tr: '"{property_name}" ({tenant_name}) adresindeki kira sözleşmesi {rent} tutarıyla {due_date} tarihine kadar otomatik olarak yenilendi.'
   }
 }

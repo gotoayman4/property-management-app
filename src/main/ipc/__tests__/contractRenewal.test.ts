@@ -27,6 +27,7 @@ vi.mock('electron', () => ({
 vi.mock('../../db/database', () => ({ db: testDb, initDatabase: () => undefined }))
 
 import { registerContractIpcHandlers } from '../contractIpc'
+import { contractRenewSchema } from '../contractSchemas'
 import { makeRegistry, invoke, resetDb, type IpcRegistry } from './ipcTestUtils'
 
 afterEach((): void => resetDb(testDb))
@@ -61,6 +62,9 @@ function seedContract(
     contract_term_years: number
     annual_increase_percent: number | null
     payment_frequency: string
+    payment_method: string | null
+    auto_renew: number
+    auto_renew_increase_percent: number | null
   }> = {}
 ): number {
   const propertyId = seedProperty('Contract Prop', overrides.currency ?? 'JOD')
@@ -77,17 +81,22 @@ function seedContract(
     contract_term_years: 1,
     has_variable_escalation: 0,
     annual_increase_percent: 5,
-    payment_frequency: 'monthly'
+    payment_frequency: 'monthly',
+    payment_method: null,
+    auto_renew: 0,
+    auto_renew_increase_percent: null
   }
   const params = { ...defaults, ...overrides }
   return testDb
     .prepare(
       `INSERT INTO contracts (contract_number, property_id, tenant_id, start_date, end_date,
          rent_amount, currency, status, contract_term_years, has_variable_escalation,
-         annual_increase_percent, payment_frequency)
+         annual_increase_percent, payment_frequency, payment_method,
+         auto_renew, auto_renew_increase_percent)
        VALUES (@contract_number, @property_id, @tenant_id, @start_date, @end_date,
                @rent_amount, @currency, @status, @contract_term_years, @has_variable_escalation,
-               @annual_increase_percent, @payment_frequency)`
+               @annual_increase_percent, @payment_frequency, @payment_method,
+               @auto_renew, @auto_renew_increase_percent)`
     )
     .run(params).lastInsertRowid as number
 }
@@ -394,5 +403,128 @@ describe('contractRenewal IPC', () => {
       cancellation_reason: string | null
     }
     expect(row.status).toBe('cancelled')
+  })
+
+  it('persists auto_renew and auto_renew_increase_percent on renewal', async () => {
+    const id = seedContract({ status: 'active', auto_renew: 0 })
+    await invoke(registry, 'contracts:renew', {
+      contract_id: id,
+      new_start_date: '2027-01-01',
+      new_end_date: '2028-01-01',
+      rent_amount: 1100,
+      security_deposit: 0,
+      has_variable_escalation: 0,
+      contract_term_years: 1,
+      annual_increase_percent: 5,
+      auto_renew: 1,
+      auto_renew_increase_percent: 4.5,
+      notes: null
+    })
+
+    const row = testDb.prepare('SELECT * FROM contracts WHERE id = ?').get(id) as {
+      auto_renew: number
+      auto_renew_increase_percent: number
+    }
+    expect(row.auto_renew).toBe(1)
+    expect(row.auto_renew_increase_percent).toBe(4.5)
+  })
+
+  it('rejects arming auto_renew on a variable-escalation renewal (AUTO_RENEW_REQUIRES_FLAT)', () => {
+    // The refine fires at the boundary; the handler wraps ZodError as INVALID_INPUT, so assert the
+    // precise error code directly against the schema (mirrors the disabled UI toggle in variable mode).
+    const parsed = contractRenewSchema.safeParse({
+      contract_id: 1,
+      new_start_date: '2027-01-01',
+      new_end_date: '2029-01-01',
+      rent_amount: 1000,
+      security_deposit: 0,
+      has_variable_escalation: 1,
+      contract_term_years: 2,
+      annual_increase_percent: null,
+      auto_renew: 1,
+      schedule: [
+        { year_number: 1, effective_start_date: '2027-01-01', rent_amount: 1000 },
+        { year_number: 2, effective_start_date: '2028-01-01', rent_amount: 1050 }
+      ]
+    })
+    expect(parsed.success).toBe(false)
+    expect(parsed.success ? [] : parsed.error.issues.map((i) => i.message)).toContain(
+      'AUTO_RENEW_REQUIRES_FLAT'
+    )
+  })
+
+  it('rejects arming auto_renew on a variable renewal at the handler (INVALID_INPUT)', async () => {
+    const id = seedContract({ status: 'active' })
+    await expect(
+      invoke(registry, 'contracts:renew', {
+        contract_id: id,
+        new_start_date: '2027-01-01',
+        new_end_date: '2029-01-01',
+        rent_amount: 1000,
+        security_deposit: 0,
+        has_variable_escalation: 1,
+        contract_term_years: 2,
+        annual_increase_percent: null,
+        auto_renew: 1,
+        schedule: [
+          { year_number: 1, effective_start_date: '2027-01-01', rent_amount: 1000 },
+          { year_number: 2, effective_start_date: '2028-01-01', rent_amount: 1050 }
+        ]
+      })
+    ).rejects.toThrow('INVALID_INPUT')
+  })
+
+  it('amends payment_frequency and payment_method when provided on renewal', async () => {
+    const id = seedContract({
+      status: 'active',
+      payment_frequency: 'monthly',
+      payment_method: 'cash'
+    })
+    await invoke(registry, 'contracts:renew', {
+      contract_id: id,
+      new_start_date: '2027-01-01',
+      new_end_date: '2028-01-01',
+      rent_amount: 1000,
+      security_deposit: 0,
+      has_variable_escalation: 0,
+      contract_term_years: 1,
+      annual_increase_percent: 5,
+      payment_frequency: 'quarterly',
+      payment_method: 'bank_transfer',
+      notes: null
+    })
+
+    const row = testDb.prepare('SELECT * FROM contracts WHERE id = ?').get(id) as {
+      payment_frequency: string
+      payment_method: string | null
+    }
+    expect(row.payment_frequency).toBe('quarterly')
+    expect(row.payment_method).toBe('bank_transfer')
+  })
+
+  it('falls back to prior payment_frequency and payment_method when omitted on renewal', async () => {
+    const id = seedContract({
+      status: 'active',
+      payment_frequency: 'quarterly',
+      payment_method: 'bank_transfer'
+    })
+    await invoke(registry, 'contracts:renew', {
+      contract_id: id,
+      new_start_date: '2027-01-01',
+      new_end_date: '2028-01-01',
+      rent_amount: 1000,
+      security_deposit: 0,
+      has_variable_escalation: 0,
+      contract_term_years: 1,
+      annual_increase_percent: 5,
+      notes: null
+    })
+
+    const row = testDb.prepare('SELECT * FROM contracts WHERE id = ?').get(id) as {
+      payment_frequency: string
+      payment_method: string | null
+    }
+    expect(row.payment_frequency).toBe('quarterly')
+    expect(row.payment_method).toBe('bank_transfer')
   })
 })

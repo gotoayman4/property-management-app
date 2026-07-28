@@ -25,7 +25,7 @@ import {
 import { GridColDef } from '@mui/x-data-grid'
 import React, { useCallback, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { DepositStatusDialog } from '../../components/DepositStatusDialog'
 import DocumentUploadForm from '../../components/DocumentUploadForm'
 import GlobalSnackbar from '../../components/GlobalSnackbar'
@@ -33,6 +33,7 @@ import StandardDialog from '../../components/StandardDialog'
 import StandardTable from '../../components/StandardTable'
 import { useSnackbar } from '../../hooks/useSnackbar'
 import { ContractDataTab } from './ContractDataTab'
+import { ContractRenewalBanner } from './ContractRenewalBanner'
 import { ContractRenewalForm } from './ContractRenewalForm'
 
 export interface ContractData {
@@ -52,6 +53,8 @@ export interface ContractData {
   has_variable_escalation: number
   annual_increase_percent: number | null
   payment_method: string | null
+  auto_renew: number
+  auto_renew_increase_percent: number | null
   notes: string | null
   cancellation_reason: string | null
   property_name: string
@@ -102,6 +105,7 @@ export default function ContractDetail(): React.ReactElement {
   const isRtl = i18n.language === 'ar'
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
   const { snack, showError, showSuccess, hideSnackbar } = useSnackbar()
 
   const [tab, setTab] = useState(0)
@@ -114,6 +118,8 @@ export default function ContractDetail(): React.ReactElement {
   const [error, setError] = useState<string | null>(null)
   const [renewalOpen, setRenewalOpen] = useState<boolean>(false)
   const [depositDialogOpen, setDepositDialogOpen] = useState<boolean>(false)
+  const [reminderDays, setReminderDays] = useState<number>(30)
+  const [savingAutoRenew, setSavingAutoRenew] = useState<boolean>(false)
 
   const fetchDetail = useCallback(async (): Promise<void> => {
     if (!id) return
@@ -150,6 +156,68 @@ export default function ContractDetail(): React.ReactElement {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchDetail()
   }, [fetchDetail])
+
+  // Expiry-cue window — mirrors the notification evaluator's contract-end reminder setting.
+  useEffect(() => {
+    window.api.settings
+      .get()
+      .then((data) => {
+        const days = (data as { reminder_days_before_contract_end?: number } | null)
+          ?.reminder_days_before_contract_end
+        if (typeof days === 'number' && days > 0) setReminderDays(days)
+      })
+      .catch(() => {
+        /* keep the 30-day default on failure */
+      })
+  }, [])
+
+  // Deep-link from an expiry / auto-renew notification (?renew=1) opens the renewal dialog once the
+  // contract has loaded and is still renewable.
+  useEffect(() => {
+    if (
+      searchParams.get('renew') === '1' &&
+      contract &&
+      (contract.status === 'active' || contract.status === 'expired')
+    ) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setRenewalOpen(true)
+    }
+  }, [searchParams, contract])
+
+  // Inline enable/disable of auto-renew from the banner. Sends the full contract payload (the
+  // update schema requires it) with only the auto_renew flag flipped.
+  const handleToggleAutoRenew = async (next: boolean): Promise<void> => {
+    if (!contract) return
+    setSavingAutoRenew(true)
+    try {
+      await window.api.contracts.update({
+        id: contract.id,
+        contract_number: contract.contract_number,
+        property_id: contract.property_id,
+        tenant_id: contract.tenant_id,
+        start_date: contract.start_date,
+        end_date: contract.end_date,
+        rent_amount: contract.rent_amount,
+        currency: contract.currency,
+        payment_frequency: contract.payment_frequency,
+        security_deposit: contract.security_deposit ?? 0,
+        status: contract.status,
+        contract_term_years: contract.contract_term_years,
+        has_variable_escalation: contract.has_variable_escalation,
+        annual_increase_percent: contract.annual_increase_percent,
+        payment_method: contract.payment_method,
+        auto_renew: next ? 1 : 0,
+        auto_renew_increase_percent: contract.auto_renew_increase_percent,
+        notes: contract.notes
+      })
+      showSuccess('common.saveSuccess')
+      fetchDetail()
+    } catch {
+      showError('common.saveError')
+    } finally {
+      setSavingAutoRenew(false)
+    }
+  }
 
   const handleDeleteDocument = async (docId: number): Promise<void> => {
     try {
@@ -304,6 +372,18 @@ export default function ContractDetail(): React.ReactElement {
           sx={{ marginInlineStart: 'auto' }}
         />
       </Box>
+
+      {/* Renewal banner: expired / within-window proximity cue + inline auto-renew toggle. */}
+      <ContractRenewalBanner
+        status={contract.status}
+        endDate={contract.end_date}
+        autoRenew={contract.auto_renew}
+        hasVariableEscalation={contract.has_variable_escalation}
+        reminderDays={reminderDays}
+        savingAutoRenew={savingAutoRenew}
+        onRenew={() => setRenewalOpen(true)}
+        onToggleAutoRenew={handleToggleAutoRenew}
+      />
       <Tabs value={tab} onChange={(_, v) => setTab(v)} sx={{ mb: 3 }}>
         <Tab label={t('contract.detailTabData')} />
         <Tab label={t('contract.detailTabSchedule')} />

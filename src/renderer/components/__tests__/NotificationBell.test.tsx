@@ -10,8 +10,17 @@
 // @vitest-environment jsdom
 import '@testing-library/jest-dom/vitest'
 import { render, screen, fireEvent, waitFor, cleanup } from '@testing-library/react'
+import { MemoryRouter } from 'react-router-dom'
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import NotificationBell from '../NotificationBell'
+
+// NotificationBell calls useNavigate for deep-linking, so it must render inside a Router.
+const renderBell = (): ReturnType<typeof render> =>
+  render(
+    <MemoryRouter>
+      <NotificationBell />
+    </MemoryRouter>
+  )
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
@@ -89,19 +98,19 @@ afterEach(() => {
 
 describe('NotificationBell', () => {
   it('renders the bell icon button', () => {
-    render(<NotificationBell />)
+    renderBell()
     expect(screen.getByRole('button', { name: 'notifications.label' })).toBeInTheDocument()
   })
 
   it('shows unread count badge after fetching', async () => {
-    render(<NotificationBell />)
+    renderBell()
     await waitFor(() => {
       expect(screen.getByText('2')).toBeInTheDocument()
     })
   })
 
   it('opens popover on bell click and shows notifications', async () => {
-    render(<NotificationBell />)
+    renderBell()
     fireEvent.click(screen.getByRole('button', { name: 'notifications.label' }))
     await waitFor(() => {
       expect(screen.getByText('notifications.title')).toBeInTheDocument()
@@ -112,7 +121,7 @@ describe('NotificationBell', () => {
 
   it('shows empty state when no notifications', async () => {
     mockList.mockResolvedValue([])
-    render(<NotificationBell />)
+    renderBell()
     fireEvent.click(screen.getByRole('button', { name: 'notifications.label' }))
     await waitFor(() => {
       expect(screen.getByText('notifications.empty')).toBeInTheDocument()
@@ -120,7 +129,7 @@ describe('NotificationBell', () => {
   })
 
   it('shows mark-all-read button when unread count > 0', async () => {
-    render(<NotificationBell />)
+    renderBell()
     fireEvent.click(screen.getByRole('button', { name: 'notifications.label' }))
     await waitFor(() => {
       expect(screen.getByText('notifications.markAllRead')).toBeInTheDocument()
@@ -128,7 +137,7 @@ describe('NotificationBell', () => {
   })
 
   it('calls markAllRead when mark-all-read button is clicked', async () => {
-    render(<NotificationBell />)
+    renderBell()
     fireEvent.click(screen.getByRole('button', { name: 'notifications.label' }))
     await waitFor(() => {
       expect(screen.getByText('notifications.markAllRead')).toBeInTheDocument()

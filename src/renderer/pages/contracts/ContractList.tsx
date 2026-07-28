@@ -5,11 +5,12 @@ import {
   Delete as DeleteIcon,
   Description as DescriptionIcon,
   Edit as EditIcon,
-  Visibility as ViewIcon
+  Visibility as ViewIcon,
+  Warning as WarningIcon
 } from '@mui/icons-material'
 import { Box, Button, Chip, IconButton, Link, Tooltip } from '@mui/material'
 import { GridColDef } from '@mui/x-data-grid'
-import React, { useCallback, useState } from 'react'
+import React, { useCallback, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 import ConfirmDialog from '../../components/ConfirmDialog'
@@ -44,6 +45,7 @@ interface Contract {
   status: 'draft' | 'active' | 'expired' | 'renewing' | 'cancelled'
   contract_term_years: number
   has_variable_escalation: number
+  auto_renew: number
   notes?: string
 }
 
@@ -66,6 +68,21 @@ export function ContractList(): React.ReactElement {
 
   const { data, loading, error, refetch } = useFetch(fetchContracts)
   const contracts = data ?? []
+
+  // Expiry-cue window — mirrors the notification evaluator's contract-end reminder setting.
+  const [reminderDays, setReminderDays] = useState<number>(30)
+  useEffect(() => {
+    window.api.settings
+      .get()
+      .then((data) => {
+        const days = (data as { reminder_days_before_contract_end?: number } | null)
+          ?.reminder_days_before_contract_end
+        if (typeof days === 'number' && days > 0) setReminderDays(days)
+      })
+      .catch(() => {
+        /* keep the 30-day default on failure */
+      })
+  }, [])
 
   const handleAddClick = (): void => {
     setSelectedContract(null)
@@ -120,6 +137,14 @@ export function ContractList(): React.ReactElement {
     }
   }
 
+  // Whole-day distance from today to the given ISO date (negative when already past).
+  const daysUntil = (isoDate: string): number => {
+    const end = new Date(`${isoDate}T00:00:00`)
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    return Math.round((end.getTime() - today.getTime()) / 86_400_000)
+  }
+
   const getStatusColor = (status: string): 'success' | 'warning' | 'error' | 'default' => {
     switch (status) {
       case 'active':
@@ -167,10 +192,48 @@ export function ContractList(): React.ReactElement {
     {
       field: 'duration',
       headerName: `${t('contract.startDate')} - ${t('contract.endDate')}`,
-      flex: 2,
+      flex: 2.4,
       renderCell: (params) => {
         const row = params.row as Contract
-        return `${row.start_date} / ${row.end_date}`
+        // Proximity cue only makes sense for live/expired contracts (BR: renewable statuses).
+        const showCue = row.status === 'active' || row.status === 'expired'
+        const days = daysUntil(row.end_date)
+        const isPastDue = showCue && days < 0
+        const isExpiringSoon = showCue && days >= 0 && days <= reminderDays
+        return (
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, flexWrap: 'wrap' }}>
+            <Box component="span">{`${row.start_date} / ${row.end_date}`}</Box>
+            {isPastDue && (
+              <Chip
+                icon={<WarningIcon fontSize="small" />}
+                label={t('contract.pastDue')}
+                color="error"
+                size="small"
+                variant="outlined"
+              />
+            )}
+            {isExpiringSoon && (
+              <Chip
+                icon={<WarningIcon fontSize="small" />}
+                label={t('contract.expiresInDays', { days })}
+                color="warning"
+                size="small"
+                variant="outlined"
+              />
+            )}
+            {row.auto_renew === 1 && (
+              <Tooltip title={t('contract.autoRenewBadge')}>
+                <Chip
+                  icon={<RenewIcon fontSize="small" />}
+                  label={t('contract.auto')}
+                  color="info"
+                  size="small"
+                  variant="outlined"
+                />
+              </Tooltip>
+            )}
+          </Box>
+        )
       }
     },
     {

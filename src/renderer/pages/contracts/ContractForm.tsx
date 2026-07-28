@@ -21,7 +21,9 @@ import EntityDocumentsTab from '../../components/EntityDocumentsTab'
 import { FormField } from '../../components/FormField'
 import GlobalSnackbar from '../../components/GlobalSnackbar'
 import { useSnackbar } from '../../hooks/useSnackbar'
+import { addYear, round2 } from '../../utils/contractDates'
 import { notifyDataChanged } from '../../utils/eventBus'
+import { AutoRenewSection } from './AutoRenewSection'
 import { ContractIncreaseMode } from './ContractIncreaseMode'
 import type { EscalationRow } from './EscalationScheduleEditor'
 
@@ -46,6 +48,8 @@ const contractSchema = z
     status: z.enum(['draft', 'active', 'expired', 'renewing', 'cancelled']).default('draft'),
     annual_increase_percent: z.number().min(0).max(100).optional().nullable(),
     payment_method: z.string().optional().nullable(),
+    auto_renew: z.number().int().min(0).max(1).default(0),
+    auto_renew_increase_percent: z.number().min(0).max(100).optional().nullable(),
     notes: z.string().optional().nullable()
   })
   .refine((d) => new Date(d.end_date) > new Date(d.start_date), {
@@ -83,6 +87,11 @@ interface Contract {
   payment_frequency: 'monthly' | 'quarterly' | 'semi-annual' | 'annual'
   security_deposit: number
   status: 'draft' | 'active' | 'expired' | 'renewing' | 'cancelled'
+  has_variable_escalation?: number
+  annual_increase_percent?: number | null
+  payment_method?: string | null
+  auto_renew?: number
+  auto_renew_increase_percent?: number | null
   notes?: string
 }
 
@@ -127,6 +136,10 @@ export function ContractForm({
         payment_frequency: contract.payment_frequency,
         security_deposit: contract.security_deposit,
         status: contract.status,
+        annual_increase_percent: contract.annual_increase_percent ?? null,
+        payment_method: contract.payment_method ?? null,
+        auto_renew: contract.auto_renew ?? 0,
+        auto_renew_increase_percent: contract.auto_renew_increase_percent ?? null,
         notes: contract.notes || ''
       }
     : {
@@ -138,6 +151,8 @@ export function ContractForm({
         payment_frequency: 'monthly',
         security_deposit: 0.0,
         status: 'draft',
+        auto_renew: 0,
+        auto_renew_increase_percent: null,
         notes: ''
       }
 
@@ -219,7 +234,11 @@ export function ContractForm({
       const base = {
         ...data,
         contract_term_years: increaseMode === 'variable' ? schedule.length : 1,
-        has_variable_escalation: increaseMode === 'variable' ? 1 : 0
+        has_variable_escalation: increaseMode === 'variable' ? 1 : 0,
+        // Auto-renew is flat-mode only (AUTO_RENEW_REQUIRES_FLAT) — force it off in variable mode.
+        auto_renew: increaseMode === 'variable' ? 0 : data.auto_renew,
+        auto_renew_increase_percent:
+          increaseMode === 'variable' ? null : (data.auto_renew_increase_percent ?? null)
       }
       let newId: number
       if (isEdit && contract) {
@@ -453,6 +472,8 @@ export function ContractForm({
             control={control}
           />
 
+          <AutoRenewSection control={control} disabled={increaseMode === 'variable'} />
+
           <Grid size={{ xs: 12 }}>
             <FormField
               name="notes"
@@ -501,14 +522,4 @@ export function ContractForm({
       <GlobalSnackbar state={snack} onClose={hideSnackbar} />
     </>
   )
-}
-
-function addYear(iso: string): string {
-  const d = new Date(iso + 'T00:00:00Z')
-  d.setUTCFullYear(d.getUTCFullYear() + 1)
-  return d.toISOString().split('T')[0]
-}
-
-function round2(n: number): number {
-  return Math.round(n * 100) / 100
 }

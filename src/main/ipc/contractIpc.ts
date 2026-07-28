@@ -127,14 +127,34 @@ export function registerContractIpcHandlers(): void {
             `INSERT INTO contracts (
                contract_number, property_id, tenant_id, start_date, end_date, rent_amount, currency,
                payment_frequency, security_deposit, status, contract_term_years,
-               has_variable_escalation, annual_increase_percent, payment_method, notes
+               has_variable_escalation, annual_increase_percent, payment_method,
+               auto_renew, auto_renew_increase_percent, notes
              ) VALUES (
                @contract_number, @property_id, @tenant_id, @start_date, @end_date, @rent_amount, @currency,
                @payment_frequency, @security_deposit, @status, @contract_term_years,
-               @has_variable_escalation, @annual_increase_percent, @payment_method, @notes
+               @has_variable_escalation, @annual_increase_percent, @payment_method,
+               @auto_renew, @auto_renew_increase_percent, @notes
              )`
           )
-          .run(v)
+          .run({
+            contract_number: v.contract_number,
+            property_id: v.property_id,
+            tenant_id: v.tenant_id,
+            start_date: v.start_date,
+            end_date: v.end_date,
+            rent_amount: v.rent_amount,
+            currency: v.currency,
+            payment_frequency: v.payment_frequency,
+            security_deposit: v.security_deposit,
+            status: v.status,
+            contract_term_years: v.contract_term_years,
+            has_variable_escalation: v.has_variable_escalation,
+            annual_increase_percent: v.annual_increase_percent ?? null,
+            payment_method: v.payment_method ?? null,
+            auto_renew: v.auto_renew,
+            auto_renew_increase_percent: v.auto_renew_increase_percent ?? null,
+            notes: v.notes ?? null
+          })
         insertedId = Number(res.lastInsertRowid)
         logHistory(insertedId, 'created', null)
         syncPropertyStatus(v.property_id)
@@ -174,10 +194,30 @@ export function registerContractIpcHandlers(): void {
              start_date = @start_date, end_date = @end_date, rent_amount = @rent_amount, currency = @currency,
              payment_frequency = @payment_frequency, security_deposit = @security_deposit, status = @status,
              contract_term_years = @contract_term_years, has_variable_escalation = @has_variable_escalation,
-             annual_increase_percent = @annual_increase_percent, payment_method = @payment_method, notes = @notes,
+             annual_increase_percent = @annual_increase_percent, payment_method = @payment_method,
+             auto_renew = @auto_renew, auto_renew_increase_percent = @auto_renew_increase_percent, notes = @notes,
              updated_at = CURRENT_TIMESTAMP
            WHERE id = @id`
-        ).run(v)
+        ).run({
+          id: v.id,
+          contract_number: v.contract_number,
+          property_id: v.property_id,
+          tenant_id: v.tenant_id,
+          start_date: v.start_date,
+          end_date: v.end_date,
+          rent_amount: v.rent_amount,
+          currency: v.currency,
+          payment_frequency: v.payment_frequency,
+          security_deposit: v.security_deposit,
+          status: v.status,
+          contract_term_years: v.contract_term_years,
+          has_variable_escalation: v.has_variable_escalation,
+          annual_increase_percent: v.annual_increase_percent ?? null,
+          payment_method: v.payment_method ?? null,
+          auto_renew: v.auto_renew,
+          auto_renew_increase_percent: v.auto_renew_increase_percent ?? null,
+          notes: v.notes ?? null
+        })
         logHistory(v.id, 'amended', old)
         syncPropertyStatus(v.property_id)
         const oldProp = old.property_id as number
@@ -296,6 +336,8 @@ export function registerContractIpcHandlers(): void {
              has_variable_escalation = @has_variable_escalation,
              contract_term_years = @contract_term_years,
              annual_increase_percent = @annual_increase_percent,
+             payment_frequency = @payment_frequency, payment_method = @payment_method,
+             auto_renew = @auto_renew, auto_renew_increase_percent = @auto_renew_increase_percent,
              status = 'active', cancellation_reason = NULL,
              notes = @notes, updated_at = CURRENT_TIMESTAMP
            WHERE id = @contract_id`
@@ -308,6 +350,11 @@ export function registerContractIpcHandlers(): void {
           has_variable_escalation: v.has_variable_escalation,
           contract_term_years: v.contract_term_years,
           annual_increase_percent: v.annual_increase_percent ?? null,
+          // Manual renewal may amend frequency/method; fall back to the prior values when omitted.
+          payment_frequency: v.payment_frequency ?? (old.payment_frequency as string),
+          payment_method: v.payment_method ?? (old.payment_method as string | null) ?? null,
+          auto_renew: v.auto_renew,
+          auto_renew_increase_percent: v.auto_renew_increase_percent ?? null,
           notes: v.notes ?? null
         })
 

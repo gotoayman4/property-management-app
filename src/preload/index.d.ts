@@ -130,6 +130,8 @@ interface ContractRow {
   has_variable_escalation: number
   annual_increase_percent: number | null
   payment_method: string | null
+  auto_renew: number
+  auto_renew_increase_percent: number | null
   notes: string | null
   cancellation_reason: string | null
   deposit_status: string | null

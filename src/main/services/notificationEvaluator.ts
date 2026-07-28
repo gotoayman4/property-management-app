@@ -9,7 +9,7 @@ import { type Database } from 'better-sqlite3'
 import { db } from '../db/database'
 import { type TriggerType } from './notificationTemplates'
 
-function resolveTemplateMessage(
+export function resolveTemplateMessage(
   triggerType: TriggerType,
   language: string,
   vars: Record<string, string>,
@@ -37,7 +37,10 @@ function resolveTemplateMessage(
   return body
 }
 
-function resolveLanguage(tenantPrefLang: string | null | undefined, appLanguage: string): string {
+export function resolveLanguage(
+  tenantPrefLang: string | null | undefined,
+  appLanguage: string
+): string {
   if (tenantPrefLang) return tenantPrefLang
   return appLanguage || 'en'
 }
@@ -175,7 +178,8 @@ export function evaluateNotifications(dbParam?: Database): void {
 
     const expiringContracts = targetDb
       .prepare(
-        `SELECT c.id, c.end_date, p.name as property_name, t.fullname as tenant_name, t.preferred_language as tenant_lang
+        `SELECT c.id, c.end_date, c.auto_renew, c.has_variable_escalation,
+                p.name as property_name, t.fullname as tenant_name, t.preferred_language as tenant_lang
          FROM contracts c
          JOIN properties p ON c.property_id = p.id
          JOIN tenants t ON c.tenant_id = t.id
@@ -184,6 +188,8 @@ export function evaluateNotifications(dbParam?: Database): void {
       .all(contractExpStr, today) as Array<{
       id: number
       end_date: string
+      auto_renew: number
+      has_variable_escalation: number
       property_name: string
       tenant_name: string
       tenant_lang: string | null
@@ -196,22 +202,44 @@ export function evaluateNotifications(dbParam?: Database): void {
         due_date: contract.end_date
       }
       const lang = resolveLanguage(contract.tenant_lang, appLanguage)
-      const message = resolveTemplateMessage('contract_expiring', lang, vars, templateMap)
-      insert.run(
-        'contract_expiry',
-        'contract',
-        contract.id,
-        'contract_expiring_title',
-        message ?? `Lease contract for "${contract.property_name}" expires on ${contract.end_date}`,
-        'notification.body.contractExpiring',
-        JSON.stringify(vars),
-        contract.end_date,
-        'contract_expiry',
-        'contract',
-        contract.id,
-
-        contract.end_date
-      )
+      // Contracts armed for auto-renewal get a reassuring "will auto-renew" variant instead of
+      // the plain expiry warning (only flat-mode contracts can be armed — see AUTO_RENEW_REQUIRES_FLAT).
+      const willAutoRenew = contract.auto_renew === 1 && contract.has_variable_escalation === 0
+      if (willAutoRenew) {
+        const message = resolveTemplateMessage('auto_renew_upcoming', lang, vars, templateMap)
+        insert.run(
+          'auto_renew_upcoming',
+          'contract',
+          contract.id,
+          'auto_renew_upcoming_title',
+          message ??
+            `Lease for "${contract.property_name}" will auto-renew on ${contract.end_date}`,
+          'notification.body.autoRenewUpcoming',
+          JSON.stringify(vars),
+          contract.end_date,
+          'auto_renew_upcoming',
+          'contract',
+          contract.id,
+          contract.end_date
+        )
+      } else {
+        const message = resolveTemplateMessage('contract_expiring', lang, vars, templateMap)
+        insert.run(
+          'contract_expiry',
+          'contract',
+          contract.id,
+          'contract_expiring_title',
+          message ??
+            `Lease contract for "${contract.property_name}" expires on ${contract.end_date}`,
+          'notification.body.contractExpiring',
+          JSON.stringify(vars),
+          contract.end_date,
+          'contract_expiry',
+          'contract',
+          contract.id,
+          contract.end_date
+        )
+      }
     }
 
     // 4. Escalation Upcoming

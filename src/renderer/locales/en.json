@@ -532,7 +532,30 @@
     "depositRefundAmount": "Refund Amount",
     "depositForfeitAmount": "Forfeit Amount",
     "depositAmountMismatch": "Refund + Forfeit must equal the total deposit amount.",
-    "depositStatusUpdated": "Deposit status updated successfully."
+    "depositStatusUpdated": "Deposit status updated successfully.",
+    "auto": "Auto",
+    "autoRenewBadge": "This contract will auto-renew at the end of its term.",
+    "expiresInDays": "Expires in {{days}} days",
+    "pastDue": "Past due",
+    "autoRenewEnable": "Enable auto-renewal",
+    "autoRenewHelp": "When enabled, this contract renews automatically at term end for another identical term.",
+    "autoRenewVariableDisabled": "Auto-renewal is unavailable for multi-year variable-escalation contracts.",
+    "autoRenewIncreasePercent": "Auto-renew Yearly Increase %",
+    "incrementHelper": "Rent Increment Calculator",
+    "regularIncreasePercent": "Regular Increase %",
+    "oneTimeAdjustmentType": "One-time Adjustment",
+    "oneTimePercent": "Percent (%)",
+    "oneTimeAmount": "Fixed Amount",
+    "oneTimeAdjustment": "One-time Adjustment Value",
+    "computedNewRent": "Computed New Rent",
+    "oneTimeNotePercent": "One-time adjustment: +{{value}}%",
+    "oneTimeNoteAmount": "One-time adjustment: +{{value}} {{currency}}",
+    "renewalComparison": "Old → New Comparison",
+    "renewalComparisonTerm": "Term: {{oldStart}} → {{oldEnd}}  ⇒  {{newStart}} → {{newEnd}}",
+    "renewalComparisonRent": "Rent: {{oldRent}}  ⇒  {{newRent}} {{currency}}",
+    "renewalBannerExpired": "This contract expired on {{date}}. Renew it to continue the tenancy.",
+    "renewalBannerExpiring": "This contract expires in {{days}} days (on {{date}}).",
+    "renewalBannerAutoOn": "It will auto-renew on {{date}}."
   },
   "payment": {
     "title": "Payments & Income",
@@ -888,7 +911,9 @@
       "document_expiry": "Document Expiry",
       "document_expiring": "Document Expiring",
       "recurring_expense_due": "Recurring Expense",
-      "backup_failed": "Backup Failed"
+      "backup_failed": "Backup Failed",
+      "auto_renew_upcoming": "Auto-Renewal Upcoming",
+      "contract_auto_renewed": "Contract Auto-Renewed"
     }
   },
   "notification": {
@@ -901,7 +926,9 @@
       "escalationUpcoming": "Rent escalation upcoming notification",
       "documentExpiring": "Document expiring notification",
       "recurringExpenseDue": "Recurring expense due notification",
-      "backupFailed": "Backup failed notification"
+      "backupFailed": "Backup failed notification",
+      "autoRenewUpcoming": "Contract will auto-renew notification",
+      "contractAutoRenewed": "Contract auto-renewed notification"
     }
   },
   "auth": {

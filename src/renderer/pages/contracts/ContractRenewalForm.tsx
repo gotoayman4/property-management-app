@@ -8,8 +8,11 @@ import {
   FormControlLabel,
   FormLabel,
   Grid,
+  InputLabel,
+  MenuItem,
   Radio,
   RadioGroup,
+  Select,
   TextField,
   Typography
 } from '@mui/material'
@@ -20,8 +23,11 @@ import { z } from 'zod'
 import { AmountField } from '../../components/AmountField'
 import { CurrencyInput } from '../../components/CurrencyInput'
 import { FormField } from '../../components/FormField'
+import { addYear, addYears, round2 } from '../../utils/contractDates'
+import { AutoRenewSection } from './AutoRenewSection'
 import type { IncreaseMode } from './ContractForm'
 import { EscalationScheduleEditor, type EscalationRow } from './EscalationScheduleEditor'
+import { RenewalIncrementPanel } from './RenewalIncrementPanel'
 
 /**
  * INTENT: Renew an existing contract in place — extends the term, optionally changes the rent
@@ -41,6 +47,10 @@ const renewalSchema = z
     rent_amount: z.number().positive('rentRequired'),
     security_deposit: z.number().nonnegative().default(0.0),
     annual_increase_percent: z.number().min(0).max(100).optional().nullable(),
+    payment_frequency: z.enum(['monthly', 'quarterly', 'semi-annual', 'annual']).default('monthly'),
+    payment_method: z.string().optional().nullable(),
+    auto_renew: z.number().int().min(0).max(1).default(0),
+    auto_renew_increase_percent: z.number().min(0).max(100).optional().nullable(),
     notes: z.string().optional().nullable()
   })
   .refine((d) => new Date(d.new_end_date) > new Date(d.new_start_date), {
@@ -105,20 +115,31 @@ export function ContractRenewalForm({
 
   // Default the renewal start date to the current end date (the natural next-term start).
   const defaultStartDate = sourceContract.end_date
+  // Smart end-date default: prior term duration (whole years) added to the new start date, so the
+  // user rarely has to hand-type it. contract_term_years is >= 1 (flat contracts default to 1).
+  const defaultEndDate = addYears(defaultStartDate, Math.max(sourceContract.contract_term_years, 1))
 
   const defaultValues: RenewalFormValues = {
     new_start_date: defaultStartDate,
-    new_end_date: '',
+    new_end_date: defaultEndDate,
     rent_amount: sourceContract.rent_amount,
     security_deposit: sourceContract.security_deposit ?? 0,
     annual_increase_percent: sourceContract.annual_increase_percent ?? null,
+    payment_frequency: 'monthly',
+    payment_method: null,
+    auto_renew: 0,
+    auto_renew_increase_percent: null,
     notes: sourceContract.notes ?? ''
   }
+
+  // One-time renewal adjustment note produced by the increment calculator (appended on submit).
+  const [oneTimeDescription, setOneTimeDescription] = useState<string | null>(null)
 
   const {
     control,
     handleSubmit,
     watch,
+    setValue,
     setError,
     formState: { errors, isSubmitting }
   } = useForm<RenewalFormValues, unknown, RenewalFormOutput>({
@@ -164,6 +185,10 @@ export function ContractRenewalForm({
   }, [increaseMode, startDate])
 
   const onSubmit = async (data: RenewalFormOutput): Promise<void> => {
+    // Append the one-time adjustment description (if any) to the renewal notes.
+    const combinedNotes = [data.notes?.trim() || '', oneTimeDescription || '']
+      .filter(Boolean)
+      .join(' — ')
     const payload = {
       contract_id: sourceContract.id,
       new_start_date: data.new_start_date,
@@ -174,6 +199,12 @@ export function ContractRenewalForm({
       contract_term_years: increaseMode === 'variable' ? Math.max(schedule.length, 1) : 1,
       annual_increase_percent:
         increaseMode === 'flat' ? (data.annual_increase_percent ?? null) : null,
+      payment_frequency: data.payment_frequency,
+      payment_method: data.payment_method ?? null,
+      // Auto-renew is flat-mode only; force it off when renewing into variable mode.
+      auto_renew: increaseMode === 'variable' ? 0 : data.auto_renew,
+      auto_renew_increase_percent:
+        increaseMode === 'variable' ? null : (data.auto_renew_increase_percent ?? null),
       schedule:
         increaseMode === 'variable'
           ? schedule.map((r) => ({
@@ -184,7 +215,7 @@ export function ContractRenewalForm({
               notes: r.notes
             }))
           : undefined,
-      notes: data.notes
+      notes: combinedNotes || null
     }
     try {
       await window.api.contracts.renew(payload)
@@ -276,6 +307,38 @@ export function ContractRenewalForm({
             endAdornment={<strong>{currency}</strong>}
           />
         </Grid>
+        <Grid size={{ xs: 12, sm: 6 }}>
+          <FormControl fullWidth>
+            <InputLabel>{t('contract.frequency')}</InputLabel>
+            <Controller
+              name="payment_frequency"
+              control={control}
+              render={({ field }) => (
+                <Select {...field} label={t('contract.frequency')}>
+                  <MenuItem value="monthly">{t('contract.monthly')}</MenuItem>
+                  <MenuItem value="quarterly">{t('contract.quarterly')}</MenuItem>
+                  <MenuItem value="semi-annual">{t('contract.semiAnnual')}</MenuItem>
+                  <MenuItem value="annual">{t('contract.annual')}</MenuItem>
+                </Select>
+              )}
+            />
+          </FormControl>
+        </Grid>
+        <Grid size={{ xs: 12, sm: 6 }}>
+          <Controller
+            name="payment_method"
+            control={control}
+            render={({ field }) => (
+              <TextField
+                {...field}
+                value={field.value ?? ''}
+                onChange={(e) => field.onChange(e.target.value === '' ? null : e.target.value)}
+                label={t('contract.paymentMethod')}
+                fullWidth
+              />
+            )}
+          />
+        </Grid>
 
         {/* Increase mode toggle (FR-CON-09 / FR-CON-13) */}
         <Grid size={{ xs: 12 }}>
@@ -299,23 +362,15 @@ export function ContractRenewalForm({
         </Grid>
 
         {increaseMode === 'flat' ? (
-          <Grid size={{ xs: 12, sm: 6 }}>
-            <Controller
-              name="annual_increase_percent"
-              control={control}
-              render={({ field }) => (
-                <TextField
-                  {...field}
-                  value={field.value ?? ''}
-                  onChange={(e) =>
-                    field.onChange(e.target.value === '' ? null : Number(e.target.value))
-                  }
-                  label={t('contract.annualIncreasePercent')}
-                  fullWidth
-                />
-              )}
-            />
-          </Grid>
+          <RenewalIncrementPanel
+            baseRent={sourceContract.rent_amount}
+            currency={currency}
+            onComputed={(newRent, regularPercent) => {
+              setValue('rent_amount', newRent, { shouldValidate: true })
+              setValue('annual_increase_percent', regularPercent)
+            }}
+            onOneTimeDescriptionChange={setOneTimeDescription}
+          />
         ) : (
           <Grid size={{ xs: 12 }}>
             <EscalationScheduleEditor
@@ -327,6 +382,32 @@ export function ContractRenewalForm({
             />
           </Grid>
         )}
+
+        {/* Arm auto-renewal for the next cycle (flat mode only). */}
+        <AutoRenewSection control={control} disabled={increaseMode === 'variable'} />
+
+        {/* Old → new comparison so the change is verifiable at a glance. */}
+        <Grid size={{ xs: 12 }}>
+          <Divider sx={{ my: 1 }} />
+          <Typography variant="subtitle2" gutterBottom>
+            {t('contract.renewalComparison')}
+          </Typography>
+          <Typography variant="body2" color="text.secondary">
+            {t('contract.renewalComparisonTerm', {
+              oldStart: sourceContract.start_date,
+              oldEnd: sourceContract.end_date,
+              newStart: watch('new_start_date'),
+              newEnd: watch('new_end_date')
+            })}
+          </Typography>
+          <Typography variant="body2" color="text.secondary">
+            {t('contract.renewalComparisonRent', {
+              oldRent: sourceContract.rent_amount,
+              newRent: round2(Number(watch('rent_amount')) || 0),
+              currency
+            })}
+          </Typography>
+        </Grid>
 
         <Grid size={{ xs: 12 }}>
           <FormField
@@ -359,14 +440,4 @@ export function ContractRenewalForm({
       </Box>
     </Box>
   )
-}
-
-function addYear(iso: string): string {
-  const d = new Date(iso + 'T00:00:00Z')
-  d.setUTCFullYear(d.getUTCFullYear() + 1)
-  return d.toISOString().split('T')[0]
-}
-
-function round2(n: number): number {
-  return Math.round(n * 100) / 100
 }

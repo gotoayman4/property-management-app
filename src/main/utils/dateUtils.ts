@@ -37,3 +37,15 @@ export function addDaysDate(d: Date, n: number): Date {
   r.setDate(r.getDate() + n)
   return r
 }
+
+/**
+ * Add N calendar years to a YYYY-MM-DD string, preserving month/day (UTC).
+ * INTENT: term-length preservation for auto-renewal — the new term is the same number of years
+ *         as the prior term (contracts.contract_term_years), so the end date shifts by whole
+ *         years without day drift across leap years.
+ */
+export function addYearsISO(iso: string, years: number): string {
+  const d = new Date(iso + 'T00:00:00Z')
+  d.setUTCFullYear(d.getUTCFullYear() + years)
+  return d.toISOString().split('T')[0]
+}

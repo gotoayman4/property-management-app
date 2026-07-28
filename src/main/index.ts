@@ -24,6 +24,7 @@ import { registerReportsIpcHandlers } from './ipc/reportsIpc'
 import { registerSearchIpcHandlers } from './ipc/searchIpc'
 import { registerTenantIpcHandlers } from './ipc/tenantIpc'
 import { registerUpdateIpcHandlers, startAutoUpdateChecks } from './ipc/updateIpc'
+import { applyDueAutoRenewals } from './services/autoRenewalService'
 import { startBackupScheduler, stopBackupScheduler } from './services/backupScheduler'
 import { createBackup, pruneOldBackups } from './services/backupService'
 import { applyDueEscalations } from './services/escalationService'
@@ -96,6 +97,10 @@ app.whenReady().then(() => {
   // Auto-update (ADR-003 §4 amendment): version metadata + GitHub Releases update checks.
   registerUpdateIpcHandlers()
   startAutoUpdateChecks()
+
+  // FR-CON-04b: Auto-renew any due opt-in contracts BEFORE evaluating notifications and
+  //             escalations, so downstream logic sees the renewed (current-term) contract state.
+  applyDueAutoRenewals(db)
 
   // Evaluate notifications on startup - check for rent due, contract expiry, etc.
   evaluateNotifications()

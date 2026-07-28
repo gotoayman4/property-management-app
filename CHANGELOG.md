@@ -5,6 +5,16 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 Release notes on GitHub Releases are generated from this file (`scripts/extract-changelog.mjs`), so every release MUST have a section here before tagging.
 
+## [1.1.3] - 2026-07-28
+
+### Added
+
+- Automatic contract renewal: contracts can opt in to auto-renew (with an optional fixed yearly increase %) — due contracts are renewed automatically at app launch, with the prior term preserved in the history log and a notification so the renewal is never silent
+- Smarter manual renewal: the new end date is pre-filled from the prior term length, and an increase calculator (regular % plus a one-time adjustment) computes the new rent, with an old → new comparison summary before submitting
+- Manual renewal can now amend the payment frequency and payment method for the new term
+- Contract list shows expiry cues ("expires in N days" / past due) and an "auto" badge for auto-renewing contracts; the contract page shows a renewal banner with a one-click Renew button and an inline auto-renew toggle
+- Expiry and auto-renewal notifications now deep-link straight into the renewal flow
+
 ## [1.1.2] - 2026-07-28
 
 ### Fixed

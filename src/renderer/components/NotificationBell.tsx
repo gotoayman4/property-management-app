@@ -18,11 +18,14 @@ import {
 } from '@mui/material'
 import React, { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
+import { useNavigate } from 'react-router-dom'
 import { useDirection } from '../hooks/useDirection'
 
 interface Notification {
   id: number
   notification_type: string
+  entity_type: string
+  entity_id: number
   title: string
   message: string
   due_date: string | null
@@ -34,14 +37,24 @@ const TYPE_COLORS: Record<string, 'warning' | 'error' | 'info' | 'success'> = {
   rent_due: 'warning',
   contract_expiry: 'error',
   contract_expiring: 'error',
+  auto_renew_upcoming: 'warning',
+  contract_auto_renewed: 'success',
   document_expiry: 'info',
   document_expiring: 'info',
   recurring_expense_due: 'success'
 }
 
+// Contract notifications that should deep-link straight into the renewal flow (?renew=1).
+const RENEWAL_DEEP_LINK_TYPES = new Set([
+  'contract_expiry',
+  'contract_expiring',
+  'auto_renew_upcoming'
+])
+
 export default function NotificationBell(): React.JSX.Element {
   const { t } = useTranslation()
   const isRtl = useDirection()
+  const navigate = useNavigate()
   const [notifications, setNotifications] = useState<Notification[]>([])
   const [unreadCount, setUnreadCount] = useState(0)
   const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null)
@@ -85,6 +98,17 @@ export default function NotificationBell(): React.JSX.Element {
       setUnreadCount((prev) => Math.max(0, prev - 1))
     } catch {
       /* silent */
+    }
+  }
+
+  // Mark read, then deep-link contract notifications to their detail page (renewal ones open the
+  // renewal dialog via ?renew=1). Non-contract notifications just mark read in place.
+  const handleNotificationClick = (n: Notification): void => {
+    handleMarkRead(n.id)
+    if (n.entity_type === 'contract' && n.entity_id) {
+      handleClose()
+      const suffix = RENEWAL_DEEP_LINK_TYPES.has(n.notification_type) ? '?renew=1' : ''
+      navigate(`/contracts/${n.entity_id}${suffix}`)
     }
   }
 
@@ -146,7 +170,7 @@ export default function NotificationBell(): React.JSX.Element {
                     bgcolor: n.is_read ? 'transparent' : 'action.hover',
                     cursor: 'pointer'
                   }}
-                  onClick={() => handleMarkRead(n.id)}
+                  onClick={() => handleNotificationClick(n)}
                 >
                   <ListItemText
                     primary={

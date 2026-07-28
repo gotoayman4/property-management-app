@@ -532,7 +532,30 @@
     "depositRefundAmount": "مبلغ الإرجاع",
     "depositForfeitAmount": "مبلغ المصادرة",
     "depositAmountMismatch": "الإرجاع + المصادرة يجب أن يساوي إجمالي وديعة التأمين.",
-    "depositStatusUpdated": "تم تحديث حالة وديعة التأمين بنجاح."
+    "depositStatusUpdated": "تم تحديث حالة وديعة التأمين بنجاح.",
+    "auto": "تلقائي",
+    "autoRenewBadge": "سيتم تجديد هذا العقد تلقائياً عند نهاية مدته.",
+    "expiresInDays": "ينتهي خلال {{days}} يوم",
+    "pastDue": "منتهٍ",
+    "autoRenewEnable": "تفعيل التجديد التلقائي",
+    "autoRenewHelp": "عند التفعيل، يتم تجديد هذا العقد تلقائياً في نهاية المدة لمدة مماثلة أخرى.",
+    "autoRenewVariableDisabled": "التجديد التلقائي غير متاح للعقود متعددة السنوات ذات التصعيد المتغير.",
+    "autoRenewIncreasePercent": "نسبة الزيادة السنوية للتجديد التلقائي ٪",
+    "incrementHelper": "حاسبة زيادة الإيجار",
+    "regularIncreasePercent": "الزيادة المنتظمة ٪",
+    "oneTimeAdjustmentType": "تعديل لمرة واحدة",
+    "oneTimePercent": "نسبة مئوية (٪)",
+    "oneTimeAmount": "مبلغ ثابت",
+    "oneTimeAdjustment": "قيمة التعديل لمرة واحدة",
+    "computedNewRent": "الإيجار الجديد المحسوب",
+    "oneTimeNotePercent": "تعديل لمرة واحدة: +{{value}}٪",
+    "oneTimeNoteAmount": "تعديل لمرة واحدة: +{{value}} {{currency}}",
+    "renewalComparison": "مقارنة القديم → الجديد",
+    "renewalComparisonTerm": "المدة: {{oldStart}} → {{oldEnd}}  ⇒  {{newStart}} → {{newEnd}}",
+    "renewalComparisonRent": "الإيجار: {{oldRent}}  ⇒  {{newRent}} {{currency}}",
+    "renewalBannerExpired": "انتهى هذا العقد في {{date}}. جدّده لمتابعة الإيجار.",
+    "renewalBannerExpiring": "ينتهي هذا العقد خلال {{days}} يوم (في {{date}}).",
+    "renewalBannerAutoOn": "سيتم تجديده تلقائياً في {{date}}."
   },
   "payment": {
     "title": "المدفوعات والإيرادات",
@@ -888,7 +911,9 @@
       "document_expiry": "انتهاء مستند",
       "document_expiring": "انتهاء مستند",
       "recurring_expense_due": "مصروف دوري",
-      "backup_failed": "فشل النسخ الاحتياطي"
+      "backup_failed": "فشل النسخ الاحتياطي",
+      "auto_renew_upcoming": "تجديد تلقائي قادم",
+      "contract_auto_renewed": "تم تجديد العقد تلقائياً"
     }
   },
   "notification": {
@@ -901,7 +926,9 @@
       "escalationUpcoming": "إشعار زيادة الإيجار القادمة",
       "documentExpiring": "إشعار انتهاء المستند",
       "recurringExpenseDue": "إشعار استحقاق مصروف دوري",
-      "backupFailed": "إشعار فشل النسخ الاحتياطي"
+      "backupFailed": "إشعار فشل النسخ الاحتياطي",
+      "autoRenewUpcoming": "إشعار بالتجديد التلقائي للعقد",
+      "contractAutoRenewed": "إشعار بتجديد العقد تلقائياً"
     }
   },
   "auth": {
