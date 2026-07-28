@@ -3,13 +3,17 @@
  * @file DownloadPage — latest release card (live from the GitHub Releases
  *       API), edition list, install steps, checksum verification, roadmap.
  *
- * DECISION: The release card is server-rendered with fallback data from
- *           config.ts and hydrated by a tiny inline fetch at runtime — the
- *           page keeps working (with the fallback link) when GitHub is
- *           unreachable or rate-limited, and with JS disabled.
+ * DECISION: The release card is rendered in three reliability layers:
+ *           1. build-time fetch of the GitHub Releases API — the direct
+ *              setup.exe link, size, date and notes are baked into the HTML;
+ *           2. if that fetch fails (rate limit / no release yet), the button
+ *              falls back to GitHub's permanent /releases/latest/download/
+ *              redirect — still a direct download, never a browse page;
+ *           3. a tiny runtime fetch re-hydrates the card so a release
+ *              published AFTER the last website deploy still shows up.
  * CAVEAT: The GitHub API is public/unauthenticated here (60 req/h per IP) —
- *         acceptable for a marketing page because failure degrades to the
- *         releases-page link, never to a broken button.
+ *         acceptable because every failure path still yields a working
+ *         direct-download button.
  */
 import { EDITIONS, SITE } from '../../config'
 import { t, type Locale } from '../../i18n'
@@ -18,9 +22,55 @@ interface Props {
   locale: Locale
 }
 
+interface GitHubAsset {
+  name: string
+  size: number
+  browser_download_url: string
+}
+
+interface GitHubRelease {
+  tag_name: string
+  published_at: string | null
+  body: string | null
+  assets: GitHubAsset[]
+}
+
 const { locale } = Astro.props
 const s = t(locale)
 const editionName = s.downloadPage.editionTitle
+
+/* Layer 2 fallback: GitHub redirects this to the newest published asset. */
+const directFallback = `${SITE.repoUrl}/releases/latest/download/PropManager-${SITE.fallbackVersion}-setup.exe`
+
+/* Layer 1: bake the real release into the HTML at build time. */
+let release = {
+  version: SITE.fallbackVersion,
+  date: SITE.fallbackReleaseDate,
+  size: '—',
+  downloadUrl: directFallback,
+  notes: [] as string[]
+}
+try {
+  const res = await fetch(SITE.releasesApi, { signal: AbortSignal.timeout(8000) })
+  if (res.ok) {
+    const data = (await res.json()) as GitHubRelease
+    const setup = data.assets.find((a) => a.name.endsWith('-setup.exe'))
+    if (setup) {
+      release = {
+        version: data.tag_name.replace(/^v/, ''),
+        date: (data.published_at ?? '').slice(0, 10) || SITE.fallbackReleaseDate,
+        size: `${(setup.size / (1024 * 1024)).toFixed(1)} MB`,
+        downloadUrl: setup.browser_download_url,
+        notes: (data.body ?? '')
+          .split(/\r?\n/)
+          .filter((line) => line.startsWith('- '))
+          .map((line) => line.slice(2).trim())
+      }
+    }
+  }
+} catch {
+  /* Keep the direct-download fallback — never break the button over an API hiccup. */
+}
 ---
 
 <section class="section section--ruled">
@@ -45,16 +95,16 @@ const editionName = s.downloadPage.editionTitle
       <div class="release__head">
         <div>
           <p class="release__label mono">{s.downloadPage.latest}</p>
-          <p class="release__version mono" data-version>v{SITE.fallbackVersion}</p>
+          <p class="release__version mono" data-version>v{release.version}</p>
         </div>
         <dl class="release__meta">
           <div>
             <dt>{s.downloadPage.released}</dt>
-            <dd class="mono" data-date>{SITE.fallbackReleaseDate}</dd>
+            <dd class="mono" data-date>{release.date}</dd>
           </div>
           <div>
             <dt>{s.downloadPage.size}</dt>
-            <dd class="mono" data-size>—</dd>
+            <dd class="mono" data-size>{release.size}</dd>
           </div>
           <div>
             <dt>{s.downloadPage.requirementsTitle}</dt>
@@ -66,15 +116,17 @@ const editionName = s.downloadPage.editionTitle
       <p class="release__status" data-status hidden></p>
 
       <div class="release__actions">
-        <a class="btn btn--primary" href={SITE.releasesUrl} data-download rel="noopener">
+        <a class="btn btn--primary" href={release.downloadUrl} data-download rel="noopener">
           {s.downloadPage.button}
         </a>
         <a class="btn btn--ghost" href={SITE.releasesUrl} rel="noopener">{s.downloadCta.allReleases}</a>
       </div>
 
-      <div class="release__notes prose" data-notes hidden>
+      <div class="release__notes prose" data-notes hidden={release.notes.length === 0}>
         <h2>{s.downloadPage.notes}</h2>
-        <ul data-notes-list></ul>
+        <ul data-notes-list>
+          {release.notes.map((note) => <li>{note}</li>)}
+        </ul>
       </div>
     </div>
   </div>
@@ -120,7 +172,7 @@ const editionName = s.downloadPage.editionTitle
     <div class="io">
       <h2 class="verify__title">{s.downloadPage.verify}</h2>
       <p class="verify__note">{s.downloadPage.verifyNote}</p>
-      <pre class="verify__code mono" dir="ltr"><code>Get-FileHash .\PropManager-{SITE.fallbackVersion}-setup.exe -Algorithm SHA256</code></pre>
+      <pre class="verify__code mono" dir="ltr"><code>Get-FileHash .\PropManager-{release.version}-setup.exe -Algorithm SHA256</code></pre>
     </div>
     <div class="io">
       <h2 class="verify__title">{s.downloadPage.futurePlatforms}</h2>
@@ -167,21 +219,24 @@ const editionName = s.downloadPage.editionTitle
       el.querySelector<HTMLAnchorElement>('[data-download]')!.href = setup.browser_download_url
 
       // Release notes: plain "- item" lines from the generated notes body.
+      // replaceChildren — the list may already hold build-time baked notes.
       const items = (release.body ?? '')
         .split(/\r?\n/)
         .filter((line) => line.startsWith('- '))
         .map((line) => line.slice(2).trim())
       if (items.length > 0) {
         const list = el.querySelector<HTMLElement>('[data-notes-list]')!
-        for (const item of items) {
-          const li = document.createElement('li')
-          li.textContent = item
-          list.append(li)
-        }
+        list.replaceChildren(
+          ...items.map((item) => {
+            const li = document.createElement('li')
+            li.textContent = item
+            return li
+          })
+        )
         el.querySelector<HTMLElement>('[data-notes]')!.hidden = false
       }
     } catch {
-      // Degrade gracefully: keep fallback version + releases-page link.
+      // Degrade gracefully: keep the baked (or fallback direct) download link.
       if (status) {
         status.textContent = el.dataset.error ?? ''
         status.hidden = false
