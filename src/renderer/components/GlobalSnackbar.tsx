@@ -1,4 +1,5 @@
-import { Button, Snackbar, Alert, Slide } from '@mui/material'
+import CloseIcon from '@mui/icons-material/Close'
+import { Button, IconButton, Snackbar, Alert, Slide } from '@mui/material'
 import React from 'react'
 import { useTranslation } from 'react-i18next'
 import type { SnackbarState } from '../hooks/useSnackbar'
@@ -8,8 +9,13 @@ import type { SnackbarState } from '../hooks/useSnackbar'
  * CONSTRAINT: Per notification-patterns.md — 4000ms autoHide, 300ms transition,
  *             variant="filled", anchored bottom-center, role="status" + aria-live="polite",
  *             close button present and activatable. Message is always an i18n key.
+ *             Persistent snacks (state.persistent) never auto-hide — used for actionable
+ *             system events like "update ready, restart to install".
  * DECISION: Slide transition for a clear enter/exit motion; severity drives the Alert color.
  *           Optional action button (e.g. Undo) rendered when state.action is provided.
+ * CAVEAT: MUI Alert hides its default close icon when a custom `action` is set, so we
+ *         render an explicit close IconButton next to the action — every snack (especially
+ *         persistent ones) must always offer an escape (Nielsen heuristic).
  */
 
 interface GlobalSnackbarProps {
@@ -33,7 +39,7 @@ export default function GlobalSnackbar({ state, onClose }: GlobalSnackbarProps):
   return (
     <Snackbar
       open={state.open}
-      autoHideDuration={AUTO_HIDE_MS}
+      autoHideDuration={state.persistent ? null : AUTO_HIDE_MS}
       onClose={onClose}
       anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
       slots={{ transition: SlideTransition }}
@@ -48,9 +54,19 @@ export default function GlobalSnackbar({ state, onClose }: GlobalSnackbarProps):
         sx={{ width: '100%', alignItems: 'center' }}
         action={
           state.action ? (
-            <Button color="inherit" size="small" onClick={state.action.onClick}>
-              {t(state.action.label)}
-            </Button>
+            <>
+              <Button color="inherit" size="small" onClick={state.action.onClick}>
+                {t(state.action.label)}
+              </Button>
+              <IconButton
+                aria-label={t('common.close')}
+                color="inherit"
+                size="small"
+                onClick={onClose}
+              >
+                <CloseIcon fontSize="small" />
+              </IconButton>
+            </>
           ) : undefined
         }
       >

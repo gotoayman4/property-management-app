@@ -5,6 +5,7 @@ import BusinessIcon from '@mui/icons-material/Business'
 import DarkModeIcon from '@mui/icons-material/DarkMode'
 import DashboardIcon from '@mui/icons-material/Dashboard'
 import DescriptionIcon from '@mui/icons-material/Description'
+import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined'
 import LightModeIcon from '@mui/icons-material/LightMode'
 import MenuIcon from '@mui/icons-material/Menu'
 import MenuOpenIcon from '@mui/icons-material/MenuOpen'
@@ -36,8 +37,10 @@ import { useTranslation } from 'react-i18next'
 import { Link, useLocation } from 'react-router-dom'
 import appLogo from '../assets/logo.png'
 import { useUiPreferences } from '../stores/uiPreferencesStore'
+import AboutDialog from './AboutDialog'
 import NotificationBell from './NotificationBell'
 import SearchBar from './SearchBar'
+import UpdateNotifier from './UpdateNotifier'
 
 /** Width when sidebar is fully expanded with labels visible. */
 const drawerExpandedWidth = 240
@@ -59,6 +62,7 @@ export default function Layout({ children }: LayoutProps): React.JSX.Element {
   const currentLanguage = i18n.language
   const direction = currentLanguage === 'ar' ? 'rtl' : 'ltr'
   const [unreadCount, setUnreadCount] = useState<number>(0)
+  const [aboutOpen, setAboutOpen] = useState(false)
   const searchRef = useRef<HTMLInputElement | null>(null)
   const handleSearchInputMount = useCallback((el: HTMLInputElement | null): void => {
     searchRef.current = el
@@ -314,9 +318,22 @@ export default function Layout({ children }: LayoutProps): React.JSX.Element {
                 <TranslateIcon />
               </IconButton>
             </Tooltip>
+            <Tooltip title={t('sidebar.about')} arrow>
+              <IconButton
+                color="inherit"
+                onClick={() => setAboutOpen(true)}
+                aria-label={t('sidebar.about')}
+              >
+                <InfoOutlinedIcon />
+              </IconButton>
+            </Tooltip>
           </Box>
         </Toolbar>
       </AppBar>
+
+      {/* About dialog (topbar info icon) + global update notifications (VS Code-style) */}
+      <AboutDialog open={aboutOpen} onClose={() => setAboutOpen(false)} />
+      <UpdateNotifier />
 
       <Box
         component="nav"

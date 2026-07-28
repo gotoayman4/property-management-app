@@ -73,6 +73,7 @@ interface SettingsData {
   company_name?: string | null
   company_logo?: string | null
   auto_update_check?: number
+  auto_update_download?: number
 }
 
 const CURRENCIES = ['JOD', 'TRY', 'QAR', 'USD', 'EUR', 'SAR']
@@ -311,6 +312,7 @@ export default function Settings(): React.JSX.Element {
           {activeSection === 'about' && (
             <AboutUpdatesCard
               autoUpdateCheck={settings.auto_update_check ?? 1}
+              autoUpdateDownload={settings.auto_update_download ?? 1}
               onUpdateField={updateField}
             />
           )}

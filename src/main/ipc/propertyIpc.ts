@@ -58,7 +58,8 @@ const settingsUpdateSchema = z.object({
   company_name: z.string().max(200).nullable().optional(),
   company_logo: z.string().nullable().optional(),
   dashboard_hidden_widgets: z.string().optional(),
-  auto_update_check: z.number().int().min(0).max(1).optional()
+  auto_update_check: z.number().int().min(0).max(1).optional(),
+  auto_update_download: z.number().int().min(0).max(1).optional()
 })
 
 const countryCreateSchema = z.object({

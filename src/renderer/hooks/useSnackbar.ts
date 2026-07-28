@@ -5,6 +5,8 @@ import { useCallback, useState } from 'react'
  * CONSTRAINT: Per notification-patterns.md — four severities (success/error/warning/info),
  *             messages are always i18n keys (never hardcoded), one active snack at a time,
  *             4000ms autoHide handled by the renderer GlobalSnackbar component.
+ *             Persistent snacks (no auto-hide) are reserved for actionable system events
+ *             (e.g. update available/ready) and always carry an action button.
  * DECISION: A hook (not a global store) so each page mounts its own GlobalSnackbar and
  *           the lifecycle stays local to the page that triggers feedback.
  */
@@ -26,6 +28,8 @@ export interface SnackbarState {
   params?: Record<string, unknown>
   /** Optional action button (e.g. Undo). Rendered as a Button inside the Alert. */
   action?: SnackbarAction
+  /** When true the snack never auto-hides — the user must act or dismiss it. */
+  persistent?: boolean
 }
 
 const CLOSED: SnackbarState = { open: false, messageKey: '', severity: 'info' }
@@ -39,7 +43,8 @@ export interface UseSnackbarReturn {
   showInfoWithAction: (
     messageKey: string,
     action: SnackbarAction,
-    params?: Record<string, unknown>
+    params?: Record<string, unknown>,
+    persistent?: boolean
   ) => void
   hideSnackbar: () => void
 }
@@ -56,9 +61,10 @@ export function useSnackbar(): UseSnackbarReturn {
       severity: SnackbarSeverity,
       messageKey: string,
       params?: Record<string, unknown>,
-      action?: SnackbarAction
+      action?: SnackbarAction,
+      persistent?: boolean
     ): void => {
-      setSnack({ open: true, messageKey, severity, params, action })
+      setSnack({ open: true, messageKey, severity, params, action, persistent })
     },
     []
   )
@@ -80,8 +86,12 @@ export function useSnackbar(): UseSnackbarReturn {
     [show]
   )
   const showInfoWithAction = useCallback(
-    (messageKey: string, action: SnackbarAction, params?: Record<string, unknown>) =>
-      show('info', messageKey, params, action),
+    (
+      messageKey: string,
+      action: SnackbarAction,
+      params?: Record<string, unknown>,
+      persistent?: boolean
+    ) => show('info', messageKey, params, action, persistent),
     [show]
   )
 

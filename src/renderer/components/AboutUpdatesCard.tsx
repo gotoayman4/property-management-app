@@ -1,73 +1,41 @@
 /**
  * @file AboutUpdatesCard — Settings › About section: app identity, version, and auto-updates.
  *
- * INTENT: The single "About" surface of the app (Windows Settings › System › About pattern —
- *         chosen over a floating dialog so version + update state live where users expect
- *         system information). Shows the app version (fed from package.json via app:getInfo),
+ * INTENT: The full "About & Updates" surface inside Settings (Windows Settings › System ›
+ *         About pattern). Shows the app version (fed from package.json via app:getInfo),
  *         runtime versions, and drives the full update flow: check → download → install.
+ *         A compact sibling surface exists as AboutDialog (topbar info icon).
  * CONSTRAINT (AGENTS.md): i18n keys only, theme.palette tokens, logical CSS, no business
  *         logic — every decision (semver compare, hash verify) lives in the main process;
  *         this card only renders updater state and forwards user intent over IPC.
- * CAVEAT: update state is global in main; the card resyncs via updates:getState on mount and
- *         subscribes to updates:state pushes, so progress survives navigation away and back.
+ * CAVEAT: update state is global in main; useUpdateStatus resyncs via updates:getState on
+ *         mount and subscribes to updates:state pushes, so progress survives navigation.
  */
-import DownloadIcon from '@mui/icons-material/Download'
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined'
-import RestartAltIcon from '@mui/icons-material/RestartAlt'
-import UpdateIcon from '@mui/icons-material/Update'
-import {
-  Alert,
-  Box,
-  Button,
-  Chip,
-  CircularProgress,
-  Divider,
-  FormControlLabel,
-  LinearProgress,
-  Link,
-  Switch,
-  Typography
-} from '@mui/material'
-import React, { useEffect, useState } from 'react'
+import { Box, Chip, Divider, FormControlLabel, Link, Switch, Typography } from '@mui/material'
+import React from 'react'
 import { useTranslation } from 'react-i18next'
-import type { AppInfo, UpdateState } from '../../preload/index.d'
 import appIcon from '../assets/logo.png'
+import { useUpdateStatus } from '../hooks/useUpdateStatus'
 import SettingsSection from './SettingsSection'
+import UpdateStatusPanel from './UpdateStatusPanel'
 
 interface AboutUpdatesCardProps {
   /** Current value of settings.auto_update_check (1 = automatic checks enabled). */
   autoUpdateCheck: number
+  /** Current value of settings.auto_update_download (1 = auto-download found updates). */
+  autoUpdateDownload: number
   /** Persists a settings field change (delegates to settings:update). */
   onUpdateField: (field: string, value: unknown) => Promise<void>
 }
 
 export default function AboutUpdatesCard({
   autoUpdateCheck,
+  autoUpdateDownload,
   onUpdateField
 }: AboutUpdatesCardProps): React.JSX.Element {
-  const { t, i18n } = useTranslation()
-  const [info, setInfo] = useState<AppInfo | null>(null)
-  const [update, setUpdate] = useState<UpdateState | null>(null)
-
-  useEffect(() => {
-    let mounted = true
-    window.api.app.getInfo().then((data) => mounted && setInfo(data))
-    window.api.updates.getState().then((state) => mounted && setUpdate(state))
-    const unsubscribe = window.api.updates.onState((state) => mounted && setUpdate(state))
-    return () => {
-      mounted = false
-      unsubscribe()
-    }
-  }, [])
-
-  const phase = update?.phase ?? 'idle'
-  const busy = phase === 'checking' || phase === 'downloading' || phase === 'verifying'
-
-  const publishedDate = update?.info?.publishedAt
-    ? new Intl.DateTimeFormat(i18n.language === 'ar' ? 'ar-u-nu-latn' : 'en', {
-        dateStyle: 'medium'
-      }).format(new Date(update.info.publishedAt))
-    : ''
+  const { t } = useTranslation()
+  const { info, update } = useUpdateStatus()
 
   return (
     <SettingsSection
@@ -96,82 +64,9 @@ export default function AboutUpdatesCard({
         </Box>
       </Box>
 
-      {/* Update status + actions */}
+      {/* Update status + actions (shared with AboutDialog) */}
       <Box sx={{ mb: 3 }}>
-        {phase === 'up-to-date' && (
-          <Alert severity="success" sx={{ mb: 2 }}>
-            {t('about.upToDate')}
-          </Alert>
-        )}
-        {phase === 'update-available' && update?.info && (
-          <Alert severity="info" sx={{ mb: 2 }}>
-            {t('about.updateAvailable', { version: update.info.version, date: publishedDate })}
-          </Alert>
-        )}
-        {phase === 'ready' && update?.info && (
-          <Alert severity="info" sx={{ mb: 2 }}>
-            {t('about.updateReady', { version: update.info.version })}
-          </Alert>
-        )}
-        {phase === 'error' && (
-          <Alert severity="error" sx={{ mb: 2 }}>
-            {t(
-              update?.errorCode === 'UPDATE_CHECKSUM_MISMATCH' ||
-                update?.errorCode === 'UPDATE_NO_CHECKSUM'
-                ? 'about.updateIntegrityError'
-                : update?.errorCode === 'UPDATE_DOWNLOAD_FAILED'
-                  ? 'about.updateDownloadError'
-                  : 'about.updateCheckError'
-            )}
-          </Alert>
-        )}
-        {(phase === 'downloading' || phase === 'verifying') && (
-          <Box sx={{ mb: 2 }}>
-            <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-              {phase === 'verifying'
-                ? t('about.verifying')
-                : t('about.downloading', { progress: update?.progress ?? 0 })}
-            </Typography>
-            <LinearProgress
-              variant={phase === 'verifying' ? 'indeterminate' : 'determinate'}
-              value={update?.progress ?? 0}
-            />
-          </Box>
-        )}
-
-        <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-          {(phase === 'idle' ||
-            phase === 'up-to-date' ||
-            phase === 'checking' ||
-            phase === 'error') && (
-            <Button
-              variant="outlined"
-              startIcon={phase === 'checking' ? <CircularProgress size={18} /> : <UpdateIcon />}
-              disabled={busy}
-              onClick={() => window.api.updates.check()}
-            >
-              {t('about.checkForUpdates')}
-            </Button>
-          )}
-          {phase === 'update-available' && (
-            <Button
-              variant="contained"
-              startIcon={<DownloadIcon />}
-              onClick={() => window.api.updates.download()}
-            >
-              {t('about.downloadUpdate')}
-            </Button>
-          )}
-          {phase === 'ready' && (
-            <Button
-              variant="contained"
-              startIcon={<RestartAltIcon />}
-              onClick={() => window.api.updates.install()}
-            >
-              {t('about.installAndRestart')}
-            </Button>
-          )}
-        </Box>
+        <UpdateStatusPanel update={update} />
       </Box>
 
       <FormControlLabel
@@ -183,8 +78,21 @@ export default function AboutUpdatesCard({
         }
         label={t('about.autoUpdateCheck')}
       />
-      <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+      <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
         {t('about.autoUpdateCheckHelp')}
+      </Typography>
+
+      <FormControlLabel
+        control={
+          <Switch
+            checked={autoUpdateDownload === 1}
+            onChange={(e) => onUpdateField('auto_update_download', e.target.checked ? 1 : 0)}
+          />
+        }
+        label={t('about.autoUpdateDownload')}
+      />
+      <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+        {t('about.autoUpdateDownloadHelp')}
       </Typography>
 
       <Divider sx={{ mb: 2 }} />

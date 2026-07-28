@@ -392,6 +392,8 @@ interface SystemSettings {
   company_logo: string | null
   dashboard_hidden_widgets: string
   font_size: string
+  auto_update_check: number
+  auto_update_download: number
 }
 
 // --- Profitability return ---

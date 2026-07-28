@@ -46,7 +46,8 @@
     "toggleTheme": "Toggle theme",
     "toggleLanguage": "Toggle language",
     "expand": "Expand sidebar",
-    "collapse": "Collapse sidebar"
+    "collapse": "Collapse sidebar",
+    "about": "About"
   },
   "common": {
     "save": "Save",
@@ -278,6 +279,12 @@
     "updateIntegrityError": "The downloaded update failed the integrity check and was discarded. Your current version is unaffected.",
     "autoUpdateCheck": "Check for updates automatically",
     "autoUpdateCheckHelp": "When enabled, the app quietly checks for new versions on startup and every few hours. Nothing is installed without your confirmation.",
+    "autoUpdateDownload": "Download updates automatically",
+    "autoUpdateDownloadHelp": "When enabled, new versions are downloaded in the background as soon as they are found. You still choose when to restart and install.",
+    "updateAvailableToast": "A new version ({{version}}) is available.",
+    "updateReadyToast": "Version {{version}} is ready to install. Restart to apply the update.",
+    "download": "Download",
+    "restart": "Restart",
     "runtimeInfo": "Runtime Information",
     "platform": "Platform",
     "projectPage": "Project page on GitHub",
