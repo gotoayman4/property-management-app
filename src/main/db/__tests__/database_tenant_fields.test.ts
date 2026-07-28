@@ -17,7 +17,7 @@ describe('Tenant fields migration (003) + national_id search', () => {
 
   it('applies all migrations including 003 tenant fields', () => {
     const migrations = db.prepare('SELECT name FROM migrations ORDER BY id ASC').all()
-    expect(migrations).toHaveLength(30)
+    expect(migrations).toHaveLength(31)
     expect(migrations[2]).toEqual({ name: '003_tenant_fields.sql' })
   })
 

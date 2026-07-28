@@ -74,6 +74,8 @@
     "saveSuccess": "Saved successfully",
     "saveSuccessWithDocuments": "Saved successfully! You can now upload related documents from the Documents tab.",
     "saveError": "Failed to save",
+    "saveErrorValidation": "Save failed — some fields contain invalid or missing data. Please review the form and try again.",
+    "saveErrorUnexpected": "Save failed due to an unexpected error. Please try again — if the problem persists, restart the app.",
     "deleteSuccess": "Deleted successfully",
     "deleteError": "Failed to delete",
     "confirmDelete": "Are you sure you want to delete this item?",

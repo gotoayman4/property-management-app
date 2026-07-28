@@ -173,12 +173,19 @@ export function TenantForm({ tenant, onSuccess, onCancel }: TenantFormProps): Re
     } catch (err: unknown) {
       console.error(err)
       const errorMessage = err instanceof Error ? err.message : ''
+      // Map machine-readable IPC error codes to actionable feedback: mark the offending
+      // field AND raise a snackbar naming the reason (the form is long — the field alone
+      // may be scrolled out of view). Unknown errors get a distinct "unexpected" message.
       if (errorMessage === 'TENANT_CODE_DUPLICATE') {
         setError('code', { type: 'manual', message: t('tenant.codeUnique') })
+        showError('tenant.codeUnique')
       } else if (errorMessage === 'NATIONAL_ID_DUPLICATE') {
         setError('national_id', { type: 'manual', message: t('tenant.nationalIdUnique') })
+        showError('tenant.nationalIdUnique')
+      } else if (errorMessage === 'INVALID_INPUT') {
+        showError('common.saveErrorValidation')
       } else {
-        showError('common.saveError')
+        showError('common.saveErrorUnexpected')
       }
     }
   }

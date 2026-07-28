@@ -5,6 +5,9 @@ import { db } from '../db/database'
 import { logger } from '../utils/logger'
 
 // Define Zod validation schemas for Tenant (SRS §8 + FR-TEN-01)
+// CAVEAT: national_id has a UNIQUE constraint (migration 014). SQLite allows multiple NULLs
+//         but NOT multiple '' — so blank/whitespace input MUST be normalized to NULL here,
+//         otherwise the second tenant saved without a national ID fails the constraint.
 const tenantCreateSchema = z.object({
   code: z
     .string()
@@ -12,7 +15,11 @@ const tenantCreateSchema = z.object({
     .max(20)
     .regex(/^[a-zA-Z0-9-]+$/),
   fullname: z.string().min(3).max(100),
-  national_id: z.string().optional().nullable(),
+  national_id: z
+    .string()
+    .optional()
+    .nullable()
+    .transform((v) => (v && v.trim() !== '' ? v.trim() : null)),
   country_code: z.string().optional().nullable(),
   phone: z.string().min(5).max(20),
   email: z.string().email().optional().nullable().or(z.literal('')),
@@ -30,6 +37,27 @@ const tenantCreateSchema = z.object({
 const tenantUpdateSchema = tenantCreateSchema.extend({
   id: z.number().int().positive()
 })
+
+/**
+ * INTENT: Translate low-level SQLite errors into the machine-readable codes the renderer
+ *         understands, so raw driver messages never leak into the UI (api-design-standards).
+ * CAVEAT: The UNIQUE constraint can still fire despite the pre-checks (e.g. legacy '' rows
+ *         or concurrent writes) — map it to the same duplicate codes as the pre-checks.
+ */
+const KNOWN_TENANT_ERROR_CODES = new Set(['TENANT_CODE_DUPLICATE', 'NATIONAL_ID_DUPLICATE'])
+
+function toTenantIpcError(error: unknown, fallbackCode: string): Error {
+  if (error instanceof Error) {
+    if (KNOWN_TENANT_ERROR_CODES.has(error.message)) return error
+    if (error.message.includes('UNIQUE constraint failed: tenants.national_id')) {
+      return new Error('NATIONAL_ID_DUPLICATE')
+    }
+    if (error.message.includes('UNIQUE constraint failed: tenants.code')) {
+      return new Error('TENANT_CODE_DUPLICATE')
+    }
+  }
+  return new Error(fallbackCode)
+}
 
 export function registerTenantIpcHandlers(): void {
   // Generate next sequential tenant code for a given type
@@ -132,7 +160,7 @@ export function registerTenantIpcHandlers(): void {
       if (error instanceof z.ZodError) {
         throw new Error('INVALID_INPUT')
       }
-      throw error
+      throw toTenantIpcError(error, 'FAILED_TO_CREATE_TENANT')
     }
   })
 
@@ -187,7 +215,7 @@ export function registerTenantIpcHandlers(): void {
       if (error instanceof z.ZodError) {
         throw new Error('INVALID_INPUT')
       }
-      throw error
+      throw toTenantIpcError(error, 'FAILED_TO_UPDATE_TENANT')
     }
   })
 
