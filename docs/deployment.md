@@ -1,107 +1,97 @@
 # Deployment Guide
 
-## Build
+How PropManager is built, packaged and released. See `deployment-architecture.md`
+for the full architecture and risk analysis, and `release-checklist.md` for the
+per-release checklist.
 
-```bash
-npm run build
+## Pipeline at a Glance
+
+```
+Developer commits → GitHub main
+      │
+      ├─ push tag v*.*.* ──► GitHub Actions (release.yml, windows-latest)
+      │                        1. guard: tag == package.json version
+      │                        2. npm ci
+      │                        3. npm run build:unpack   → dist/win-unpacked/
+      │                        4. npm run build:installer → installer/output/*.exe + SHA256SUMS.txt
+      │                        5. extract-changelog.mjs   → release notes
+      │                        6. gh release create --draft
+      │                        7. human review → Publish release
+      │                              └─► app auto-updater sees the new version
+      │
+      └─ every push to main ──► Netlify rebuilds the website (netlify.toml)
+                                  └─ download page + changelog update automatically
 ```
 
-Produces platform-specific artifacts in `out/make/`:
-
-- **Windows:** NSIS installer (`out/make/nsis/`) + unpacked app
-- **macOS:** DMG (`out/make/dmg/`)
-- **Linux:** AppImage, snap, deb
-
-## Windows Distribution
-
-### Option A: NSIS (electron-builder default)
-
-The `out/make/nsis/PropManager-*-setup.exe` is the ready-to-distribute installer.
-Includes desktop shortcut, Start Menu entry, and uninstaller.
-
-### Option B: Inno Setup (Recommended)
-
-For better bilingual (Arabic/English) installer UI:
-
-1. Build the app: `npm run build`
-2. Open the Inno Setup script in `installer/windows/`
-3. Point the Inno Setup source to `out/` directory
-4. Compile the Inno Setup script to produce the final installer
-
-See ADR-003 for the rationale behind choosing Inno Setup over NSIS.
-
-## macOS Distribution
-
-### Unsigned (Current)
-
-Without code signing, macOS users must:
+## Local Build Commands
 
 ```bash
-# Remove quarantine attribute after downloading
-xattr -d com.apple.quarantine /Applications/PropManager.app
+npm run build:unpack     # electron-builder → dist/win-unpacked/ (unpacked app)
+npm run build:installer  # Inno Setup → installer/output/PropManager-<v>-setup.exe + SHA256SUMS.txt
+npm run dist:win         # both steps in sequence
 ```
 
-Or right-click → Open on first launch.
+Requirements on the build machine:
 
-### Signed (Future)
+- Node.js 22, `npm ci` done
+- Inno Setup 6.5+ installed (bundles the official `Languages\Arabic.isl`);
+  `scripts/build-installer.mjs` finds ISCC automatically or via the
+  `INNO_SETUP_ISCC` environment variable
+- No running PropManager/dev instances (locked native modules break packaging)
 
-When code signing is configured:
+## Version Management (single source of truth)
 
-1. Set `CSC_LINK` and `CSC_KEY_PASSWORD` environment variables
-2. Build: `npm run build`
-3. The entitlements in `build/entitlements.mac.plist` grant minimum required privileges
-4. Enable notarization in `electron-builder.yml`: `notarize: true`
+`package.json` `version` is the only place a version is defined. It propagates to:
 
-## Linux Distribution
+- App UI / About dialog — via the `app:info` IPC handler
+- Installer filename + metadata — injected as `/DAppVersion` by `build-installer.mjs`
+- GitHub Release — the workflow refuses to build if the tag ≠ package.json
+- Website download page — reads the GitHub Releases API at runtime
+- Changelog — `CHANGELOG.md` entry per version (also rendered by the website)
 
-AppImage, snap, and deb packages are produced in `out/make/`:
+## Releasing
 
 ```bash
-# AppImage (portable)
-chmod +x PropManager-*.AppImage
-./PropManager-*.AppImage
-
-# Deb (Debian/Ubuntu)
-sudo dpkg -i propmanager_*.deb
+npm version 1.1.0            # bumps package.json + creates tag v1.1.0
+# add a "## [1.1.0] - YYYY-MM-DD" section to CHANGELOG.md, commit
+git push origin main --tags  # tag push triggers the release workflow
 ```
+
+The workflow creates a **draft** release — verify the installer and notes, then
+click **Publish**. The in-app updater ignores drafts, so nothing reaches users
+until you publish.
 
 ## Auto-Updates
 
-Auto-update is currently **disabled** (see ADR-003). To enable:
+The app checks GitHub Releases (`src/main/services/updateService.ts`), downloads
+the new installer in the background, verifies its SHA-256 against
+`SHA256SUMS.txt`, and asks the user before installing. The installer runs
+per-user (no UAC), preserves all user data, and blocks downgrades.
 
-1. Set up an update server (GitHub Releases, S3, or generic HTTP)
-2. Update `publish.url` in `electron-builder.yml`
-3. Install `electron-updater` and configure in main process
+## Code Signing (placeholder)
 
-## CI/CD
+No certificate is currently owned. When one is acquired:
 
-GitHub Actions workflow (`.github/workflows/ci.yml`) runs on push/PR to main:
-
-1. Checkout + Node.js 22
-2. `npm ci`
-3. i18n parity check
-4. ESLint lint
-5. TypeScript type-check
-6. Vitest unit tests
-
-Build artifacts are not yet produced in CI (manual local build for distribution).
+1. Uncomment the `SignTool` line in `installer/windows/PropManager.iss`
+2. Configure the certificate in the CI runner (secrets + signtool)
+3. Windows SmartScreen warnings disappear after reputation builds
 
 ## Troubleshooting
 
-### Build fails with native module errors
+| Symptom                                 | Fix                                                                                                                          |
+| --------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| `EBUSY` during `build:unpack`           | Close all running PropManager/`npm run dev` instances (they lock `better_sqlite3.node`)                                      |
+| `ISCC.exe not found`                    | Install Inno Setup 6.5+ or set `INNO_SETUP_ISCC`                                                                             |
+| `Arabic.isl missing`                    | Upgrade Inno Setup — Arabic is official since 6.5                                                                            |
+| Release workflow fails at version guard | Tag must equal `package.json` version exactly (`v1.2.3` ↔ `1.2.3`)                                                           |
+| Update not offered in app               | Release still a draft, or the asset name doesn't end in `-setup.exe`                                                         |
+| Migration errors after update           | Check `%APPDATA%/propmanager/logs/main.log`; restore from a backup (pre-restore emergency backups are created automatically) |
 
-```bash
-# Rebuild native modules
-npm rebuild
+## Recovery
 
-# Windows: ensure build tools are installed
-npm install -g windows-build-tools
-```
-
-### Database migration errors
-
-The app runs migrations automatically on startup. If a migration fails:
-
-1. Check the log file: `%APPDATA%/PropManager/logs/main.log`
-2. Restore from backup (the app creates pre-restore emergency backups)
-3. If all else fails, delete the database and let the app recreate it (loses all data)
+- **Bad release published:** delete the GitHub release + tag; the updater only
+  ever sees the latest published release, so removing it stops the rollout.
+  Users who already updated can reinstall the previous setup.exe from the
+  releases page — user data is never touched by install/uninstall.
+- **Corrupted install:** re-run the same setup.exe (repair path) or uninstall +
+  reinstall; the uninstaller never deletes `%APPDATA%/propmanager` silently.
