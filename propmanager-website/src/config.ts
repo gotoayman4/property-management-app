@@ -17,7 +17,7 @@ export const SITE = {
   releasesApi: 'https://api.github.com/repos/gotoayman4/property-management-app/releases/latest',
   releasesUrl: 'https://github.com/gotoayman4/property-management-app/releases',
   issuesUrl: 'https://github.com/gotoayman4/property-management-app/issues',
-  contactEmail: 'gotoayman4@gmail.com',
+  contactEmail: 'gotoayman@gmail.com',
   /** Shown before the GitHub Releases API responds (and as no-JS fallback). */
   fallbackVersion: '1.0.0',
   fallbackReleaseDate: '2026-07-28',
