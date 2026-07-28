@@ -1,0 +1,150 @@
+---
+/**
+ * @file TermsPage — terms of use for the free desktop application.
+ * DECISION: Same structure as PrivacyPage — long-form bilingual prose kept
+ *           in the component, dated, rendered through the shared .prose style.
+ */
+import { SITE } from '../../config'
+import { t, type Locale } from '../../i18n'
+
+interface Props {
+  locale: Locale
+}
+
+const { locale } = Astro.props
+const s = t(locale)
+const updated = '2026-07-28'
+
+interface LegalSection {
+  h: string
+  p: string[]
+}
+
+const content: Record<Locale, LegalSection[]> = {
+  ar: [
+    {
+      h: 'قبول الشروط',
+      p: [
+        'بتحميلك تطبيق مدير العقار أو تثبيته أو استخدامه فأنت توافق على هذه الشروط. إن لم توافق عليها فلا تستخدم التطبيق.'
+      ]
+    },
+    {
+      h: 'الترخيص',
+      p: [
+        'يُمنح لك ترخيص مجاني وغير حصري وغير قابل للتحويل لاستخدام التطبيق على أجهزتك لأغراض إدارة أملاكك — الشخصية أو التجارية.',
+        'قد تُطرح مستقبلاً نسخ مدفوعة بمزايا إضافية؛ وفي كل الأحوال تبقى بياناتك ملكك ولن تُحتجز خلف جدار دفع.'
+      ]
+    },
+    {
+      h: 'مسؤوليتك عن بياناتك',
+      p: [
+        'التطبيق يعمل محلياً وبياناتك محفوظة على جهازك وحده، لذا فأنت المسؤول الوحيد عن أخذ نسخ احتياطية منتظمة وصونها. ننصح بتفعيل النسخ الاحتياطي المدمج والاحتفاظ بنسخة خارج الجهاز.'
+      ]
+    },
+    {
+      h: 'إخلاء المسؤولية',
+      p: [
+        'يُقدَّم التطبيق «كما هو» دون أي ضمانات صريحة أو ضمنية. التطبيق أداة لتسجيل ومتابعة بياناتك وليس مستشاراً مالياً أو قانونياً أو ضريبياً؛ تحقق دائماً من أرقامك قبل اتخاذ قرارات مبنية عليها.',
+        'إلى الحد الأقصى الذي يسمح به القانون، لا يتحمل مطوّر التطبيق أي مسؤولية عن أضرار مباشرة أو غير مباشرة تنشأ عن استخدامه، بما في ذلك فقدان البيانات أو الأرباح.'
+      ]
+    },
+    {
+      h: 'التحديثات',
+      p: [
+        'قد يفحص التطبيق وجود تحديثات عبر GitHub ويحمّلها بعد موافقتك. يمكنك تعطيل ذلك من الإعدادات ومتابعة استخدام إصدارك الحالي.'
+      ]
+    },
+    {
+      h: 'الاستخدام المقبول',
+      p: ['لا يجوز إعادة بيع التطبيق أو توزيعه على أنه منتجك، ولا محاولة استغلاله لأغراض غير مشروعة.']
+    },
+    {
+      h: 'تعديل الشروط',
+      p: ['قد تُحدَّث هذه الشروط من وقت لآخر؛ تُنشر النسخة السارية دائماً على هذه الصفحة مع تاريخ آخر تحديث.']
+    },
+    {
+      h: 'تواصل معنا',
+      p: [`لأي استفسار حول هذه الشروط راسلنا على ${SITE.contactEmail}.`]
+    }
+  ],
+  en: [
+    {
+      h: 'Acceptance of terms',
+      p: [
+        'By downloading, installing or using PropManager you agree to these terms. If you do not agree, do not use the application.'
+      ]
+    },
+    {
+      h: 'License',
+      p: [
+        'You are granted a free, non-exclusive, non-transferable license to use the application on your devices for managing your properties — personal or commercial.',
+        'Paid editions with additional features may be offered in the future; in all cases your data remains yours and will never be locked behind a paywall.'
+      ]
+    },
+    {
+      h: 'Your responsibility for your data',
+      p: [
+        'The application runs locally and your data lives only on your device, so you are solely responsible for taking and keeping regular backups. We recommend enabling the built-in backup feature and keeping a copy off the device.'
+      ]
+    },
+    {
+      h: 'Disclaimer',
+      p: [
+        'The application is provided "as is", without warranties of any kind, express or implied. It is a tool for recording and tracking your data — not financial, legal or tax advice; always verify your numbers before acting on them.',
+        'To the maximum extent permitted by law, the developer is not liable for any direct or indirect damages arising from its use, including loss of data or profits.'
+      ]
+    },
+    {
+      h: 'Updates',
+      p: [
+        'The application may check GitHub for updates and download them with your consent. You can disable this in Settings and keep using your current version.'
+      ]
+    },
+    {
+      h: 'Acceptable use',
+      p: ['You may not resell or redistribute the application as your own product, or attempt to use it for unlawful purposes.']
+    },
+    {
+      h: 'Changes to these terms',
+      p: ['These terms may be updated from time to time; the current version is always published on this page with the date of the last update.']
+    },
+    {
+      h: 'Contact',
+      p: [`For any question about these terms, write to ${SITE.contactEmail}.`]
+    }
+  ]
+}
+---
+
+<section class="section section--ruled">
+  <div class="wrap">
+    <p class="label reveal">{s.footer.legal}</p>
+    <h1 class="section-title reveal" style="animation-delay: 0.08s">{s.legal.termsTitle}</h1>
+    <p class="section-sub reveal mono" style="animation-delay: 0.16s">{s.legal.updated}: {updated}</p>
+  </div>
+</section>
+
+<section class="section" style="padding-block-start: 0">
+  <div class="wrap prose legal io">
+    {
+      content[locale].map((section) => (
+        <>
+          <h2>{section.h}</h2>
+          {section.p.map((paragraph) => (
+            <p>{paragraph}</p>
+          ))}
+        </>
+      ))
+    }
+  </div>
+</section>
+
+<style>
+  .legal {
+    max-inline-size: 42rem;
+  }
+
+  .legal p + p {
+    margin-block-start: 0.7rem;
+  }
+</style>

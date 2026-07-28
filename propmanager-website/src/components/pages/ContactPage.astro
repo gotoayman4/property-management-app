@@ -1,0 +1,104 @@
+---
+/**
+ * @file ContactPage — email, GitHub issues and repository cards.
+ */
+import { SITE } from '../../config'
+import { t, type Locale } from '../../i18n'
+
+interface Props {
+  locale: Locale
+}
+
+const { locale } = Astro.props
+const s = t(locale)
+const cards = [
+  {
+    title: s.contactPage.emailTitle,
+    desc: s.contactPage.emailDesc,
+    cta: SITE.contactEmail,
+    href: `mailto:${SITE.contactEmail}`
+  },
+  {
+    title: s.contactPage.issuesTitle,
+    desc: s.contactPage.issuesDesc,
+    cta: s.contactPage.issuesCta,
+    href: SITE.issuesUrl
+  },
+  {
+    title: s.contactPage.repoTitle,
+    desc: s.contactPage.repoDesc,
+    cta: s.contactPage.repoCta,
+    href: SITE.repoUrl
+  }
+]
+---
+
+<section class="section section--ruled">
+  <div class="wrap">
+    <p class="label reveal">{s.nav.contact}</p>
+    <h1 class="section-title reveal" style="animation-delay: 0.08s">{s.contactPage.title}</h1>
+    <p class="section-sub reveal" style="animation-delay: 0.16s">{s.contactPage.sub}</p>
+  </div>
+</section>
+
+<section class="section" style="padding-block-start: 0">
+  <div class="wrap">
+    <div class="contact">
+      {
+        cards.map((card, i) => (
+          <article class="card io">
+            <span class="card__num">{String(i + 1).padStart(2, '0')}</span>
+            <h2 class="contact__title">{card.title}</h2>
+            <p class="contact__desc">{card.desc}</p>
+            <a class="contact__cta" href={card.href} rel="noopener">
+              {card.cta}
+            </a>
+          </article>
+        ))
+      }
+    </div>
+    <p class="contact__note io">{s.contactPage.responseNote}</p>
+  </div>
+</section>
+
+<style>
+  .contact {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1.2rem;
+  }
+
+  .contact__title {
+    font-size: 1.15rem;
+    margin-block-end: 0.5rem;
+    padding-inline-end: 2rem;
+  }
+
+  .contact__desc {
+    color: var(--ink-soft);
+    font-size: 0.95rem;
+    margin-block-end: 1rem;
+  }
+
+  .contact__cta {
+    color: var(--accent-ink);
+    font-weight: 600;
+    text-decoration: none;
+    border-block-end: 1px solid var(--accent);
+    inline-size: fit-content;
+    display: inline-block;
+    word-break: break-word;
+  }
+
+  .contact__note {
+    margin-block-start: 2rem;
+    color: var(--ink-faint);
+    font-size: 0.9rem;
+  }
+
+  @media (max-width: 62rem) {
+    .contact {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>

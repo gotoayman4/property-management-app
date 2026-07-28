@@ -1,0 +1,369 @@
+/*
+ * PropManager marketing site — "The Ledger" design system.
+ *
+ * INTENT: An editorial, accounting-ledger identity: ruled lines, a crimson
+ *         margin rule, mono numerals, warm paper (light) and deep ink (dark).
+ * CONSTRAINT: Logical properties only (inline-start/end) — the site is
+ *             Arabic-first RTL with an LTR English mirror.
+ * CONSTRAINT: Arabic typography — line-height ≥ 1.6 for prose, no letter-
+ *             spacing on Arabic text, weight ≥ 400.
+ */
+
+/* ---------- Tokens ---------- */
+:root {
+  /* paper (light) */
+  --bg: #f7f3ec;
+  --bg-raised: #fffdf8;
+  --ink: #221d17;
+  --ink-soft: #5b544a;
+  --ink-faint: #8a8278;
+  --line: rgba(34, 29, 23, 0.14);
+  --line-soft: rgba(34, 29, 23, 0.07);
+  --accent: #b45309;
+  --accent-ink: #7c3a06;
+  --accent-soft: rgba(180, 83, 9, 0.09);
+  --rule: rgba(196, 74, 74, 0.38); /* the classic ledger margin line */
+  --ok: #3f6c45;
+  --shadow: 0 1px 2px rgba(34, 29, 23, 0.05), 0 12px 32px -12px rgba(34, 29, 23, 0.18);
+  --font-sans: 'Alexandria Variable', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono Variable', ui-monospace, monospace;
+  --ledger-line-h: 2.25rem;
+  color-scheme: light;
+}
+
+:root[data-theme='dark'] {
+  /* ink (dark) */
+  --bg: #14110d;
+  --bg-raised: #1d1915;
+  --ink: #ece5da;
+  --ink-soft: #a89e91;
+  --ink-faint: #766d61;
+  --line: rgba(236, 229, 218, 0.16);
+  --line-soft: rgba(236, 229, 218, 0.07);
+  --accent: #e5a13d;
+  --accent-ink: #f0bc6d;
+  --accent-soft: rgba(229, 161, 61, 0.1);
+  --rule: rgba(224, 108, 108, 0.32);
+  --ok: #86b28d;
+  --shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 16px 40px -16px rgba(0, 0, 0, 0.6);
+  color-scheme: dark;
+}
+
+/* ---------- Base ---------- */
+* {
+  box-sizing: border-box;
+  margin: 0;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  font-size: 1rem;
+  line-height: 1.75;
+  -webkit-font-smoothing: antialiased;
+  /* faint paper grain */
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)' opacity='0.028'/%3E%3C/svg%3E");
+}
+
+h1,
+h2,
+h3 {
+  line-height: 1.35;
+  font-weight: 700;
+  text-wrap: balance;
+}
+
+p {
+  text-wrap: pretty;
+}
+
+a {
+  color: inherit;
+}
+
+img {
+  max-width: 100%;
+  height: auto;
+  display: block;
+}
+
+::selection {
+  background: var(--accent);
+  color: var(--bg);
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+  border-radius: 2px;
+}
+
+/* ---------- Layout primitives ---------- */
+.wrap {
+  max-width: 74rem;
+  margin-inline: auto;
+  padding-inline: clamp(1.25rem, 4vw, 2.5rem);
+}
+
+.section {
+  padding-block: clamp(4rem, 9vw, 7.5rem);
+  position: relative;
+}
+
+/* Ledger-ruled section: horizontal account lines + crimson margin rule */
+.section--ruled {
+  background-image: repeating-linear-gradient(
+    to bottom,
+    transparent 0,
+    transparent calc(var(--ledger-line-h) - 1px),
+    var(--line-soft) calc(var(--ledger-line-h) - 1px),
+    var(--line-soft) var(--ledger-line-h)
+  );
+}
+
+.section--ruled::before {
+  content: '';
+  position: absolute;
+  inset-block: 0;
+  inset-inline-start: clamp(0.75rem, 3vw, 2.25rem);
+  width: 1px;
+  background: var(--rule);
+  pointer-events: none;
+}
+
+/* Mono section label: "01 / السجل" */
+.label {
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--accent);
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.label::after {
+  content: '';
+  height: 1px;
+  width: 3.5rem;
+  background: var(--accent);
+  opacity: 0.5;
+}
+
+/* CAVEAT: letter-spacing would disconnect Arabic cursive glyphs — reset it. */
+[dir='rtl'] .label {
+  letter-spacing: 0;
+}
+
+.section-title {
+  font-size: clamp(1.7rem, 3.6vw, 2.6rem);
+  margin-block: 0.9rem 0.6rem;
+}
+
+.section-sub {
+  color: var(--ink-soft);
+  max-width: 46ch;
+  font-size: 1.06rem;
+}
+
+/* ---------- Components ---------- */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
+  padding: 0.85rem 1.7rem;
+  border-radius: 0.6rem;
+  border: 1px solid transparent;
+  font: inherit;
+  font-weight: 600;
+  font-size: 1rem;
+  text-decoration: none;
+  cursor: pointer;
+  transition:
+    transform 0.16s ease,
+    box-shadow 0.16s ease,
+    background-color 0.16s ease,
+    border-color 0.16s ease;
+}
+
+.btn:active {
+  transform: translateY(1px);
+}
+
+.btn--primary {
+  background: var(--ink);
+  color: var(--bg);
+  box-shadow: var(--shadow);
+}
+
+.btn--primary:hover {
+  background: var(--accent);
+  color: #fffdf8;
+  transform: translateY(-2px);
+}
+
+.btn--ghost {
+  border-color: var(--line);
+  color: var(--ink);
+  background: transparent;
+}
+
+.btn--ghost:hover {
+  border-color: var(--accent);
+  color: var(--accent-ink);
+  background: var(--accent-soft);
+}
+
+.card {
+  background: var(--bg-raised);
+  border: 1px solid var(--line);
+  border-radius: 0.9rem;
+  padding: 1.6rem;
+  position: relative;
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease,
+    border-color 0.2s ease;
+}
+
+.card:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--shadow);
+  border-color: var(--accent);
+}
+
+/* index number stamped on cards, mono like a ledger folio */
+.card__num {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: var(--ink-faint);
+  position: absolute;
+  inset-block-start: 1.15rem;
+  inset-inline-end: 1.3rem;
+}
+
+.mono {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 0.3rem 0.9rem;
+  font-size: 0.85rem;
+  color: var(--ink-soft);
+  background: var(--bg-raised);
+}
+
+.chip::before {
+  content: '';
+  inline-size: 0.45rem;
+  block-size: 0.45rem;
+  border-radius: 50%;
+  background: var(--ok);
+}
+
+/* Screenshot window frame */
+.frame {
+  border: 1px solid var(--line);
+  border-radius: 1rem;
+  overflow: hidden;
+  background: var(--bg-raised);
+  box-shadow: var(--shadow);
+}
+
+.frame__bar {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.7rem 1rem;
+  border-block-end: 1px solid var(--line-soft);
+}
+
+.frame__dot {
+  inline-size: 0.6rem;
+  block-size: 0.6rem;
+  border-radius: 50%;
+  background: var(--line);
+}
+
+.frame__title {
+  margin-inline-start: 0.5rem;
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  color: var(--ink-faint);
+}
+
+/* ---------- Motion ---------- */
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(1.1rem);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.reveal {
+  animation: rise 0.7s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+
+/* scroll-triggered reveals (activated by tiny IntersectionObserver script) */
+.io {
+  opacity: 0;
+  transform: translateY(1.1rem);
+  transition:
+    opacity 0.65s cubic-bezier(0.2, 0.7, 0.2, 1),
+    transform 0.65s cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+
+.io.is-in {
+  opacity: 1;
+  transform: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  .reveal,
+  .io {
+    animation: none;
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+}
+
+/* ---------- Prose (legal pages, changelog) ---------- */
+.prose h2 {
+  font-size: 1.35rem;
+  margin-block: 2.2rem 0.7rem;
+}
+
+.prose p,
+.prose li {
+  color: var(--ink-soft);
+}
+
+.prose ul {
+  padding-inline-start: 1.2rem;
+}
+
+.prose a {
+  color: var(--accent-ink);
+}

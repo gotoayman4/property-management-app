@@ -1,0 +1,22 @@
+{
+  "name": "propmanager-website",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Marketing website for PropManager (مدير العقار) — bilingual Astro static site deployed on Netlify",
+  "type": "module",
+  "scripts": {
+    "dev": "astro dev",
+    "build": "astro build",
+    "preview": "astro preview",
+    "generate:assets": "node scripts/generate-assets.mjs"
+  },
+  "dependencies": {
+    "@astrojs/sitemap": "^3.7.3",
+    "@fontsource-variable/alexandria": "^5.3.0",
+    "@fontsource-variable/jetbrains-mono": "^5.3.0",
+    "astro": "^7.1.4"
+  },
+  "devDependencies": {
+    "sharp": "^0.35.3"
+  }
+}

@@ -1,0 +1,140 @@
+---
+/**
+ * @file PrivacyPage — the privacy policy for an app that collects nothing.
+ * DECISION: Legal body text lives here (not in the i18n dictionaries) — it
+ *           is long-form prose unique to this page, versioned by date below.
+ */
+import { SITE } from '../../config'
+import { t, type Locale } from '../../i18n'
+
+interface Props {
+  locale: Locale
+}
+
+const { locale } = Astro.props
+const s = t(locale)
+const updated = '2026-07-28'
+
+interface LegalSection {
+  h: string
+  p: string[]
+}
+
+const content: Record<Locale, LegalSection[]> = {
+  ar: [
+    {
+      h: 'المبدأ',
+      p: [
+        'مدير العقار تطبيق يعمل على جهازك بالكامل. لا نجمع بياناتك، ولا نراها، ولا نستطيع رؤيتها — فهي لا تغادر جهازك أساساً.'
+      ]
+    },
+    {
+      h: 'ما الذي يُخزَّن وأين؟',
+      p: [
+        'كل بيانات العقارات والمستأجرين والعقود والقيود المالية تُحفظ في قاعدة بيانات محلية داخل مجلد المستخدم على ويندوز.',
+        'النسخ الاحتياطية ملفات محلية تنشئها أنت وتتحكم بها وحدك.'
+      ]
+    },
+    {
+      h: 'ما الذي لا نفعله؟',
+      p: [
+        'لا حسابات مستخدمين ولا تسجيل دخول. لا خوادم تحليلات ولا تتبّع ولا ملفات تعريف ارتباط داخل التطبيق. لا إعلانات. لا بيع أو مشاركة بيانات مع أي طرف ثالث — لأننا لا نملك بياناتك أصلاً.'
+      ]
+    },
+    {
+      h: 'متى يتصل التطبيق بالإنترنت؟',
+      p: [
+        'في حالتين اختياريتين فقط: جلب أسعار الصرف إذا فعّلت ذلك في الإعدادات، وفحص التحديثات عبر GitHub. في الحالتين تُرسَل طلبات قياسية فقط (عنوان IP وترويسات الطلب المعتادة) إلى الخدمة المعنية ولا يُرسَل أي شيء من بياناتك.'
+      ]
+    },
+    {
+      h: 'هذا الموقع',
+      p: [
+        'موقعنا ثابت (static) ولا يستخدم ملفات تعريف ارتباط ولا أدوات تتبّع. يُستضاف على Netlify التي قد تسجّل طلبات الخادم القياسية وفق سياساتها. صفحة التحميل تستعلم من واجهة GitHub العامة لعرض أحدث إصدار.'
+      ]
+    },
+    {
+      h: 'التغييرات على هذه السياسة',
+      p: ['إن تغيّرت هذه السياسة يوماً، سننشر النسخة الجديدة هنا مع تحديث التاريخ أعلاه.']
+    },
+    {
+      h: 'تواصل معنا',
+      p: [`لأي سؤال عن الخصوصية راسلنا على ${SITE.contactEmail}.`]
+    }
+  ],
+  en: [
+    {
+      h: 'The principle',
+      p: [
+        'PropManager runs entirely on your device. We do not collect your data, we do not see it, and we cannot see it — it never leaves your machine in the first place.'
+      ]
+    },
+    {
+      h: 'What is stored, and where?',
+      p: [
+        'All property, tenant, contract and ledger data is stored in a local database inside your Windows user profile.',
+        'Backups are local files that you create and control.'
+      ]
+    },
+    {
+      h: 'What we do not do',
+      p: [
+        'No user accounts, no sign-in. No analytics, no tracking, no in-app cookies. No advertising. No selling or sharing data with third parties — we never hold your data to begin with.'
+      ]
+    },
+    {
+      h: 'When does the app go online?',
+      p: [
+        'In exactly two optional cases: fetching exchange rates if you enable it in Settings, and checking for updates via GitHub. In both cases only standard requests are made (your IP address and usual request headers reach the service) and none of your data is transmitted.'
+      ]
+    },
+    {
+      h: 'This website',
+      p: [
+        'This site is static and uses no cookies or trackers. It is hosted on Netlify, which may log standard server requests per its own policies. The download page queries the public GitHub API to display the latest release.'
+      ]
+    },
+    {
+      h: 'Changes to this policy',
+      p: ['If this policy ever changes, the new version will be published here with an updated date above.']
+    },
+    {
+      h: 'Contact',
+      p: [`For any privacy question, write to ${SITE.contactEmail}.`]
+    }
+  ]
+}
+---
+
+<section class="section section--ruled">
+  <div class="wrap">
+    <p class="label reveal">{s.footer.legal}</p>
+    <h1 class="section-title reveal" style="animation-delay: 0.08s">{s.legal.privacyTitle}</h1>
+    <p class="section-sub reveal mono" style="animation-delay: 0.16s">{s.legal.updated}: {updated}</p>
+  </div>
+</section>
+
+<section class="section" style="padding-block-start: 0">
+  <div class="wrap prose legal io">
+    {
+      content[locale].map((section) => (
+        <>
+          <h2>{section.h}</h2>
+          {section.p.map((paragraph) => (
+            <p>{paragraph}</p>
+          ))}
+        </>
+      ))
+    }
+  </div>
+</section>
+
+<style>
+  .legal {
+    max-inline-size: 42rem;
+  }
+
+  .legal p + p {
+    margin-block-start: 0.7rem;
+  }
+</style>

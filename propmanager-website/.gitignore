@@ -1,0 +1,4 @@
+# Website build outputs
+dist/
+.astro/
+node_modules/

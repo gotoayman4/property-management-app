@@ -1,0 +1,392 @@
+---
+/**
+ * @file HomePage — hero, ledger strip, features, privacy, gallery, CTA, FAQ.
+ *
+ * INTENT: The full landing narrative in one component; the /index.astro and
+ *         /en/index.astro shells only pass `locale`.
+ * DECISION: Hero screenshot follows the locale (Arabic UI for ar, English UI
+ *           for en) so the first paint mirrors what the visitor will install.
+ */
+import { Image } from 'astro:assets'
+import dashboardDarkAr from '../../assets/screenshots/dashboard-dark-ar.png'
+import dashboardDarkEn from '../../assets/screenshots/dashboard-dark-en.png'
+import dashboardLightAr from '../../assets/screenshots/dashboard-light-ar.png'
+import dashboardLightEn from '../../assets/screenshots/dashboard-light-en.png'
+import notifications from '../../assets/screenshots/notifications.png'
+import reports from '../../assets/screenshots/reports.png'
+import { SITE } from '../../config'
+import { localePath, t, type Locale } from '../../i18n'
+
+interface Props {
+  locale: Locale
+}
+
+const { locale } = Astro.props
+const s = t(locale)
+const heroShot = locale === 'ar' ? dashboardDarkAr : dashboardDarkEn
+const lightShot = locale === 'ar' ? dashboardLightAr : dashboardLightEn
+const gallery = [
+  { img: heroShot, alt: s.gallery.alts.dashboardDark },
+  { img: lightShot, alt: s.gallery.alts.dashboardLight },
+  { img: reports, alt: s.gallery.alts.reports },
+  { img: notifications, alt: s.gallery.alts.notifications }
+]
+/* Two-digit folio numbers for the feature cards. */
+const folio = (i: number): string => String(i + 1).padStart(2, '0')
+---
+
+<!-- ============ Hero ============ -->
+<section class="section section--ruled hero">
+  <div class="wrap">
+    <p class="label reveal">{s.hero.kicker}</p>
+    <h1 class="hero__title reveal" style="animation-delay: 0.08s">
+      <span>{s.hero.title1}</span>
+      <span class="hero__accent">{s.hero.titleAccent}</span>
+      <span>{s.hero.title2}</span>
+    </h1>
+    <p class="hero__sub reveal" style="animation-delay: 0.16s">{s.hero.sub}</p>
+    <div class="hero__actions reveal" style="animation-delay: 0.24s">
+      <a class="btn btn--primary" href={localePath(locale, '/download')}>{s.hero.ctaPrimary}</a>
+      <a class="btn btn--ghost" href={localePath(locale, '/features')}>{s.hero.ctaSecondary}</a>
+    </div>
+    <div class="hero__chips reveal" style="animation-delay: 0.32s">
+      <span class="chip">{s.hero.free}</span>
+      <span class="chip">{s.hero.offline}</span>
+      <span class="chip">{s.hero.bilingual}</span>
+    </div>
+
+    <div class="hero__shot reveal" style="animation-delay: 0.4s">
+      <div class="frame">
+        <div class="frame__bar">
+          <span class="frame__dot"></span><span class="frame__dot"></span><span class="frame__dot"></span>
+          <span class="frame__title">{locale === 'ar' ? SITE.nameAr : SITE.nameEn} — v{SITE.fallbackVersion}</span>
+        </div>
+        <Image src={heroShot} alt={s.hero.screenshotAlt} loading="eager" widths={[640, 1080, 1600]} sizes="(max-width: 74rem) 100vw, 74rem" />
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ Ledger strip (marquee of capabilities) ============ -->
+<div class="strip" aria-hidden="true">
+  <div class="strip__inner">
+    {[...s.ledgerStrip.entries, ...s.ledgerStrip.entries].map((entry) => (
+      <span class="strip__item mono"><span class="strip__tick">✓</span>{entry}</span>
+    ))}
+  </div>
+</div>
+
+<!-- ============ Features ============ -->
+<section class="section">
+  <div class="wrap">
+    <p class="label io">{`01 / ${s.features.label}`}</p>
+    <h2 class="section-title io">{s.features.title}</h2>
+    <p class="section-sub io">{s.features.sub}</p>
+    <div class="grid grid--4 io" style="margin-block-start: 2.5rem">
+      {
+        s.features.items.map((item, i) => (
+          <article class="card">
+            <span class="card__num">{folio(i)}</span>
+            <h3 class="card__title">{item.title}</h3>
+            <p class="card__desc">{item.desc}</p>
+          </article>
+        ))
+      }
+    </div>
+  </div>
+</section>
+
+<!-- ============ Privacy / offline ============ -->
+<section class="section section--ruled">
+  <div class="wrap">
+    <p class="label io">{`02 / ${s.privacy.label}`}</p>
+    <h2 class="section-title io">{s.privacy.title}</h2>
+    <div class="grid grid--2 io" style="margin-block-start: 2.5rem">
+      {
+        s.privacy.points.map((point, i) => (
+          <article class="card">
+            <span class="card__num">{folio(i)}</span>
+            <h3 class="card__title">{point.title}</h3>
+            <p class="card__desc">{point.desc}</p>
+          </article>
+        ))
+      }
+    </div>
+  </div>
+</section>
+
+<!-- ============ Gallery ============ -->
+<section class="section">
+  <div class="wrap">
+    <p class="label io">{`03 / ${s.gallery.label}`}</p>
+    <h2 class="section-title io">{s.gallery.title}</h2>
+    <p class="section-sub io">{s.gallery.sub}</p>
+    <div class="gallery io" style="margin-block-start: 2.5rem">
+      {
+        gallery.map((shot) => (
+          <figure class="frame gallery__item">
+            <div class="frame__bar">
+              <span class="frame__dot" /><span class="frame__dot" /><span class="frame__dot" />
+              <span class="frame__title">{shot.alt}</span>
+            </div>
+            <Image src={shot.img} alt={shot.alt} widths={[480, 800, 1200]} sizes="(max-width: 46rem) 100vw, 37rem" />
+          </figure>
+        ))
+      }
+    </div>
+  </div>
+</section>
+
+<!-- ============ Download CTA ============ -->
+<section class="section section--ruled">
+  <div class="wrap cta io">
+    <p class="label">{`04 / ${s.downloadCta.label}`}</p>
+    <h2 class="section-title">{s.downloadCta.title}</h2>
+    <p class="section-sub">{s.downloadCta.sub}</p>
+    <div class="cta__row">
+      <a class="btn btn--primary" href={localePath(locale, '/download')}>{s.downloadCta.button}</a>
+      <span class="cta__meta mono">{s.downloadCta.versionPrefix} {SITE.fallbackVersion} · {s.downloadCta.requirements}</span>
+    </div>
+  </div>
+</section>
+
+<!-- ============ FAQ ============ -->
+<section class="section">
+  <div class="wrap faq">
+    <p class="label io">{`05 / ${s.faq.label}`}</p>
+    <h2 class="section-title io">{s.faq.title}</h2>
+    <div class="faq__list io" style="margin-block-start: 2rem">
+      {
+        s.faq.items.map((item) => (
+          <details class="faq__item">
+            <summary>{item.q}</summary>
+            <p>{item.a}</p>
+          </details>
+        ))
+      }
+    </div>
+  </div>
+</section>
+
+<style>
+  /* ----- hero ----- */
+  .hero {
+    padding-block-start: clamp(3.5rem, 8vw, 6.5rem);
+  }
+
+  .hero__title {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35em;
+    font-size: clamp(2.4rem, 7vw, 4.6rem);
+    line-height: 1.2;
+    margin-block-start: 1.2rem;
+    max-inline-size: 20ch;
+  }
+
+  .hero__accent {
+    color: var(--accent);
+    position: relative;
+  }
+
+  .hero__accent::after {
+    content: '';
+    position: absolute;
+    inset-inline: 0;
+    inset-block-end: 0.08em;
+    block-size: 0.09em;
+    background: var(--rule);
+  }
+
+  .hero__sub {
+    margin-block-start: 1.4rem;
+    max-inline-size: 56ch;
+    font-size: clamp(1.05rem, 1.6vw, 1.2rem);
+    color: var(--ink-soft);
+  }
+
+  .hero__actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.8rem;
+    margin-block-start: 2.2rem;
+  }
+
+  .hero__chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.6rem;
+    margin-block-start: 1.4rem;
+  }
+
+  .hero__shot {
+    margin-block-start: 3.5rem;
+  }
+
+  /* ----- capability strip ----- */
+  .strip {
+    overflow: hidden;
+    border-block: 1px solid var(--line);
+    background: var(--bg-raised);
+    padding-block: 0.8rem;
+  }
+
+  .strip__inner {
+    display: flex;
+    gap: 2.5rem;
+    inline-size: max-content;
+    animation: slide 36s linear infinite;
+  }
+
+  /* CAVEAT: translate direction must follow the writing direction. */
+  @keyframes slide {
+    to {
+      transform: translateX(-50%);
+    }
+  }
+
+  :global([dir='rtl']) .strip__inner {
+    animation-name: slide-rtl;
+  }
+
+  @keyframes slide-rtl {
+    to {
+      transform: translateX(50%);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .strip__inner {
+      animation: none;
+      flex-wrap: wrap;
+      inline-size: auto;
+    }
+  }
+
+  .strip__item {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.82rem;
+    color: var(--ink-soft);
+    white-space: nowrap;
+  }
+
+  .strip__tick {
+    color: var(--ok);
+  }
+
+  /* ----- grids ----- */
+  .grid {
+    display: grid;
+    gap: 1.1rem;
+  }
+
+  .grid--4 {
+    grid-template-columns: repeat(4, 1fr);
+  }
+
+  .grid--2 {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .card__title {
+    font-size: 1.06rem;
+    margin-block-end: 0.5rem;
+    padding-inline-end: 2rem;
+  }
+
+  .card__desc {
+    color: var(--ink-soft);
+    font-size: 0.95rem;
+  }
+
+  /* ----- gallery ----- */
+  .gallery {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.4rem;
+  }
+
+  .gallery__item {
+    margin: 0;
+  }
+
+  /* ----- CTA ----- */
+  .cta__row {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 1.2rem;
+    margin-block-start: 2rem;
+  }
+
+  .cta__meta {
+    font-size: 0.85rem;
+    color: var(--ink-faint);
+  }
+
+  /* ----- FAQ ----- */
+  .faq__list {
+    max-inline-size: 46rem;
+    display: grid;
+    gap: 0.7rem;
+  }
+
+  .faq__item {
+    border: 1px solid var(--line);
+    border-radius: 0.75rem;
+    background: var(--bg-raised);
+    padding: 0;
+    overflow: hidden;
+  }
+
+  .faq__item summary {
+    cursor: pointer;
+    font-weight: 600;
+    padding: 1rem 1.3rem;
+    list-style: none;
+    position: relative;
+    padding-inline-end: 3rem;
+  }
+
+  .faq__item summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .faq__item summary::after {
+    content: '+';
+    font-family: var(--font-mono);
+    position: absolute;
+    inset-inline-end: 1.2rem;
+    inset-block-start: 50%;
+    transform: translateY(-50%);
+    color: var(--accent);
+    font-size: 1.2rem;
+    transition: transform 0.2s ease;
+  }
+
+  .faq__item[open] summary::after {
+    content: '−';
+  }
+
+  .faq__item p {
+    padding: 0 1.3rem 1.1rem;
+    color: var(--ink-soft);
+  }
+
+  /* ----- responsive ----- */
+  @media (max-width: 62rem) {
+    .grid--4 {
+      grid-template-columns: repeat(2, 1fr);
+    }
+  }
+
+  @media (max-width: 46rem) {
+    .grid--4,
+    .grid--2,
+    .gallery {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>

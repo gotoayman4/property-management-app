@@ -1,0 +1,15 @@
+---
+/**
+ * @file Arabic features page — "/features".
+ */
+import FeaturesPage from '../components/pages/FeaturesPage.astro'
+import { t } from '../i18n'
+import BaseLayout from '../layouts/BaseLayout.astro'
+
+const locale = 'ar'
+const s = t(locale)
+---
+
+<BaseLayout locale={locale} title={s.featuresPage.title} description={s.featuresPage.sub}>
+  <FeaturesPage locale={locale} />
+</BaseLayout>

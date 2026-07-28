@@ -1,0 +1,15 @@
+---
+/**
+ * @file English changelog page — "/en/changelog".
+ */
+import ChangelogPage from '../../components/pages/ChangelogPage.astro'
+import { t } from '../../i18n'
+import BaseLayout from '../../layouts/BaseLayout.astro'
+
+const locale = 'en'
+const s = t(locale)
+---
+
+<BaseLayout locale={locale} title={s.changelogPage.title} description={s.changelogPage.sub}>
+  <ChangelogPage locale={locale} />
+</BaseLayout>

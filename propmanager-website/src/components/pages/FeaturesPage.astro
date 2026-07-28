@@ -1,0 +1,150 @@
+---
+/**
+ * @file FeaturesPage — deep-dive sections, each pairing prose with a shot.
+ * DECISION: Alternating text/screenshot layout ("zig-zag") with logical
+ *           properties so the alternation mirrors correctly in RTL.
+ */
+import { Image } from 'astro:assets'
+import dashboardDarkAr from '../../assets/screenshots/dashboard-dark-ar.png'
+import dashboardDarkEn from '../../assets/screenshots/dashboard-dark-en.png'
+import exchangeRates from '../../assets/screenshots/exchange-rates.png'
+import notifications from '../../assets/screenshots/notifications.png'
+import reports from '../../assets/screenshots/reports.png'
+import settings from '../../assets/screenshots/settings.png'
+import { localePath, t, type Locale } from '../../i18n'
+
+interface Props {
+  locale: Locale
+}
+
+const { locale } = Astro.props
+const s = t(locale)
+const dashboard = locale === 'ar' ? dashboardDarkAr : dashboardDarkEn
+/* One screenshot per section, in the same order as featuresPage.sections. */
+const shots = [dashboard, reports, exchangeRates, reports, notifications, settings]
+const folio = (i: number): string => String(i + 1).padStart(2, '0')
+---
+
+<section class="section section--ruled">
+  <div class="wrap">
+    <p class="label reveal">{s.nav.features}</p>
+    <h1 class="section-title reveal" style="animation-delay: 0.08s">{s.featuresPage.title}</h1>
+    <p class="section-sub reveal" style="animation-delay: 0.16s">{s.featuresPage.sub}</p>
+  </div>
+</section>
+
+{
+  s.featuresPage.sections.map((section, i) => (
+    <section class={`section ${i % 2 === 1 ? 'section--ruled' : ''}`}>
+      <div class:list={['wrap', 'row', { 'row--flip': i % 2 === 1 }]}>
+        <div class="row__text io">
+          <p class="label">{`${folio(i)} / ${s.features.label}`}</p>
+          <h2 class="row__title">{section.title}</h2>
+          <p class="row__desc">{section.desc}</p>
+          <ul class="row__list">
+            {section.bullets.map((bullet) => (
+              <li>
+                <span class="tick" aria-hidden="true">
+                  ✓
+                </span>
+                {bullet}
+              </li>
+            ))}
+          </ul>
+        </div>
+        <figure class="row__shot io frame">
+          <div class="frame__bar">
+            <span class="frame__dot" />
+            <span class="frame__dot" />
+            <span class="frame__dot" />
+            <span class="frame__title">{section.title}</span>
+          </div>
+          <Image src={shots[i]} alt={section.title} widths={[480, 800, 1200]} sizes="(max-width: 62rem) 100vw, 36rem" />
+        </figure>
+      </div>
+    </section>
+  ))
+}
+
+<section class="section section--ruled">
+  <div class="wrap cta io">
+    <h2 class="section-title">{s.downloadCta.title}</h2>
+    <p class="section-sub">{s.downloadCta.sub}</p>
+    <a class="btn btn--primary" href={localePath(locale, '/download')} style="margin-block-start: 1.6rem">
+      {s.downloadCta.button}
+    </a>
+  </div>
+</section>
+
+<style>
+  .row {
+    display: grid;
+    grid-template-columns: 1fr 1.15fr;
+    gap: clamp(2rem, 5vw, 4rem);
+    align-items: center;
+  }
+
+  /* Alternate sides on even/odd sections; mirrors automatically in RTL. */
+  .row--flip .row__text {
+    order: 2;
+  }
+
+  .row--flip .row__shot {
+    order: 1;
+  }
+
+  .row__title {
+    font-size: clamp(1.4rem, 2.6vw, 1.9rem);
+    margin-block: 0.8rem 0.6rem;
+  }
+
+  .row__desc {
+    color: var(--ink-soft);
+  }
+
+  .row__list {
+    list-style: none;
+    padding: 0;
+    margin-block-start: 1.2rem;
+    display: grid;
+    gap: 0.55rem;
+  }
+
+  .row__list li {
+    display: flex;
+    gap: 0.6rem;
+    align-items: baseline;
+    color: var(--ink-soft);
+  }
+
+  .tick {
+    color: var(--ok);
+    font-family: var(--font-mono);
+    font-size: 0.85rem;
+  }
+
+  .row__shot {
+    margin: 0;
+  }
+
+  .cta {
+    text-align: center;
+    display: grid;
+    justify-items: center;
+  }
+
+  @media (max-width: 62rem) {
+    .row {
+      grid-template-columns: 1fr;
+    }
+
+    /* Text first on mobile regardless of alternation. */
+    .row--flip .row__text {
+      order: 1;
+    }
+
+    .row--flip .row__shot {
+      order: 2;
+    }
+  }
+</style>

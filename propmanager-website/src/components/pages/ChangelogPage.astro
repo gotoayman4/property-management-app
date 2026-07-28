@@ -1,0 +1,106 @@
+---
+/**
+ * @file ChangelogPage — renders CHANGELOG.md (same file that produces GitHub
+ *       release notes) as a ledger of releases.
+ */
+import { SITE } from '../../config'
+import { t, type Locale } from '../../i18n'
+import { parseChangelog } from '../../lib/changelog'
+
+interface Props {
+  locale: Locale
+}
+
+const { locale } = Astro.props
+const s = t(locale)
+const releases = parseChangelog()
+---
+
+<section class="section section--ruled">
+  <div class="wrap">
+    <p class="label reveal">{s.nav.changelog}</p>
+    <h1 class="section-title reveal" style="animation-delay: 0.08s">{s.changelogPage.title}</h1>
+    <p class="section-sub reveal" style="animation-delay: 0.16s">{s.changelogPage.sub}</p>
+  </div>
+</section>
+
+<section class="section" style="padding-block-start: 0">
+  <div class="wrap log">
+    {
+      releases.map((release, i) => (
+        <article class="log__entry io">
+          <header class="log__head">
+            <h2 class="log__version mono">v{release.version}</h2>
+            {i === 0 && <span class="log__badge">{s.changelogPage.current}</span>}
+            {release.date && <time class="log__date mono">{release.date}</time>}
+          </header>
+          <div class="log__body prose">
+            {release.sections.map((section) => (
+              <div>
+                {section.heading && <h3 class="log__heading">{section.heading}</h3>}
+                <ul>
+                  {section.items.map((item) => (
+                    <li>{item}</li>
+                  ))}
+                </ul>
+              </div>
+            ))}
+          </div>
+        </article>
+      ))
+    }
+
+    <a class="btn btn--ghost io" href={SITE.releasesUrl} rel="noopener">{s.changelogPage.viewOnGitHub}</a>
+  </div>
+</section>
+
+<style>
+  .log {
+    max-inline-size: 46rem;
+    display: grid;
+    gap: 2.5rem;
+  }
+
+  .log__entry {
+    border-inline-start: 2px solid var(--rule);
+    padding-inline-start: clamp(1.2rem, 3vw, 2rem);
+  }
+
+  .log__head {
+    display: flex;
+    align-items: baseline;
+    gap: 1rem;
+    flex-wrap: wrap;
+  }
+
+  .log__version {
+    font-size: 1.5rem;
+  }
+
+  .log__badge {
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    background: var(--accent-soft);
+    color: var(--accent-ink);
+    border: 1px solid var(--accent);
+    border-radius: 999px;
+    padding: 0.15rem 0.7rem;
+  }
+
+  .log__date {
+    color: var(--ink-faint);
+    font-size: 0.85rem;
+  }
+
+  .log__heading {
+    font-size: 0.95rem;
+    color: var(--accent-ink);
+    margin-block: 1.1rem 0.4rem;
+  }
+
+  .log__body ul {
+    display: grid;
+    gap: 0.35rem;
+  }
+</style>

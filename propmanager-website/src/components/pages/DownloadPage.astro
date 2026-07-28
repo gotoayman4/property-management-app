@@ -1,0 +1,356 @@
+---
+/**
+ * @file DownloadPage — latest release card (live from the GitHub Releases
+ *       API), edition list, install steps, checksum verification, roadmap.
+ *
+ * DECISION: The release card is server-rendered with fallback data from
+ *           config.ts and hydrated by a tiny inline fetch at runtime — the
+ *           page keeps working (with the fallback link) when GitHub is
+ *           unreachable or rate-limited, and with JS disabled.
+ * CAVEAT: The GitHub API is public/unauthenticated here (60 req/h per IP) —
+ *         acceptable for a marketing page because failure degrades to the
+ *         releases-page link, never to a broken button.
+ */
+import { EDITIONS, SITE } from '../../config'
+import { t, type Locale } from '../../i18n'
+
+interface Props {
+  locale: Locale
+}
+
+const { locale } = Astro.props
+const s = t(locale)
+const editionName = s.downloadPage.editionTitle
+---
+
+<section class="section section--ruled">
+  <div class="wrap">
+    <p class="label reveal">{s.nav.download}</p>
+    <h1 class="section-title reveal" style="animation-delay: 0.08s">{s.downloadPage.title}</h1>
+    <p class="section-sub reveal" style="animation-delay: 0.16s">{s.downloadPage.sub}</p>
+  </div>
+</section>
+
+<!-- ============ Latest release card ============ -->
+<section class="section" style="padding-block-start: 0">
+  <div class="wrap">
+    <div
+      class="release card reveal"
+      style="animation-delay: 0.24s"
+      data-release
+      data-api={SITE.releasesApi}
+      data-loading={s.downloadPage.loading}
+      data-error={s.downloadPage.apiError}
+    >
+      <div class="release__head">
+        <div>
+          <p class="release__label mono">{s.downloadPage.latest}</p>
+          <p class="release__version mono" data-version>v{SITE.fallbackVersion}</p>
+        </div>
+        <dl class="release__meta">
+          <div>
+            <dt>{s.downloadPage.released}</dt>
+            <dd class="mono" data-date>{SITE.fallbackReleaseDate}</dd>
+          </div>
+          <div>
+            <dt>{s.downloadPage.size}</dt>
+            <dd class="mono" data-size>—</dd>
+          </div>
+          <div>
+            <dt>{s.downloadPage.requirementsTitle}</dt>
+            <dd>{s.downloadCta.requirements}</dd>
+          </div>
+        </dl>
+      </div>
+
+      <p class="release__status" data-status hidden></p>
+
+      <div class="release__actions">
+        <a class="btn btn--primary" href={SITE.releasesUrl} data-download rel="noopener">
+          {s.downloadPage.button}
+        </a>
+        <a class="btn btn--ghost" href={SITE.releasesUrl} rel="noopener">{s.downloadCta.allReleases}</a>
+      </div>
+
+      <div class="release__notes prose" data-notes hidden>
+        <h2>{s.downloadPage.notes}</h2>
+        <ul data-notes-list></ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ Editions (freemium-ready) ============ -->
+<section class="section section--ruled" style="padding-block: 3.5rem">
+  <div class="wrap">
+    <div class:list={['editions', { 'editions--single': EDITIONS.length === 1 }]}>
+      {
+        EDITIONS.map((edition) => (
+          <article class="card edition io">
+            <p class="edition__price mono">{edition.price === null ? s.downloadPage.editionCta : `$${edition.price}`}</p>
+            <h2 class="edition__name">{editionName}</h2>
+            <p class="edition__desc">{s.downloadPage.editionDesc}</p>
+          </article>
+        ))
+      }
+    </div>
+  </div>
+</section>
+
+<!-- ============ Install steps ============ -->
+<section class="section">
+  <div class="wrap">
+    <h2 class="section-title io">{s.downloadPage.installTitle}</h2>
+    <ol class="steps io">
+      {
+        s.downloadPage.installSteps.map((step, i) => (
+          <li class="steps__item">
+            <span class="steps__num mono">{String(i + 1).padStart(2, '0')}</span>
+            <p>{step}</p>
+          </li>
+        ))
+      }
+    </ol>
+  </div>
+</section>
+
+<!-- ============ Verify + future platforms ============ -->
+<section class="section section--ruled">
+  <div class="wrap verify">
+    <div class="io">
+      <h2 class="verify__title">{s.downloadPage.verify}</h2>
+      <p class="verify__note">{s.downloadPage.verifyNote}</p>
+      <pre class="verify__code mono" dir="ltr"><code>Get-FileHash .\PropManager-{SITE.fallbackVersion}-setup.exe -Algorithm SHA256</code></pre>
+    </div>
+    <div class="io">
+      <h2 class="verify__title">{s.downloadPage.futurePlatforms}</h2>
+      <p class="verify__note">{s.downloadPage.futurePlatformsNote}</p>
+    </div>
+  </div>
+</section>
+
+<!-- Runtime hydration of the release card from the GitHub Releases API. -->
+<script>
+  interface GitHubAsset {
+    name: string
+    size: number
+    browser_download_url: string
+  }
+
+  interface GitHubRelease {
+    tag_name: string
+    published_at: string
+    body: string
+    assets: GitHubAsset[]
+  }
+
+  const card = document.querySelector<HTMLElement>('[data-release]')
+
+  /** Format bytes as a human MB string (Western numerals per numeral policy). */
+  function formatSize(bytes: number): string {
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
+  }
+
+  async function hydrate(el: HTMLElement): Promise<void> {
+    const status = el.querySelector<HTMLElement>('[data-status]')
+    try {
+      const res = await fetch(el.dataset.api ?? '')
+      if (!res.ok) throw new Error(`GitHub API ${res.status}`)
+      const release = (await res.json()) as GitHubRelease
+      const setup = release.assets.find((a) => a.name.endsWith('-setup.exe'))
+      if (!setup) return
+
+      const version = release.tag_name.replace(/^v/, '')
+      el.querySelector('[data-version]')!.textContent = `v${version}`
+      el.querySelector('[data-date]')!.textContent = release.published_at.slice(0, 10)
+      el.querySelector('[data-size]')!.textContent = formatSize(setup.size)
+      el.querySelector<HTMLAnchorElement>('[data-download]')!.href = setup.browser_download_url
+
+      // Release notes: plain "- item" lines from the generated notes body.
+      const items = (release.body ?? '')
+        .split(/\r?\n/)
+        .filter((line) => line.startsWith('- '))
+        .map((line) => line.slice(2).trim())
+      if (items.length > 0) {
+        const list = el.querySelector<HTMLElement>('[data-notes-list]')!
+        for (const item of items) {
+          const li = document.createElement('li')
+          li.textContent = item
+          list.append(li)
+        }
+        el.querySelector<HTMLElement>('[data-notes]')!.hidden = false
+      }
+    } catch {
+      // Degrade gracefully: keep fallback version + releases-page link.
+      if (status) {
+        status.textContent = el.dataset.error ?? ''
+        status.hidden = false
+      }
+    }
+  }
+
+  if (card) void hydrate(card)
+</script>
+
+<style>
+  .release {
+    padding: clamp(1.6rem, 4vw, 2.6rem);
+  }
+
+  .release__head {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 2rem;
+    flex-wrap: wrap;
+  }
+
+  .release__label {
+    font-size: 0.78rem;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--accent);
+  }
+
+  :global([dir='rtl']) .release__label {
+    letter-spacing: 0;
+  }
+
+  .release__version {
+    font-size: clamp(2rem, 5vw, 3rem);
+    font-weight: 700;
+    line-height: 1.15;
+  }
+
+  .release__meta {
+    display: flex;
+    gap: 2.2rem;
+    flex-wrap: wrap;
+    margin: 0;
+  }
+
+  .release__meta dt {
+    font-size: 0.78rem;
+    color: var(--ink-faint);
+    margin-block-end: 0.2rem;
+  }
+
+  .release__meta dd {
+    margin: 0;
+    font-weight: 600;
+  }
+
+  .release__status {
+    margin-block-start: 1rem;
+    color: var(--accent-ink);
+    font-size: 0.9rem;
+  }
+
+  .release__actions {
+    display: flex;
+    gap: 0.8rem;
+    flex-wrap: wrap;
+    margin-block-start: 1.8rem;
+  }
+
+  .release__notes {
+    margin-block-start: 1.8rem;
+    border-block-start: 1px dashed var(--line);
+    padding-block-start: 0.4rem;
+  }
+
+  .release__notes h2 {
+    font-size: 1.05rem;
+  }
+
+  /* editions */
+  .editions {
+    display: grid;
+    gap: 1.2rem;
+    grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
+  }
+
+  .editions--single {
+    max-inline-size: 34rem;
+  }
+
+  .edition__price {
+    color: var(--accent);
+    font-weight: 600;
+    font-size: 0.9rem;
+  }
+
+  .edition__name {
+    font-size: 1.3rem;
+    margin-block: 0.5rem;
+  }
+
+  .edition__desc {
+    color: var(--ink-soft);
+  }
+
+  /* steps */
+  .steps {
+    list-style: none;
+    padding: 0;
+    margin-block-start: 2rem;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1.2rem;
+    counter-reset: step;
+  }
+
+  .steps__item {
+    border: 1px solid var(--line);
+    border-radius: 0.9rem;
+    background: var(--bg-raised);
+    padding: 1.4rem;
+  }
+
+  .steps__num {
+    color: var(--accent);
+    font-size: 0.85rem;
+    display: block;
+    margin-block-end: 0.6rem;
+  }
+
+  .steps__item p {
+    color: var(--ink-soft);
+  }
+
+  /* verify */
+  .verify {
+    display: grid;
+    grid-template-columns: 1.3fr 1fr;
+    gap: clamp(2rem, 5vw, 4rem);
+  }
+
+  .verify__title {
+    font-size: 1.2rem;
+    margin-block-end: 0.6rem;
+  }
+
+  .verify__note {
+    color: var(--ink-soft);
+  }
+
+  .verify__code {
+    margin-block-start: 1rem;
+    background: var(--bg-raised);
+    border: 1px solid var(--line);
+    border-radius: 0.6rem;
+    padding: 0.9rem 1.1rem;
+    font-size: 0.82rem;
+    overflow-x: auto;
+  }
+
+  @media (max-width: 62rem) {
+    .steps {
+      grid-template-columns: 1fr;
+    }
+
+    .verify {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>

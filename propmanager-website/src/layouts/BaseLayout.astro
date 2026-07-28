@@ -1,0 +1,135 @@
+---
+/**
+ * @file BaseLayout — HTML shell for every page.
+ *
+ * INTENT: One place for SEO (canonical, hreflang, Open Graph, JSON-LD),
+ *         theme pre-paint (no FOUC), fonts and the shared header/footer.
+ * CONSTRAINT: dir/lang are set on <html>; all layout uses logical properties.
+ */
+import '@fontsource-variable/alexandria'
+import '@fontsource-variable/jetbrains-mono'
+import Footer from '../components/Footer.astro'
+import Header from '../components/Header.astro'
+import { SITE } from '../config'
+import { alternatePath, dir, t, type Locale } from '../i18n'
+import '../styles/global.css'
+
+interface Props {
+  locale: Locale
+  /** Page title WITHOUT the site suffix. */
+  title: string
+  description: string
+}
+
+const { locale, title, description } = Astro.props
+const strings = t(locale)
+const direction = dir(locale)
+const siteName = locale === 'ar' ? SITE.nameAr : SITE.nameEn
+const fullTitle = `${title} — ${siteName}`
+const canonical = new URL(Astro.url.pathname, Astro.site)
+const altPath = alternatePath(locale, Astro.url.pathname)
+const alternate = new URL(altPath, Astro.site)
+const ogImage = new URL('/og.png', Astro.site)
+
+/* JSON-LD: the app as a SoftwareApplication — free offer included. */
+const jsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'SoftwareApplication',
+  name: siteName,
+  operatingSystem: 'Windows 10, Windows 11',
+  applicationCategory: 'BusinessApplication',
+  offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
+  softwareVersion: SITE.fallbackVersion,
+  inLanguage: ['ar', 'en'],
+  url: Astro.site?.toString(),
+  downloadUrl: SITE.releasesUrl
+}
+---
+
+<!doctype html>
+<html lang={locale} dir={direction}>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{fullTitle}</title>
+    <meta name="description" content={description} />
+    <link rel="canonical" href={canonical} />
+    <link rel="alternate" hreflang={locale === 'ar' ? 'en' : 'ar'} href={alternate} />
+    <link rel="alternate" hreflang={locale} href={canonical} />
+    <link rel="alternate" hreflang="x-default" href={new URL(locale === 'ar' ? Astro.url.pathname : altPath, Astro.site)} />
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png" />
+    <link rel="icon" type="image/png" sizes="192x192" href="/favicon-192.png" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <meta name="theme-color" content="#14110d" />
+    <link rel="sitemap" href="/sitemap-index.xml" />
+    <!-- Open Graph / Twitter -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content={siteName} />
+    <meta property="og:title" content={fullTitle} />
+    <meta property="og:description" content={description} />
+    <meta property="og:url" content={canonical} />
+    <meta property="og:image" content={ogImage} />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:locale" content={locale === 'ar' ? 'ar_AR' : 'en_US'} />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content={fullTitle} />
+    <meta name="twitter:description" content={description} />
+    <meta name="twitter:image" content={ogImage} />
+    <script type="application/ld+json" set:html={JSON.stringify(jsonLd)} />
+    <!-- Theme pre-paint: runs before first paint so there is no flash.
+         Same pattern as the desktop app's index.html dir bootstrap. -->
+    <script is:inline>
+      const stored = localStorage.getItem('pm-theme')
+      const preferred =
+        stored || (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
+      document.documentElement.dataset.theme = preferred
+    </script>
+  </head>
+  <body>
+    <a class="skip" href="#main">{strings.nav.skip}</a>
+    <Header locale={locale} />
+    <main id="main">
+      <slot />
+    </main>
+    <Footer locale={locale} />
+    <!-- Progressive enhancement: scroll reveals. Respects reduced motion. -->
+    <script is:inline>
+      if (!matchMedia('(prefers-reduced-motion: reduce)').matches && 'IntersectionObserver' in window) {
+        const io = new IntersectionObserver(
+          (entries) => {
+            for (const e of entries) {
+              if (e.isIntersecting) {
+                e.target.classList.add('is-in')
+                io.unobserve(e.target)
+              }
+            }
+          },
+          { rootMargin: '0px 0px -8% 0px' }
+        )
+        document.querySelectorAll('.io').forEach((el) => io.observe(el))
+      } else {
+        document.querySelectorAll('.io').forEach((el) => el.classList.add('is-in'))
+      }
+    </script>
+  </body>
+</html>
+
+<style>
+  .skip {
+    position: absolute;
+    inset-inline-start: 1rem;
+    inset-block-start: -3.5rem;
+    z-index: 100;
+    background: var(--accent);
+    color: #fffdf8;
+    padding: 0.6rem 1.2rem;
+    border-radius: 0 0 0.5rem 0.5rem;
+    text-decoration: none;
+    transition: inset-block-start 0.2s ease;
+  }
+
+  .skip:focus-visible {
+    inset-block-start: 0;
+  }
+</style>

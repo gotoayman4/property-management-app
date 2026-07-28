@@ -1,0 +1,55 @@
+---
+/**
+ * @file 404 — bilingual "entry not in the ledger" page.
+ * CAVEAT: Netlify serves /404.html for any missing path in BOTH locales, so
+ *         this single page shows Arabic first with an English line below.
+ */
+import { ar } from '../i18n/ar'
+import { en } from '../i18n/en'
+import BaseLayout from '../layouts/BaseLayout.astro'
+---
+
+<BaseLayout locale="ar" title={ar.notFound.title} description={ar.notFound.sub}>
+  <section class="section section--ruled">
+    <div class="wrap nf">
+      <p class="nf__code mono reveal">404</p>
+      <h1 class="section-title reveal" style="animation-delay: 0.08s">{ar.notFound.title}</h1>
+      <p class="section-sub reveal" style="animation-delay: 0.16s">{ar.notFound.sub}</p>
+      <p class="nf__en reveal" dir="ltr" style="animation-delay: 0.24s">
+        {en.notFound.title} — {en.notFound.sub}
+      </p>
+      <div class="nf__actions reveal" style="animation-delay: 0.32s">
+        <a class="btn btn--primary" href="/">{ar.notFound.back}</a>
+        <a class="btn btn--ghost" href="/en">{en.notFound.back}</a>
+      </div>
+    </div>
+  </section>
+</BaseLayout>
+
+<style>
+  .nf {
+    min-block-size: 46vh;
+    display: grid;
+    align-content: center;
+    justify-items: start;
+  }
+
+  .nf__code {
+    font-size: clamp(3rem, 9vw, 5.5rem);
+    color: var(--rule);
+    font-weight: 700;
+    line-height: 1;
+  }
+
+  .nf__en {
+    color: var(--ink-faint);
+    margin-block-start: 0.8rem;
+  }
+
+  .nf__actions {
+    display: flex;
+    gap: 0.8rem;
+    flex-wrap: wrap;
+    margin-block-start: 2rem;
+  }
+</style>

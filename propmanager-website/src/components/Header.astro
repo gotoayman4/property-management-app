@@ -1,0 +1,207 @@
+---
+/**
+ * @file Header — sticky nav with logo, links, theme toggle and language switch.
+ * CAVEAT: The mobile menu is a <details> element — works without JS and
+ *         collapses naturally; no focus-trap library needed for a static site.
+ */
+import { Image } from 'astro:assets'
+import icon from '../assets/icon.png'
+import { SITE } from '../config'
+import { alternatePath, localePath, t, type Locale } from '../i18n'
+import ThemeToggle from './ThemeToggle.astro'
+
+interface Props {
+  locale: Locale
+}
+
+const { locale } = Astro.props
+const s = t(locale)
+const siteName = locale === 'ar' ? SITE.nameAr : SITE.nameEn
+const links = [
+  { href: localePath(locale, '/features'), label: s.nav.features },
+  { href: localePath(locale, '/download'), label: s.nav.download },
+  { href: localePath(locale, '/changelog'), label: s.nav.changelog },
+  { href: localePath(locale, '/contact'), label: s.nav.contact }
+]
+const switchHref = alternatePath(locale, Astro.url.pathname)
+const current = Astro.url.pathname.replace(/\/$/, '')
+---
+
+<header class="header">
+  <div class="wrap header__row">
+    <a class="brand" href={localePath(locale, '/')}>
+      <Image src={icon} alt="" width={34} height={34} loading="eager" />
+      <span class="brand__name">{siteName}</span>
+    </a>
+
+    <nav class="nav" aria-label={s.nav.menu}>
+      {
+        links.map((link) => (
+          <a
+            class="nav__link"
+            href={link.href}
+            aria-current={current === link.href.replace(/\/$/, '') ? 'page' : undefined}
+          >
+            {link.label}
+          </a>
+        ))
+      }
+    </nav>
+
+    <div class="header__actions">
+      <a class="lang mono" href={switchHref} title={s.nav.languageHref}>{s.nav.language}</a>
+      <ThemeToggle label={s.nav.theme} />
+      <details class="menu">
+        <summary class="menu__btn" aria-label={s.nav.menu}>
+          <span></span><span></span><span></span>
+        </summary>
+        <div class="menu__panel">
+          {links.map((link) => <a href={link.href}>{link.label}</a>)}
+        </div>
+      </details>
+    </div>
+  </div>
+</header>
+
+<style>
+  .header {
+    position: sticky;
+    inset-block-start: 0;
+    z-index: 50;
+    background: color-mix(in srgb, var(--bg) 82%, transparent);
+    backdrop-filter: blur(12px);
+    border-block-end: 1px solid var(--line-soft);
+  }
+
+  .header__row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    min-block-size: 4.25rem;
+  }
+
+  .brand {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+    text-decoration: none;
+    font-weight: 700;
+    font-size: 1.08rem;
+  }
+
+  .brand :global(img) {
+    border-radius: 0.5rem;
+  }
+
+  .nav {
+    display: flex;
+    gap: 0.25rem;
+  }
+
+  .nav__link {
+    text-decoration: none;
+    color: var(--ink-soft);
+    padding: 0.45rem 0.9rem;
+    border-radius: 0.5rem;
+    font-size: 0.95rem;
+    transition:
+      color 0.15s ease,
+      background-color 0.15s ease;
+  }
+
+  .nav__link:hover {
+    color: var(--ink);
+    background: var(--accent-soft);
+  }
+
+  .nav__link[aria-current='page'] {
+    color: var(--accent-ink);
+    font-weight: 600;
+  }
+
+  .header__actions {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .lang {
+    text-decoration: none;
+    font-size: 0.82rem;
+    border: 1px solid var(--line);
+    padding: 0.35rem 0.75rem;
+    border-radius: 0.5rem;
+    color: var(--ink-soft);
+    transition:
+      border-color 0.15s ease,
+      color 0.15s ease;
+  }
+
+  .lang:hover {
+    border-color: var(--accent);
+    color: var(--accent-ink);
+  }
+
+  /* Mobile menu */
+  .menu {
+    display: none;
+    position: relative;
+  }
+
+  .menu__btn {
+    list-style: none;
+    cursor: pointer;
+    display: grid;
+    gap: 4px;
+    padding: 0.6rem;
+    border: 1px solid var(--line);
+    border-radius: 0.5rem;
+  }
+
+  .menu__btn::-webkit-details-marker {
+    display: none;
+  }
+
+  .menu__btn span {
+    display: block;
+    inline-size: 1.1rem;
+    block-size: 2px;
+    background: var(--ink);
+    border-radius: 2px;
+  }
+
+  .menu__panel {
+    position: absolute;
+    inset-inline-end: 0;
+    inset-block-start: calc(100% + 0.5rem);
+    display: grid;
+    gap: 0.25rem;
+    background: var(--bg-raised);
+    border: 1px solid var(--line);
+    border-radius: 0.75rem;
+    padding: 0.6rem;
+    min-inline-size: 11rem;
+    box-shadow: var(--shadow);
+  }
+
+  .menu__panel a {
+    text-decoration: none;
+    color: var(--ink);
+    padding: 0.55rem 0.8rem;
+    border-radius: 0.5rem;
+  }
+
+  .menu__panel a:hover {
+    background: var(--accent-soft);
+  }
+
+  @media (max-width: 46rem) {
+    .nav {
+      display: none;
+    }
+    .menu {
+      display: block;
+    }
+  }
+</style>

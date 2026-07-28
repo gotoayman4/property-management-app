@@ -1,0 +1,15 @@
+---
+/**
+ * @file Arabic download page — "/download".
+ */
+import DownloadPage from '../components/pages/DownloadPage.astro'
+import { t } from '../i18n'
+import BaseLayout from '../layouts/BaseLayout.astro'
+
+const locale = 'ar'
+const s = t(locale)
+---
+
+<BaseLayout locale={locale} title={s.downloadPage.title} description={s.downloadPage.sub}>
+  <DownloadPage locale={locale} />
+</BaseLayout>

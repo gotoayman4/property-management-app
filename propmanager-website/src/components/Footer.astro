@@ -1,0 +1,126 @@
+---
+/**
+ * @file Footer — link columns + ledger-style closing line.
+ */
+import { SITE } from '../config'
+import { localePath, t, type Locale } from '../i18n'
+
+interface Props {
+  locale: Locale
+}
+
+const { locale } = Astro.props
+const s = t(locale)
+const siteName = locale === 'ar' ? SITE.nameAr : SITE.nameEn
+const year = new Date().getFullYear()
+---
+
+<footer class="footer">
+  <div class="wrap footer__grid">
+    <div class="footer__brand">
+      <p class="footer__name">{siteName}</p>
+      <p class="footer__tag">{s.footer.tagline}</p>
+    </div>
+
+    <nav aria-label={s.footer.product}>
+      <p class="footer__head">{s.footer.product}</p>
+      <a href={localePath(locale, '/features')}>{s.nav.features}</a>
+      <a href={localePath(locale, '/download')}>{s.nav.download}</a>
+      <a href={localePath(locale, '/changelog')}>{s.nav.changelog}</a>
+    </nav>
+
+    <nav aria-label={s.footer.resources}>
+      <p class="footer__head">{s.footer.resources}</p>
+      <a href={SITE.repoUrl} rel="noopener">{s.footer.github}</a>
+      <a href={SITE.releasesUrl} rel="noopener">{s.footer.releases}</a>
+      <a href={SITE.issuesUrl} rel="noopener">{s.footer.reportIssue}</a>
+    </nav>
+
+    <nav aria-label={s.footer.legal}>
+      <p class="footer__head">{s.footer.legal}</p>
+      <a href={localePath(locale, '/privacy')}>{s.footer.privacy}</a>
+      <a href={localePath(locale, '/terms')}>{s.footer.terms}</a>
+      <a href={localePath(locale, '/contact')}>{s.nav.contact}</a>
+    </nav>
+  </div>
+
+  <div class="wrap footer__base">
+    <span class="mono">© {year} {siteName}</span>
+    <span>{s.footer.rights}</span>
+  </div>
+</footer>
+
+<style>
+  .footer {
+    border-block-start: 1px solid var(--line);
+    padding-block: 3.5rem 2rem;
+    margin-block-start: 4rem;
+    background:
+      linear-gradient(color-mix(in srgb, var(--bg-raised) 55%, transparent), transparent);
+  }
+
+  .footer__grid {
+    display: grid;
+    grid-template-columns: 2fr 1fr 1fr 1fr;
+    gap: 2rem;
+  }
+
+  .footer__name {
+    font-weight: 700;
+    font-size: 1.15rem;
+  }
+
+  .footer__tag {
+    color: var(--ink-soft);
+    margin-block-start: 0.4rem;
+    max-inline-size: 26ch;
+  }
+
+  .footer__head {
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--ink-faint);
+    margin-block-end: 0.9rem;
+  }
+
+  :global([dir='rtl']) .footer__head {
+    letter-spacing: 0;
+  }
+
+  .footer nav {
+    display: grid;
+    gap: 0.55rem;
+    align-content: start;
+  }
+
+  .footer nav a {
+    text-decoration: none;
+    color: var(--ink-soft);
+    transition: color 0.15s ease;
+    inline-size: fit-content;
+  }
+
+  .footer nav a:hover {
+    color: var(--accent-ink);
+  }
+
+  .footer__base {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    flex-wrap: wrap;
+    margin-block-start: 3rem;
+    padding-block-start: 1.5rem;
+    border-block-start: 1px dashed var(--line);
+    color: var(--ink-faint);
+    font-size: 0.85rem;
+  }
+
+  @media (max-width: 46rem) {
+    .footer__grid {
+      grid-template-columns: 1fr 1fr;
+    }
+  }
+</style>

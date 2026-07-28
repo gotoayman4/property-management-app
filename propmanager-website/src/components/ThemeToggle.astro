@@ -1,0 +1,69 @@
+---
+/**
+ * @file ThemeToggle — dark/light switch persisted to localStorage.
+ * DECISION: Inline sun/moon SVGs swapped via CSS on [data-theme] — no
+ *           hydration, just one tiny click handler.
+ */
+interface Props {
+  label: string
+}
+
+const { label } = Astro.props
+---
+
+<button class="toggle" type="button" aria-label={label} data-theme-toggle>
+  <svg class="sun" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+    <circle cx="12" cy="12" r="4"></circle>
+    <path d="M12 2v2m0 16v2M4.9 4.9l1.4 1.4m11.4 11.4 1.4 1.4M2 12h2m16 0h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"></path>
+  </svg>
+  <svg class="moon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+    <path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z"></path>
+  </svg>
+</button>
+
+<script is:inline>
+  document.querySelectorAll('[data-theme-toggle]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const next = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark'
+      document.documentElement.dataset.theme = next
+      localStorage.setItem('pm-theme', next)
+    })
+  })
+</script>
+
+<style>
+  .toggle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    inline-size: 2.35rem;
+    block-size: 2.35rem;
+    border: 1px solid var(--line);
+    border-radius: 0.5rem;
+    background: transparent;
+    color: var(--ink-soft);
+    cursor: pointer;
+    transition:
+      border-color 0.15s ease,
+      color 0.15s ease,
+      transform 0.15s ease;
+  }
+
+  .toggle:hover {
+    border-color: var(--accent);
+    color: var(--accent-ink);
+    transform: rotate(12deg);
+  }
+
+  .moon {
+    display: none;
+  }
+
+  :global([data-theme='dark']) .moon {
+    display: block;
+  }
+
+  :global([data-theme='dark']) .sun {
+    display: none;
+  }
+</style>
