@@ -131,10 +131,25 @@ const
   UninstallKey = 'Software\Microsoft\Windows\CurrentVersion\Uninstall\{6E1FA9D3-24B7-4C58-9A0E-D7C3B54F81A2}_is1';
 
 { INTENT: [Run] check — relaunch only for /SILENT installs (the in-app updater),
-  never for /VERYSILENT (unattended deployments must not spawn UI). }
+  never for /VERYSILENT (unattended deployments must not spawn UI).
+  CAVEAT: there is no WizardVerySilent function in Inno Setup Pascal Script;
+  /VERYSILENT must be detected by scanning the command-line parameters. }
+function CmdLineParamExists(const Value: String): Boolean;
+var
+  I: Integer;
+begin
+  Result := False;
+  for I := 1 to ParamCount do
+    if CompareText(ParamStr(I), Value) = 0 then
+    begin
+      Result := True;
+      Exit;
+    end;
+end;
+
 function IsSilentUpdate(): Boolean;
 begin
-  Result := WizardSilent and not WizardVerySilent;
+  Result := WizardSilent and not CmdLineParamExists('/VERYSILENT');
 end;
 
 function GetInstalledVersion(): String;
