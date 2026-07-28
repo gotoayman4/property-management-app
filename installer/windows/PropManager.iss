@@ -63,7 +63,9 @@ ArchitecturesInstallIn64BitMode=x64compatible
 ; Windows 10 1809+ (Electron 43 minimum supported Windows).
 MinVersion=10.0.17763
 ; Detect and close a running PropManager via Restart Manager on upgrade;
-; the in-app updater additionally passes /CLOSEAPPLICATIONS /RESTARTAPPLICATIONS.
+; the in-app updater additionally passes /CLOSEAPPLICATIONS. RestartApplications
+; does NOT relaunch Electron apps (they never register with Restart Manager) —
+; silent-update relaunch is handled explicitly in [Run] below.
 CloseApplications=yes
 RestartApplications=yes
 ; Write a setup log to %TEMP% for troubleshooting (Setup Log*.txt).
@@ -103,6 +105,9 @@ Name: "{autodesktop}\{#MyAppDisplayName}"; Filename: "{app}\{#MyAppExeName}"; Ta
 
 [Run]
 Filename: "{app}\{#MyAppExeName}"; Description: "{cm:LaunchProgram,{#MyAppName}}"; Flags: nowait postinstall skipifsilent
+; INTENT: relaunch the app after a silent in-app update (/SILENT from updateService).
+; CAVEAT: skipped for /VERYSILENT so unattended IT deployments stay launch-free.
+Filename: "{app}\{#MyAppExeName}"; Flags: nowait skipifnotsilent; Check: IsSilentUpdate
 
 [UninstallDelete]
 ; Remove installer/runtime leftovers inside {app} only. User data in
@@ -124,6 +129,13 @@ ar.DeleteUserData=هل تريد أيضاً حذف جميع بيانات التط
 
 const
   UninstallKey = 'Software\Microsoft\Windows\CurrentVersion\Uninstall\{6E1FA9D3-24B7-4C58-9A0E-D7C3B54F81A2}_is1';
+
+{ INTENT: [Run] check — relaunch only for /SILENT installs (the in-app updater),
+  never for /VERYSILENT (unattended deployments must not spawn UI). }
+function IsSilentUpdate(): Boolean;
+begin
+  Result := WizardSilent and not WizardVerySilent;
+end;
 
 function GetInstalledVersion(): String;
 var

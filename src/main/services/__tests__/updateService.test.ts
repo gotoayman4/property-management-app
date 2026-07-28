@@ -29,7 +29,8 @@ import {
   extractUpdateInfo,
   parseShaSums,
   checkForUpdates,
-  getUpdateState
+  getUpdateState,
+  INSTALLER_ARGS
 } from '../updateService'
 
 /** Minimal valid release payload builder for extractUpdateInfo/checkForUpdates tests. */
@@ -204,5 +205,25 @@ describe('checkForUpdates state machine', () => {
     const state = await checkForUpdates()
     expect(state.phase).toBe('error')
     expect(state.errorCode).toBe('UPDATE_CHECK_FAILED')
+  })
+})
+
+describe('installer arguments (updater ↔ PropManager.iss relaunch contract)', () => {
+  // REGRESSION (v1.0.0→v1.0.1): the app never relaunched after a silent update because
+  // the installer's only [Run] entry had `skipifsilent`. The fix relies on /SILENT
+  // (never /VERYSILENT) triggering the IsSilentUpdate relaunch entry in the installer.
+  it('uses /SILENT so the installer relaunch entry fires after the update', () => {
+    expect(INSTALLER_ARGS).toContain('/SILENT')
+    expect(INSTALLER_ARGS).not.toContain('/VERYSILENT')
+  })
+
+  it('suppresses reboots and prompts, and closes the running app', () => {
+    expect(INSTALLER_ARGS).toContain('/NORESTART')
+    expect(INSTALLER_ARGS).toContain('/SUPPRESSMSGBOXES')
+    expect(INSTALLER_ARGS).toContain('/CLOSEAPPLICATIONS')
+  })
+
+  it('does not pass /RESTARTAPPLICATIONS — Restart Manager cannot relaunch Electron apps', () => {
+    expect(INSTALLER_ARGS).not.toContain('/RESTARTAPPLICATIONS')
   })
 })

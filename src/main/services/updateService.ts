@@ -5,7 +5,8 @@
  *         1. check   — GET /repos/{owner}/{repo}/releases/latest, semver-compare with app version
  *         2. download — stream the `-setup.exe` asset to a temp dir with progress callbacks
  *         3. verify  — SHA-256 of the download MUST match SHA256SUMS.txt from the same release
- *         4. install — run `setup.exe /SILENT /NORESTART` detached, then quit the app
+ *         4. install — run `setup.exe /SILENT /NORESTART` detached, then quit the app;
+ *                       the installer's [Run] section relaunches the app when silent (not verysilent)
  *
  * CONSTRAINT (ADR-003 §4): electron-updater is NOT used — it cannot service Inno Setup installs.
  *         This service + GitHub Releases is the sanctioned replacement.
@@ -279,19 +280,24 @@ export async function downloadUpdate(): Promise<UpdateState> {
 }
 
 /**
+ * Command-line arguments passed to the downloaded Inno Setup installer.
+ * CONSTRAINT: MUST be /SILENT (not /VERYSILENT) — the installer's [Run] relaunch
+ * entry (IsSilentUpdate in PropManager.iss) only fires for silent-not-verysilent,
+ * so /VERYSILENT here would leave the app closed after the update completes.
+ */
+export const INSTALLER_ARGS = ['/SILENT', '/NORESTART', '/SUPPRESSMSGBOXES', '/CLOSEAPPLICATIONS']
+
+/**
  * Launch the verified installer silently and quit. Inno Setup's CloseApplications directive
  * plus the same AppId performs an in-place upgrade; the app's `before-quit` hook still runs,
- * so the automatic database backup happens before the binary swap.
+ * so the automatic database backup happens before the binary swap. The installer relaunches
+ * the app itself once files are swapped (see [Run] in PropManager.iss).
  * @returns false when there is no verified installer to run.
  */
 export function installUpdate(): boolean {
   if (state.phase !== 'ready' || !state.downloadedPath) return false
   try {
-    const child = spawn(
-      state.downloadedPath,
-      ['/SILENT', '/NORESTART', '/SUPPRESSMSGBOXES', '/CLOSEAPPLICATIONS', '/RESTARTAPPLICATIONS'],
-      { detached: true, stdio: 'ignore' }
-    )
+    const child = spawn(state.downloadedPath, INSTALLER_ARGS, { detached: true, stdio: 'ignore' })
     child.unref()
     // Give the detached installer a moment to spawn before the quit sequence begins.
     setTimeout(() => app.quit(), 500)
