@@ -7,7 +7,7 @@ import eslintPluginReactRefresh from 'eslint-plugin-react-refresh'
 import eslintPluginImportX from 'eslint-plugin-import-x'
 
 export default defineConfig(
-  { ignores: ['**/node_modules', '**/dist', '**/out', '**/_guidelines'] },
+  { ignores: ['**/node_modules', '**/dist', '**/out', '**/_guidelines', 'propmanager-website/.astro'] },
   tseslint.configs.recommended,
   eslintPluginReact.configs.flat.recommended,
   eslintPluginReact.configs.flat['jsx-runtime'],
