@@ -477,19 +477,83 @@ Versions may be pinned to older major releases only when documented in an ADR (R
 
 ```bash
 npm run dev           # Start Electron + Vite dev server (hot reload)
-npm run build         # Production build (Electron packager)
+npm run build         # Production build (i18n gate + typecheck + electron-vite)
+npm run build:unpack  # Build + electron-builder --dir (dist/win-unpacked)
+npm run build:installer # Compile the Inno Setup installer from dist/win-unpacked
+npm run dist:win      # Full chain: build:unpack + build:installer
 npm run lint          # ESLint (TypeScript rules)
-npm run type-check    # tsc --noEmit (strict mode)
+npm run typecheck     # tsc --noEmit (strict mode, node + web projects)
 npm test              # Vitest unit tests
 npm run test:e2e      # Playwright E2E tests (both RTL and LTR)
-npm run preview       # Preview the built app locally
+npm run start         # Preview the built app locally (electron-vite preview)
 ```
 
-Before suggesting any code change, verify it would pass `lint` and `type-check`.
+Before suggesting any code change, verify it would pass `lint` and `typecheck`.
 Never introduce TypeScript `any` casts, `eslint-disable` suppressions, or `@ts-ignore` without a comment explaining why.
 
-Before suggesting any code change, verify it would pass `lint` and `type-check`.
-Never introduce TypeScript `any` casts, `eslint-disable` suppressions, or `@ts-ignore` without a comment explaining why.
+---
+
+## Deployment & Release (Production Pipeline)
+
+### Deployment Architecture
+
+The product ships through four coordinated channels — all live and verified in production:
+
+| Channel            | Technology                                  | Trigger                              |
+| ------------------ | ------------------------------------------- | ------------------------------------ |
+| Desktop app        | Electron + Inno Setup 6 installer (Windows) | Git tag `v*.*.*` → GitHub Actions    |
+| App distribution   | GitHub Releases (public repo, required)     | Manual "Publish release" click       |
+| In-app auto-update | Custom updater (`updateService.ts`)         | Checks GitHub Releases API on launch |
+| Marketing website  | Astro 7 on Netlify (`propmanager-website/`) | Every push to `main`                 |
+
+- **Live website:** `https://property-manager-app.netlify.app` — download page bakes the direct setup.exe link at build time from the GitHub Releases API, with a `releases/latest/download/` static fallback and runtime JS re-hydration.
+- **Auto-update flow:** app checks `releases/latest` → downloads `PropManager-{v}-setup.exe` → verifies SHA-256 against `SHA256SUMS.txt` from the same release → runs installer `/SILENT` → app quits → installer swaps files and **relaunches the app automatically**. Drafts and prereleases are ignored by design. User data (`%APPDATA%/PropManager`) is never touched by updates.
+- **The GitHub repo MUST stay public** — a private repo 404s release assets, the releases API, the website download button, AND the in-app updater simultaneously.
+
+### Release Procedure (Exact Steps)
+
+The version lives in ONE place: `package.json`. It propagates automatically to the app UI, About dialog, installer filename, updater comparison, and website. NEVER hardcode a version anywhere else.
+
+1. **Add a CHANGELOG.md entry** ABOVE the previous version, following Keep-a-Changelog format:
+   `## [x.y.z] - YYYY-MM-DD` with `### Added` / `### Fixed` / `### Changed` bullets in plain language, plus a link reference at the bottom of the file. These bullets BECOME the GitHub release notes (extracted by `scripts/extract-changelog.mjs`) and the website changelog — a release without a CHANGELOG section fails. Verify extraction: `node scripts/extract-changelog.mjs x.y.z`. Commit: `git commit -m "docs(changelog): x.y.z"`.
+2. **Bump + tag in one command:** `npm version patch` (or `minor` / `major`, with `-m "chore(release): v%s"`). This updates package.json, commits, and creates tag `vx.y.z`. Pre-commit hooks (lint-staged, i18n parity, typecheck) run automatically.
+3. **Push:** `git push origin main --follow-tags`. The tag triggers `.github/workflows/release.yml` (~10–15 min on windows-latest).
+4. **Publish (the only human gate):** go to the repo’s **Releases** section (right sidebar — NOT the Actions tab), open the draft `PropManager x.y.z`, pencil icon → **Publish release**. Until published, users and the updater see nothing. Drafts are only visible while logged in to GitHub.
+
+**If the release build fails:** fix the cause, then re-point the tag — safe ONLY while no release was created: `git tag -f vx.y.z && git push origin main && git push origin vx.y.z --force`. NEVER move a tag that already has a published release; cut a new patch version instead.
+
+### Configuration Files (What Controls What)
+
+| File                                   | Purpose                                                                                                                                                                                                                                                      |
+| -------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `.github/workflows/release.yml`        | Tag-triggered: validates tag == package.json version (hard-fails on mismatch), builds app (`build:unpack`), compiles installer, extracts notes, creates DRAFT release. Uses `actions/checkout@v7` + `actions/setup-node@v7` (Node 24) — keep majors current. |
+| `.github/workflows/ci.yml`             | Push/PR gate: lint, typecheck, tests.                                                                                                                                                                                                                        |
+| `installer/windows/PropManager.iss`    | Bilingual (en/ar) Inno Setup script: per-user install, upgrade/downgrade guard, user-data preservation, silent-update relaunch via `IsSilentUpdate` Check function.                                                                                          |
+| `scripts/build-installer.mjs`          | Locates ISCC, injects version via `/DAppVersion`, emits `installer/output/PropManager-{v}-setup.exe` + `SHA256SUMS.txt`.                                                                                                                                     |
+| `src/main/services/updateService.ts`   | Auto-update engine (check/download/verify/install) + `INSTALLER_ARGS` + `WEBSITE_URL` constant surfaced in Settings › About.                                                                                                                                 |
+| `netlify.toml`                         | Website deploy: `base = propmanager-website`, `publish = dist` (**relative to base** — never change to out/renderer), production `SITE_URL` env.                                                                                                             |
+| `propmanager-website/astro.config.mjs` | Site URL fallback for canonical/sitemap.                                                                                                                                                                                                                     |
+| `CHANGELOG.md`                         | Single source of release notes for GitHub Releases AND the website.                                                                                                                                                                                          |
+
+### Hard-Won Pitfalls (Do Not Re-Learn These)
+
+- **Inno Setup:** `WizardVerySilent` does NOT exist in Pascal Script — detect `/VERYSILENT` by scanning `ParamStr`/`ParamCount`. After ANY `.iss` edit, compile locally BEFORE pushing: run ISCC with a dummy `/DAppSourceDir` pointing at any small folder — syntax errors otherwise only surface in CI.
+- **Inno Setup:** `[Run]` entries with `skipifsilent` never fire during silent updates — the silent-update relaunch needs its own entry (`Flags: nowait skipifnotsilent; Check: IsSilentUpdate`). Windows Restart Manager (`/RESTARTAPPLICATIONS`) cannot relaunch Electron apps.
+- **Updater:** MUST pass `/SILENT`, never `/VERYSILENT` — the installer only auto-relaunches for silent-not-verysilent (regression-tested in `updateService.test.ts`).
+- **Netlify/Astro:** root `tsconfig.node.json` / `tsconfig.web.json` MUST stay self-contained (no `extends` into root `node_modules`) — Astro’s rolldown crawls up and parses them without root deps installed, crashing the build.
+- **Netlify:** the toml `publish` path is relative to `base`; Netlify’s AI build-failure suggestions have been wrong every time — always reproduce and verify the root cause locally.
+
+### Post-Release Verification Checklist
+
+After clicking Publish, verify in order:
+
+1. **Release assets:** the release page shows `PropManager-{v}-setup.exe` AND `SHA256SUMS.txt`.
+2. **Auto-update loop:** on a machine with the previous version → Settings → About → Check for Updates → install → app must **restart by itself** on the new version, with all user data intact.
+3. **Website:** the download page shows the new version/size/date (runtime check is instant; baked HTML refreshes on next push to `main`) and the button downloads the exe directly — no releases-page detour.
+4. **Netlify deploy:** confirm the site deploy triggered by the release commits is green.
+5. **Troubleshooting:** silent-install behavior is logged to `%TEMP%\Setup Log*.txt`; workflow status is queryable unauthenticated via the GitHub Actions API (run logs require repo admin).
+
+Full details: `docs/release-checklist.md` and `docs/deployment.md`.
 
 ---
 
