@@ -157,13 +157,13 @@ export function ContractForm({
   useEffect(() => {
     const load = async (): Promise<void> => {
       try {
+        // CAVEAT: Do NOT pre-filter by status here — a vacant-only filter previously
+        // emptied the dropdown for rented/maintenance properties. Overlap protection
+        // is enforced by the main process (CONTRACT_OVERLAPS), so all non-archived
+        // properties must stay selectable (e.g., future-dated or draft contracts).
         const propsData = (await window.api.properties.list()) as Property[]
         const tenantsData = (await window.api.tenants.list({ is_active: 1 })) as Tenant[]
-        setProperties(
-          propsData.filter(
-            (p) => p.status === 'vacant' || (contract && p.id === contract.property_id)
-          )
-        )
+        setProperties(propsData)
         setTenants(tenantsData)
       } catch (err) {
         console.error('Failed to load properties/tenants:', err)
