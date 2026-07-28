@@ -1,0 +1,94 @@
+# Release — Property Management App
+#
+# INTENT: One repeatable pipeline that turns a version tag (v1.2.3) into a published
+#         GitHub Release carrying the two assets the in-app updater consumes:
+#         PropManager-{version}-setup.exe + SHA256SUMS.txt.
+#
+# TRIGGER: push of a tag matching v*.*.* — created via:
+#           npm version <patch|minor|major>   (bumps package.json + creates the tag)
+#           git push origin main --follow-tags
+#
+# CONSTRAINT: The tag MUST equal package.json's version (single source of truth).
+#             The guard step below hard-fails on mismatch so a stray tag can never
+#             ship a mislabeled installer.
+# CONSTRAINT: windows-latest is required — Inno Setup (preinstalled on GitHub
+#             Windows runners) compiles the installer; Electron win packaging
+#             also needs Windows for the native better-sqlite3/bcrypt rebuild.
+# CAVEAT: The release is created as a DRAFT. A human reviews the generated notes
+#         and assets, then clicks Publish — only then do running apps see the
+#         update (the updater ignores drafts/prereleases by design).
+
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+permissions:
+  contents: write # create the GitHub Release + upload assets
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false # never kill a half-published release
+
+jobs:
+  release:
+    name: Build installer & draft GitHub Release
+    runs-on: windows-latest
+    timeout-minutes: 60
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Validate tag matches package.json version
+        # Single-source-of-truth guard: refuse to build if the tag and
+        # package.json disagree about what version this is.
+        shell: pwsh
+        run: |
+          $tagVersion = '${{ github.ref_name }}'.TrimStart('v')
+          $pkgVersion = (Get-Content package.json -Raw | ConvertFrom-Json).version
+          if ($tagVersion -ne $pkgVersion) {
+            Write-Error "Tag v$tagVersion does not match package.json version $pkgVersion. Bump package.json (npm version) before tagging."
+            exit 1
+          }
+          Write-Host "Version check OK: $pkgVersion"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build app (i18n gate, typecheck, electron-vite, unpacked package)
+        # npm run build already runs check:i18n + rebuild:electron + typecheck.
+        run: npm run build:unpack
+
+      - name: Compile bilingual installer (Inno Setup)
+        # Inno Setup 6 is preinstalled on windows-latest; the script locates ISCC,
+        # injects the package.json version and emits SHA256SUMS.txt next to the exe.
+        run: npm run build:installer
+
+      - name: Extract release notes from CHANGELOG.md
+        shell: pwsh
+        run: |
+          $version = '${{ github.ref_name }}'.TrimStart('v')
+          node scripts/extract-changelog.mjs $version > release-notes.md
+          Get-Content release-notes.md
+
+      - name: Create draft GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: pwsh
+        run: |
+          $version = '${{ github.ref_name }}'.TrimStart('v')
+          gh release create '${{ github.ref_name }}' `
+            "installer/output/PropManager-$version-setup.exe" `
+            "installer/output/SHA256SUMS.txt" `
+            --title "PropManager $version" `
+            --notes-file release-notes.md `
+            --draft
