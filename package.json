@@ -1,6 +1,6 @@
 {
   "name": "propmanager",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "مدير العقار (PropManager) - An Arabic-first local property management desktop application built with Electron, React, and MUI",
   "main": "./out/main/index.js",
   "author": "Antigravity",
