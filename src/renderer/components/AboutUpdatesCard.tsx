@@ -215,7 +215,10 @@ export default function AboutUpdatesCard({
       </Box>
 
       {info && (
-        <Typography variant="body2" sx={{ mt: 2 }}>
+        <Typography variant="body2" sx={{ mt: 2, display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+          <Link href={info.websiteUrl} target="_blank" rel="noreferrer">
+            {t('about.website')}
+          </Link>
           <Link href={info.repoUrl} target="_blank" rel="noreferrer">
             {t('about.projectPage')}
           </Link>

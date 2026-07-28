@@ -24,7 +24,8 @@ import {
   getUpdateState,
   installUpdate,
   onUpdateState,
-  UPDATE_REPO
+  UPDATE_REPO,
+  WEBSITE_URL
 } from '../services/updateService'
 import { logger } from '../utils/logger'
 
@@ -52,7 +53,8 @@ export function registerUpdateIpcHandlers(): void {
     node: process.versions.node,
     platform: process.platform,
     arch: process.arch,
-    repoUrl: `https://github.com/${UPDATE_REPO.owner}/${UPDATE_REPO.repo}`
+    repoUrl: `https://github.com/${UPDATE_REPO.owner}/${UPDATE_REPO.repo}`,
+    websiteUrl: WEBSITE_URL
   }))
 
   ipcMain.handle('updates:check', async () => checkForUpdates())

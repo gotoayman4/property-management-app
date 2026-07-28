@@ -280,7 +280,8 @@
     "autoUpdateCheckHelp": "When enabled, the app quietly checks for new versions on startup and every few hours. Nothing is installed without your confirmation.",
     "runtimeInfo": "Runtime Information",
     "platform": "Platform",
-    "projectPage": "Project page on GitHub"
+    "projectPage": "Project page on GitHub",
+    "website": "App website"
   },
   "settings": {
     "title": "Global Settings",

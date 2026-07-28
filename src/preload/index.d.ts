@@ -9,6 +9,7 @@ export interface AppInfo {
   platform: string
   arch: string
   repoUrl: string
+  websiteUrl: string
 }
 
 /** Latest-release metadata surfaced by the updater when an update exists. */

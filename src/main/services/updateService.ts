@@ -33,6 +33,9 @@ import { logger } from '../utils/logger'
 /** GitHub repository that hosts release assets. One place to change if the repo moves. */
 export const UPDATE_REPO = { owner: 'gotoayman4', repo: 'property-management-app' }
 
+/** Public marketing/download website (Netlify) — shown in Settings › About. */
+export const WEBSITE_URL = 'https://property-manager-app.netlify.app'
+
 const RELEASES_LATEST_URL = `https://api.github.com/repos/${UPDATE_REPO.owner}/${UPDATE_REPO.repo}/releases/latest`
 
 /** Minimal shape of the GitHub Releases API response consumed by this service. */

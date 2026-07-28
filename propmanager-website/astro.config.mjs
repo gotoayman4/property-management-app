@@ -15,7 +15,7 @@ const site =
   process.env.SITE_URL ||
   process.env.DEPLOY_PRIME_URL ||
   process.env.URL ||
-  'https://propmanager-app.netlify.app'
+  'https://property-manager-app.netlify.app'
 
 export default defineConfig({
   site,

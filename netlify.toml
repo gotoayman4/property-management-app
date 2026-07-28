@@ -18,7 +18,7 @@
 # custom domain. Deploy previews fall back to DEPLOY_PRIME_URL automatically
 # (see astro.config.mjs).
 [context.production.environment]
-  SITE_URL = "https://propmanager-app.netlify.app"
+  SITE_URL = "https://property-manager-app.netlify.app"
 
 # ---------- Security headers (all pages) ----------
 [[headers]]
