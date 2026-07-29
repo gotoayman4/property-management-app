@@ -97,5 +97,14 @@
     "*.{json,md,css,yml,yaml}": [
       "prettier --write"
     ]
+  },
+  "//": "allowScripts approvals below are VERSION-PINNED (npm 12+ install-scripts policy). After upgrading any listed package, re-run: npm install-scripts approve <pkg> — otherwise npm rebuild silently skips its native build and the app/tests fail with NODE_MODULE_VERSION mismatch.",
+  "allowScripts": {
+    "better-sqlite3@12.11.1": true,
+    "bcrypt@5.1.1": true,
+    "electron-winstaller@5.4.0": true,
+    "esbuild@0.25.12": true,
+    "esbuild@0.28.1": true,
+    "unrs-resolver@1.12.2": true
   }
 }
