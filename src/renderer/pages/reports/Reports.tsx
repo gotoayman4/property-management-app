@@ -25,7 +25,7 @@ import { useSnackbar } from '../../hooks/useSnackbar'
 import ReportFilterBar from './ReportFilterBar'
 import ReportPreview from './ReportPreview'
 import type { ReportType, ReportData, Property, Tenant } from './reportTypes'
-import { buildGridColumns } from './reportTypes'
+import { buildGridColumns, extractIpcErrorCode } from './reportTypes'
 
 export default function Reports(): React.ReactElement {
   const { t, i18n } = useTranslation()
@@ -137,7 +137,14 @@ export default function Reports(): React.ReactElement {
       setData(result)
     } catch (err) {
       console.error(err)
-      setError(t('common.error'))
+      // Stale rows from a previous successful run must not mask the error state.
+      setData(null)
+      const code = extractIpcErrorCode(err)
+      setError(
+        code === 'LEDGER_PROPERTY_REQUIRED'
+          ? t('reports.ledgerPropertyRequired')
+          : t('common.error')
+      )
     } finally {
       setLoading(false)
     }
@@ -166,7 +173,10 @@ export default function Reports(): React.ReactElement {
         }
       } catch (err) {
         console.error(err)
-        showError('reports.exportFailed')
+        // REPORT_NO_DATA is a user-fixable condition (filters too narrow), not a failure.
+        showError(
+          extractIpcErrorCode(err) === 'REPORT_NO_DATA' ? 'reports.noData' : 'reports.exportFailed'
+        )
       } finally {
         setExporting(null)
       }

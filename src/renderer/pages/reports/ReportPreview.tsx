@@ -34,6 +34,13 @@ export default function ReportPreview({
   const { t } = useTranslation()
 
   if (data) {
+    // CAVEAT: a successful build with zero matching rows yields groups = [] (groupByCurrency
+    // creates groups per row), so mapping over it rendered a completely blank page. Show the
+    // explicit empty state so the user gets feedback instead of white space.
+    const isEmpty = !data.consolidatedGroup && data.groups.every((g) => g.rows.length === 0)
+    if (isEmpty) {
+      return <StandardTable columns={gridColumns} rows={[]} emptyMessage={t('reports.noData')} />
+    }
     return (
       <Box>
         {data.consolidatedGroup && (

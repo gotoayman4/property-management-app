@@ -79,6 +79,21 @@ export function makeRowId(prefix: string): (row: Record<string, unknown>) => str
 }
 
 /**
+ * Extract the machine-readable error code from an IPC rejection.
+ *
+ * INTENT: Main-process handlers throw `new Error('CODE')`; Electron wraps that as
+ *         "Error invoking remote method 'reports:preview': Error: CODE". The stable code is
+ *         always the final colon-separated segment.
+ * CAVEAT: All report IPC codes (REPORT_BUILD_FAILED, REPORT_NO_DATA, INVALID_INPUT,
+ *         LEDGER_PROPERTY_REQUIRED, …) are colon-free, so the last segment is safe.
+ */
+export function extractIpcErrorCode(err: unknown): string {
+  const message = err instanceof Error ? err.message : String(err)
+  const segments = message.split(':')
+  return segments[segments.length - 1].trim()
+}
+
+/**
  * Build DataGrid columns from the report's column metadata — header resolved via i18n.
  *
  * INTENT: Centralize column construction so both the main preview and any future sub-previews

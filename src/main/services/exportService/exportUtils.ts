@@ -15,9 +15,10 @@
  *   - NFR-SEC-05: no string concatenation into SQL anywhere in the report builders either.
  */
 
-import { readFileSync } from 'fs'
 import { rename, writeFile } from 'fs/promises'
 import { dirname, join } from 'path'
+import arLocale from '../../../renderer/locales/ar.json'
+import enLocale from '../../../renderer/locales/en.json'
 
 /** The two output formats produced by this pipeline. */
 export type ExportFormat = 'xlsx' | 'html'
@@ -183,36 +184,15 @@ export function buildFileName(
  * Resolve a set of i18n keys into localized strings on the main-process side.
  * Missing keys throw — there is never a silent fallback to the raw key (BR-29 / NFR-I18N-03).
  *
- * CAVEAT: locale JSON files live under `src/renderer/locales/`. We resolve them via
- *         `app.getAppPath()` (or `process.cwd()` in Vitest) so the path works both
- *         in the bundled Electron output and under test.
+ * DECISION: Both locale JSON files are imported statically so the bundler inlines them into
+ *           the main-process bundle. The previous runtime readFileSync from
+ *           `app.getAppPath()/src/renderer/locales/` broke every packaged build: `src/**` is
+ *           excluded from the asar (electron-builder.yml `!src/*`), so the read threw ENOENT
+ *           and every report that resolves a locale key failed with REPORT_BUILD_FAILED.
  */
-const localeCache = new Map<ExportLanguage, Record<string, unknown>>()
-
-/**
- * Resolve the project root. In the bundled Electron app, use `app.getAppPath()`.
- * In Vitest (no Electron), fall back to `process.cwd()` which is the project root.
- */
-function resolveAppRoot(): string {
-  try {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const electron = require('electron') as { app?: { getAppPath(): string } }
-    if (electron?.app?.getAppPath) return electron.app.getAppPath()
-  } catch {
-    // Not in Electron context
-  }
-  return process.cwd()
-}
-
-function loadLocale(lang: ExportLanguage): Record<string, unknown> {
-  const cached = localeCache.get(lang)
-  if (cached) return cached
-  const appRoot = resolveAppRoot()
-  const filePath = join(appRoot, 'src', 'renderer', 'locales', `${lang}.json`)
-  const raw = readFileSync(filePath, 'utf-8')
-  const parsed = JSON.parse(raw) as Record<string, unknown>
-  localeCache.set(lang, parsed)
-  return parsed
+const LOCALES: Record<ExportLanguage, Record<string, unknown>> = {
+  ar: arLocale as Record<string, unknown>,
+  en: enLocale as Record<string, unknown>
 }
 
 /**
@@ -224,7 +204,7 @@ export function resolveLocaleKey(
   lang: ExportLanguage,
   params?: Record<string, string | number>
 ): string {
-  const root = loadLocale(lang)
+  const root = LOCALES[lang]
   const parts = key.split('.')
   let node: unknown = root
   for (const part of parts) {

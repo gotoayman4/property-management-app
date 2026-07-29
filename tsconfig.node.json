@@ -5,7 +5,14 @@
   // installed ONLY in its base directory; Astro's bundler (rolldown) still
   // parses the repo-root tsconfigs, so an `extends` into node_modules breaks
   // the deploy. Keep this file self-contained.
-  "include": ["electron.vite.config.*", "src/main/**/*", "src/preload/**/*"],
+  // CAVEAT: src/renderer/locales/*.json is included because the main process statically
+  // imports the locale files (exportUtils) — composite projects must list every input file.
+  "include": [
+    "electron.vite.config.*",
+    "src/main/**/*",
+    "src/preload/**/*",
+    "src/renderer/locales/*.json"
+  ],
   "compilerOptions": {
     "target": "esnext",
     "module": "esnext",
