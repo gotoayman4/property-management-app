@@ -5,6 +5,17 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 Release notes on GitHub Releases are generated from this file (`scripts/extract-changelog.mjs`), so every release MUST have a section here before tagging.
 
+## [1.2.2] - 2026-07-30
+
+### Fixed
+
+- Notification bell unread counter now works — the `notifications:unreadCount` IPC handler was missing, so the renderer request silently failed
+- Excel/report export no longer breaks in the packaged app — locale files are now inlined at build time instead of resolved from disk paths that don't exist after packaging
+
+### Changed
+
+- Native dependency install scripts (better-sqlite3, bcrypt, electron) are now explicitly approved under the npm 12 `allowScripts` policy so fresh installs rebuild native modules without prompts
+
 ## [1.2.1] - 2026-07-29
 
 ### Fixed
