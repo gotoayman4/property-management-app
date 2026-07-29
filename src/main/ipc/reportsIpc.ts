@@ -46,6 +46,7 @@ const reportRequestSchema = z.object({
     'contract_expiry',
     'recurring_schedule',
     'document_expiry',
+    'dues_schedule',
     'ledger'
   ]),
   from_date: z

@@ -50,12 +50,21 @@ export function overdueCols(t: TFunction): GridColDef[] {
         `${Number(value).toLocaleString()} ${row.currency}`
     },
     {
-      field: 'payment_date',
+      field: 'due_date',
       headerName: t('common.date'),
       flex: 1,
       minWidth: 100,
       renderCell: (params: { row: OverdueRow }) => (
-        <Chip size="small" label={params.row.payment_date} color="error" variant="outlined" />
+        <Chip
+          size="small"
+          label={
+            params.row.months_overdue > 1
+              ? `${params.row.due_date} (${params.row.months_overdue})`
+              : params.row.due_date
+          }
+          color="error"
+          variant="outlined"
+        />
       )
     }
   ]

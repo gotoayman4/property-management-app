@@ -56,7 +56,5 @@ for (let i = start + 1; i < lines.length; i++) {
   }
 }
 // Drop "[x.y.z]: https://..." link-reference definitions — noise in release notes.
-const body = lines
-  .slice(start + 1, end)
-  .filter((line) => !/^\[[^\]]+\]:\s+\S/.test(line))
+const body = lines.slice(start + 1, end).filter((line) => !/^\[[^\]]+\]:\s+\S/.test(line))
 console.log(body.join('\n').trim())

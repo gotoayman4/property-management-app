@@ -35,6 +35,7 @@
     "tenants": "Tenants",
     "contracts": "Rental Contracts",
     "payments": "Payments & Income",
+    "dues": "Rent Dues",
     "expenses": "Expenses",
     "ledger": "Financial Ledger",
     "currency": "Exchange Rates",
@@ -48,6 +49,52 @@
     "expand": "Expand sidebar",
     "collapse": "Collapse sidebar",
     "about": "About"
+  },
+  "dues": {
+    "title": "Rent Dues",
+    "noDues": "No outstanding dues.",
+    "totalOutstanding": "Outstanding: {{amount}} {{currency}}",
+    "aging": {
+      "days": "{{days}} days"
+    },
+    "col": {
+      "property": "Property",
+      "tenant": "Tenant",
+      "period": "Period",
+      "dueDate": "Due Date",
+      "amountDue": "Amount Due",
+      "amountPaid": "Amount Paid",
+      "outstanding": "Outstanding",
+      "status": "Status",
+      "daysOverdue": "Days Overdue"
+    },
+    "status": {
+      "pending": "Pending",
+      "partial": "Partial",
+      "paid": "Paid",
+      "settled_before_app": "Settled Before App",
+      "waived": "Waived"
+    },
+    "action": {
+      "settle": "Settle Before App",
+      "waive": "Waive",
+      "openingBalance": "Opening Balance"
+    },
+    "settleTitle": "Settle Dues Before App",
+    "waiveTitle": "Waive Due",
+    "openingBalanceTitle": "Record Opening Balance",
+    "selectedCount": "{{n}} selected dues",
+    "contract": "Contract",
+    "amount": "Amount",
+    "asOfDate": "As of Date",
+    "note": "Note",
+    "reason": "Reason",
+    "settleSuccess": "Selected dues marked as settled before app.",
+    "waiveSuccess": "Due waived.",
+    "openingBalanceSuccess": "Opening balance recorded.",
+    "reviewTitle": "Review Generated Dues",
+    "reviewSubtitle": "These rent periods were generated for the contract. You can mark past periods as settled before the app, or record an opening balance.",
+    "reviewSettleAll": "Mark all past dues as settled before app"
   },
   "common": {
     "save": "Save",
@@ -579,6 +626,7 @@
     "relatedPeriodYear": "Year",
     "relatedPeriodMonths": "Month(s)",
     "relatedPeriodPlaceholder": "Select months",
+    "openDuesHint": "Outstanding periods this year: {{months}}",
     "void": "Void Payment",
     "voidConfirm": "Void this payment? A reversal ledger entry will be created; the original record stays intact.",
     "voidReasonLabel": "Reason for voiding",
@@ -905,6 +953,7 @@
     "type": {
       "rent_due": "Rent Due",
       "overdue": "Overdue",
+      "arrears_summary": "Arrears Summary",
       "contract_expiry": "Contract Expiry",
       "contract_expiring": "Contract Expiring",
       "escalation_upcoming": "Escalation Upcoming",
@@ -922,6 +971,7 @@
     "body": {
       "rentDue": "Rent due notification",
       "overdue": "Overdue payment notification",
+      "arrearsSummary": "Arrears summary notification",
       "contractExpiring": "Contract expiring notification",
       "escalationUpcoming": "Rent escalation upcoming notification",
       "documentExpiring": "Document expiring notification",
@@ -1048,6 +1098,7 @@
       "contract_expiry": "Contract Expiration & Escalation",
       "recurring_schedule": "Recurring Expenses Schedule",
       "document_expiry": "Document Expiry",
+      "dues_schedule": "Dues Schedule",
       "ledger": "Financial Ledger"
     },
     "filters": "Filters",
@@ -1118,7 +1169,16 @@
       "frequency": "Frequency",
       "documentType": "Document type",
       "issueDate": "Issue date",
-      "expiryDate": "Expiry date"
+      "expiryDate": "Expiry date",
+      "status": "Status",
+      "period": "Period",
+      "dueDate": "Due date",
+      "amountPaid": "Amount paid",
+      "outstanding": "Outstanding",
+      "aging0_30": "0–30 days",
+      "aging31_60": "31–60 days",
+      "aging61_90": "61–90 days",
+      "aging90Plus": "90+ days"
     },
     "presetPeriod": "Period Preset",
     "presetCustom": "Custom Range",
@@ -1140,6 +1200,13 @@
     "statusExpired": "Expired",
     "statusExpiringSoon": "Expiring Soon",
     "statusValid": "Valid",
+    "duesStatus": {
+      "pending": "Pending",
+      "partial": "Partial",
+      "paid": "Paid",
+      "settled_before_app": "Settled before app",
+      "waived": "Waived"
+    },
     "frequency": {
       "daily": "Daily",
       "weekly": "Weekly",

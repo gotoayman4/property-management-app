@@ -109,11 +109,14 @@ export function registerNotificationIpcHandlers(): void {
     trigger_type: z.enum([
       'rent_due',
       'overdue',
+      'arrears_summary',
       'contract_expiring',
       'escalation_upcoming',
       'recurring_expense_due',
       'document_expiring',
-      'backup_failed'
+      'backup_failed',
+      'auto_renew_upcoming',
+      'contract_auto_renewed'
     ]),
     language: z.enum(['ar', 'tr', 'en']),
     message_body: z.string().min(1)

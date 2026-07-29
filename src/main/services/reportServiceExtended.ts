@@ -155,46 +155,43 @@ const TENANT_PAYMENT_COLUMNS: ReportColumn[] = [
 
 function buildTenantPaymentHistoryReport(db: Database, filters: ReportFilters): ReportData {
   const params: Record<string, unknown> = {}
-  const payCond = dateRangeClause('p.payment_date', filters, params)
-  const propertyFilter = filters.property_id ? 'AND c.property_id = @property_id' : ''
-  const tenantFilter = filters.tenant_id ? 'AND c.tenant_id = @tenant_id' : ''
+  // Dues-driven: total_due/total_paid come from the materialized rent_dues schedule (real
+  // receivables incl. backdated periods), NOT a single month's contract rent. Date range applies
+  // to the due period (d.due_date) so historical arrears are captured accurately.
+  const dueCond = dateRangeClause('d.due_date', filters, params)
+  const propertyFilter = filters.property_id ? 'AND d.property_id = @property_id' : ''
+  const tenantFilter = filters.tenant_id ? 'AND d.tenant_id = @tenant_id' : ''
   if (filters.property_id) params.property_id = filters.property_id
   if (filters.tenant_id) params.tenant_id = filters.tenant_id
 
   const rows = db
     .prepare(
       `SELECT t.fullname AS tenant_name, pr.name AS property_name, pr.currency,
-              COALESCE(payments.total_paid, 0) AS total_paid,
-              COALESCE(c.rent_amount, 0) AS monthly_rent,
+              SUM(d.amount_due) AS total_due,
+              SUM(d.amount_paid) AS total_paid,
               (SELECT MAX(p2.payment_date) FROM payments p2
                 WHERE p2.tenant_id = t.id AND p2.is_voided = 0) AS last_payment_date
-         FROM tenants t
-         JOIN contracts c ON c.tenant_id = t.id
-         JOIN properties pr ON c.property_id = pr.id
-         LEFT JOIN (
-           SELECT tenant_id, property_id, SUM(amount) AS total_paid
-             FROM payments WHERE is_voided = 0 AND ${payCond}
-             GROUP BY tenant_id, property_id
-         ) payments ON payments.tenant_id = t.id AND payments.property_id = pr.id
-        WHERE c.status IN ('active', 'expired')
+         FROM rent_dues d
+         JOIN contracts c ON d.contract_id = c.id
+         JOIN tenants t ON d.tenant_id = t.id
+         JOIN properties pr ON d.property_id = pr.id
+        WHERE ${dueCond}
           ${propertyFilter}
           ${tenantFilter}
+        GROUP BY t.id, pr.id, pr.currency
         ORDER BY t.fullname
         LIMIT ${REPORT_ROW_LIMIT + 1}`
     )
-    .all(params) as Array<Record<string, unknown> & { total_paid: number; monthly_rent: number }>
+    .all(params) as Array<Record<string, unknown> & { total_due: number; total_paid: number }>
 
   for (const row of rows) {
-    const totalDue = row.monthly_rent
-    row['total_due'] = totalDue
-    row['remaining'] = Math.max(0, totalDue - row.total_paid)
+    row['remaining'] = Math.max(0, Number(row.total_due ?? 0) - Number(row.total_paid ?? 0))
   }
 
   const groups = groupByCurrency(rows, 'currency', ['total_due', 'total_paid', 'remaining'])
-  // DECISION: tenant_payment_history intentionally has NO consolidatedGroup. Only `total_paid`
-  // has a frozen snapshot; `total_due` (contract monthly_rent) and `remaining` do not. Mixing
-  // snapshot-converted payments with native rent would produce a half-converted, misleading
-  // "remaining" value. The per-currency native tables remain the correct view for this report.
+  // DECISION: tenant_payment_history intentionally has NO consolidatedGroup. rent_dues carry no
+  // frozen base_amount snapshot, so cross-currency consolidation would be misleading. The
+  // per-currency native tables remain the correct view for this report.
   return {
     titleKey: 'reports.type.tenant_payment_history',
     columns: TENANT_PAYMENT_COLUMNS,
@@ -211,33 +208,60 @@ const OUTSTANDING_COLUMNS: ReportColumn[] = [
   { key: 'property_name', headerKey: 'reports.col.property', type: 'text' },
   { key: 'currency', headerKey: 'reports.col.currency', type: 'text' },
   { key: 'amount_due', headerKey: 'reports.col.amountDue', type: 'currency', sumInTotals: true },
-  { key: 'days_overdue', headerKey: 'reports.col.daysOverdue', type: 'number' }
+  { key: 'days_overdue', headerKey: 'reports.col.daysOverdue', type: 'number' },
+  { key: 'aging_0_30', headerKey: 'reports.col.aging0_30', type: 'currency', sumInTotals: true },
+  { key: 'aging_31_60', headerKey: 'reports.col.aging31_60', type: 'currency', sumInTotals: true },
+  { key: 'aging_61_90', headerKey: 'reports.col.aging61_90', type: 'currency', sumInTotals: true },
+  {
+    key: 'aging_90_plus',
+    headerKey: 'reports.col.aging90Plus',
+    type: 'currency',
+    sumInTotals: true
+  }
 ]
 
 function buildOutstandingBalancesReport(db: Database, filters: ReportFilters): ReportData {
   const params: Record<string, unknown> = {}
   const today = new Date().toISOString().split('T')[0]
   params.today = today
-  const propertyFilter = filters.property_id ? 'AND pr.id = @property_id' : ''
+  const propertyFilter = filters.property_id ? 'AND d.property_id = @property_id' : ''
   if (filters.property_id) params.property_id = filters.property_id
 
+  // Real arrears: sum outstanding (amount_due - amount_paid) of every still-open past-due due,
+  // grouped per tenant/property/currency, with a true days_overdue (today - oldest open due_date)
+  // and standard aging buckets by each due's age. Replaces the old c.end_date proxy (which only
+  // ever surfaced a single month of rent at contract end).
+  const age = 'julianday(@today) - julianday(d.due_date)'
+  const out = 'd.amount_due - d.amount_paid'
   const rows = db
     .prepare(
       `SELECT t.fullname AS tenant_name, pr.name AS property_name, pr.currency,
-              c.rent_amount AS amount_due,
-              julianday(@today) - julianday(c.end_date) AS days_overdue
-         FROM contracts c
-         JOIN tenants t ON c.tenant_id = t.id
-         JOIN properties pr ON c.property_id = pr.id
-         WHERE c.status = 'active'
+              SUM(${out}) AS amount_due,
+              CAST(julianday(@today) - julianday(MIN(d.due_date)) AS INTEGER) AS days_overdue,
+              SUM(CASE WHEN ${age} <= 30 THEN ${out} ELSE 0 END) AS aging_0_30,
+              SUM(CASE WHEN ${age} > 30 AND ${age} <= 60 THEN ${out} ELSE 0 END) AS aging_31_60,
+              SUM(CASE WHEN ${age} > 60 AND ${age} <= 90 THEN ${out} ELSE 0 END) AS aging_61_90,
+              SUM(CASE WHEN ${age} > 90 THEN ${out} ELSE 0 END) AS aging_90_plus
+         FROM rent_dues d
+         JOIN contracts c ON d.contract_id = c.id
+         JOIN tenants t ON d.tenant_id = t.id
+         JOIN properties pr ON d.property_id = pr.id
+         WHERE d.status IN ('pending', 'partial')
+           AND d.due_date < @today
            ${propertyFilter}
-           AND c.end_date < @today
+         GROUP BY t.id, pr.id, pr.currency
          ORDER BY days_overdue DESC
          LIMIT ${REPORT_ROW_LIMIT + 1}`
     )
     .all(params) as Array<Record<string, unknown> & { amount_due: number; days_overdue: number }>
 
-  const groups = groupByCurrency(rows, 'currency', ['amount_due'])
+  const groups = groupByCurrency(rows, 'currency', [
+    'amount_due',
+    'aging_0_30',
+    'aging_31_60',
+    'aging_61_90',
+    'aging_90_plus'
+  ])
   return { titleKey: 'reports.type.outstanding_balances', columns: OUTSTANDING_COLUMNS, groups }
 }
 
@@ -425,6 +449,53 @@ function buildDocumentExpiryReport(db: Database, filters: ReportFilters): Report
 }
 
 /* -------------------------------------------------------------------------- */
+/* Report 12 — Dues Schedule (rent_dues per-period ledger)                    */
+/* -------------------------------------------------------------------------- */
+
+const DUES_SCHEDULE_COLUMNS: ReportColumn[] = [
+  { key: 'period', headerKey: 'reports.col.period', type: 'text' },
+  { key: 'due_date', headerKey: 'reports.col.dueDate', type: 'date' },
+  { key: 'amount_due', headerKey: 'reports.col.amountDue', type: 'currency', sumInTotals: true },
+  { key: 'amount_paid', headerKey: 'reports.col.amountPaid', type: 'currency', sumInTotals: true },
+  { key: 'outstanding', headerKey: 'reports.col.outstanding', type: 'currency', sumInTotals: true },
+  { key: 'status', headerKey: 'reports.col.status', type: 'text' }
+]
+
+function buildDuesScheduleReport(db: Database, filters: ReportFilters): ReportData {
+  const params: Record<string, unknown> = {}
+  const dueCond = dateRangeClause('d.due_date', filters, params)
+  const propertyFilter = filters.property_id ? 'AND d.property_id = @property_id' : ''
+  const tenantFilter = filters.tenant_id ? 'AND d.tenant_id = @tenant_id' : ''
+  if (filters.property_id) params.property_id = filters.property_id
+  if (filters.tenant_id) params.tenant_id = filters.tenant_id
+  const lang = langOf(filters)
+
+  const rows = db
+    .prepare(
+      `SELECT pr.currency, d.period_key AS period, d.due_date,
+              d.amount_due, d.amount_paid,
+              (d.amount_due - d.amount_paid) AS outstanding,
+              d.status AS status_code
+         FROM rent_dues d
+         JOIN contracts c ON d.contract_id = c.id
+         JOIN properties pr ON d.property_id = pr.id
+         WHERE ${dueCond}
+           ${propertyFilter}
+           ${tenantFilter}
+         ORDER BY d.due_date ASC
+         LIMIT ${REPORT_ROW_LIMIT + 1}`
+    )
+    .all(params) as Record<string, unknown>[]
+
+  for (const row of rows) {
+    row['status'] = resolveLocaleKey(`reports.duesStatus.${row.status_code}`, lang)
+  }
+
+  const groups = groupByCurrency(rows, 'currency', ['amount_due', 'amount_paid', 'outstanding'])
+  return { titleKey: 'reports.type.dues_schedule', columns: DUES_SCHEDULE_COLUMNS, groups }
+}
+
+/* -------------------------------------------------------------------------- */
 /* Builder registry — maps report type string to builder function.            */
 /* The main reportService's dispatcher delegates to these via the switch.     */
 /* -------------------------------------------------------------------------- */
@@ -438,5 +509,6 @@ export const extendedBuilders: Record<
   outstanding_balances: buildOutstandingBalancesReport,
   contract_expiry: buildContractExpiryReport,
   recurring_schedule: buildRecurringScheduleReport,
-  document_expiry: buildDocumentExpiryReport
+  document_expiry: buildDocumentExpiryReport,
+  dues_schedule: buildDuesScheduleReport
 }

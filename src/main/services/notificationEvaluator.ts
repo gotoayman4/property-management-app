@@ -66,29 +66,14 @@ export function evaluateNotifications(dbParam?: Database): void {
   }
 
   targetDb.transaction(() => {
-    // 1. Rent Due (contracts active, end_date >= today, next payment within N days)
+    // 1. Rent Due / Overdue are driven by rent_dues (real receivables) — NOT the contract
+    //    end_date proxy. A per-tenant/contract arrears aggregate (months_overdue,
+    //    total_outstanding) feeds the enriched template variables and the arrears_summary blast.
     const today = new Date().toISOString().split('T')[0]
-
-    const rentDueContracts = targetDb
-      .prepare(
-        `SELECT c.id, c.start_date, c.end_date, c.rent_amount, c.currency, c.tenant_id,
-                p.name as property_name, t.fullname as tenant_name, t.preferred_language as tenant_lang
-         FROM contracts c
-         JOIN properties p ON c.property_id = p.id
-         JOIN tenants t ON c.tenant_id = t.id
-         WHERE c.status = 'active' AND c.end_date >= ? AND c.is_archived = 0`
-      )
-      .all(today) as Array<{
-      id: number
-      start_date: string
-      end_date: string
-      rent_amount: number
-      currency: string
-      tenant_id: number
-      property_name: string
-      tenant_name: string
-      tenant_lang: string | null
-    }>
+    const reminderDaysBeforeDue = settings.reminder_days_before_due || 7
+    const rentDueThreshold = new Date()
+    rentDueThreshold.setDate(rentDueThreshold.getDate() + reminderDaysBeforeDue)
+    const rentDueThresholdStr = rentDueThreshold.toISOString().split('T')[0]
 
     const insert = targetDb.prepare(`
       INSERT INTO notifications (notification_type, entity_type, entity_id, title, message, message_key, message_vars, due_date)
@@ -99,74 +84,189 @@ export function evaluateNotifications(dbParam?: Database): void {
       )
     `)
 
-    for (const contract of rentDueContracts) {
-      const vars: Record<string, string> = {
-        tenant_name: contract.tenant_name,
-        property_name: contract.property_name,
-        amount: `${contract.rent_amount} ${contract.currency}`,
-        due_date: contract.end_date
+    // Per-contract arrears aggregate across all still-open past-due dues (one row per currency;
+    // a contract has a single currency so at most one row per contract).
+    const arrearsRows = targetDb
+      .prepare(
+        `SELECT d.contract_id,
+                d.currency,
+                COUNT(*) AS months_overdue,
+                SUM(d.amount_due - d.amount_paid) AS total_outstanding
+         FROM rent_dues d
+         JOIN contracts c ON d.contract_id = c.id
+         WHERE d.status IN ('pending', 'partial') AND d.due_date < ? AND c.is_archived = 0
+         GROUP BY d.contract_id, d.currency`
+      )
+      .all(today) as Array<{
+      contract_id: number
+      currency: string
+      months_overdue: number
+      total_outstanding: number
+    }>
+    const arrearsByContract = new Map<
+      number,
+      { months_overdue: number; total_outstanding: number; currency: string }
+    >()
+    for (const row of arrearsRows) {
+      arrearsByContract.set(row.contract_id, {
+        months_overdue: row.months_overdue,
+        total_outstanding: row.total_outstanding,
+        currency: row.currency
+      })
+    }
+
+    const dueRowFields = `d.id AS due_id, d.contract_id, d.period_key, d.due_type, d.due_date,
+            d.amount_due, (d.amount_due - d.amount_paid) AS outstanding, d.currency,
+            p.name AS property_name, t.fullname AS tenant_name,
+            t.preferred_language AS tenant_lang`
+
+    interface DueNotifyRow {
+      due_id: number
+      contract_id: number
+      period_key: string
+      due_type: string
+      due_date: string
+      amount_due: number
+      outstanding: number
+      currency: string
+      property_name: string
+      tenant_name: string
+      tenant_lang: string | null
+    }
+
+    // Build the enriched variable set shared by rent_due / overdue / arrears_summary.
+    const buildVars = (d: DueNotifyRow): Record<string, string> => {
+      const agg = arrearsByContract.get(d.contract_id)
+      return {
+        tenant_name: d.tenant_name,
+        property_name: d.property_name,
+        amount: `${d.amount_due} ${d.currency}`,
+        amount_due: `${d.amount_due} ${d.currency}`,
+        amount_outstanding: `${d.outstanding} ${d.currency}`,
+        period: d.period_key,
+        due_date: d.due_date,
+        months_overdue: String(agg?.months_overdue ?? 0),
+        total_outstanding: `${agg?.total_outstanding ?? d.outstanding} ${d.currency}`
       }
-      const lang = resolveLanguage(contract.tenant_lang, appLanguage)
+    }
+
+    // 1a. Rent Due — open dues coming due within the reminder window (not yet overdue).
+    const rentDueDues = targetDb
+      .prepare(
+        `SELECT ${dueRowFields}
+         FROM rent_dues d
+         JOIN properties p ON d.property_id = p.id
+         JOIN contracts c ON d.contract_id = c.id
+         JOIN tenants t ON d.tenant_id = t.id
+         WHERE d.status IN ('pending', 'partial') AND d.due_type = 'rent'
+           AND d.due_date >= ? AND d.due_date <= ? AND c.is_archived = 0`
+      )
+      .all(today, rentDueThresholdStr) as DueNotifyRow[]
+
+    for (const d of rentDueDues) {
+      const vars = buildVars(d)
+      const lang = resolveLanguage(d.tenant_lang, appLanguage)
       const message = resolveTemplateMessage('rent_due', lang, vars, templateMap)
       insert.run(
         'rent_due',
         'contract',
-        contract.id,
+        d.contract_id,
         'rent_due_title',
-        message ?? `Rent due for ${contract.property_name}`,
+        message ?? `Rent due for ${d.property_name}`,
         'notification.body.rentDue',
         JSON.stringify(vars),
-        contract.end_date,
+        d.due_date,
         'rent_due',
         'contract',
-        contract.id,
-        contract.end_date
+        d.contract_id,
+        d.due_date
       )
     }
 
-    // 2. Overdue Payments
-    const overdueContracts = targetDb
+    // 2. Overdue — every open due whose due_date has already passed. Using each due's own
+    //    due_date as the notification due_date makes the dedup key period-specific, so multiple
+    //    unpaid periods for one contract each surface distinctly.
+    const overdueDues = targetDb
       .prepare(
-        `SELECT c.id, c.end_date, c.rent_amount, c.currency, c.tenant_id,
-                p.name as property_name, t.fullname as tenant_name, t.preferred_language as tenant_lang
-         FROM contracts c
-         JOIN properties p ON c.property_id = p.id
-         JOIN tenants t ON c.tenant_id = t.id
-         WHERE c.status = 'active' AND c.end_date < ? AND c.is_archived = 0`
+        `SELECT ${dueRowFields}
+         FROM rent_dues d
+         JOIN properties p ON d.property_id = p.id
+         JOIN contracts c ON d.contract_id = c.id
+         JOIN tenants t ON d.tenant_id = t.id
+         WHERE d.status IN ('pending', 'partial') AND d.due_date < ? AND c.is_archived = 0
+         ORDER BY d.due_date ASC`
+      )
+      .all(today) as DueNotifyRow[]
+
+    for (const d of overdueDues) {
+      const vars = buildVars(d)
+      const lang = resolveLanguage(d.tenant_lang, appLanguage)
+      const message = resolveTemplateMessage('overdue', lang, vars, templateMap)
+      insert.run(
+        'overdue',
+        'contract',
+        d.contract_id,
+        'overdue_title',
+        message ?? `Rent overdue for ${d.property_name}`,
+        'notification.body.overdue',
+        JSON.stringify(vars),
+        d.due_date,
+        'overdue',
+        'contract',
+        d.contract_id,
+        d.due_date
+      )
+    }
+
+    // 2b. Arrears Summary — one aggregate reminder per contract carrying MULTIPLE open past-due
+    //     periods (the migrated pre-app debt case). Deduped per day via due_date = today.
+    const arrearsSummaryDues = targetDb
+      .prepare(
+        `SELECT d.contract_id, MIN(d.due_date) AS due_date, d.currency,
+                p.name AS property_name, t.fullname AS tenant_name,
+                t.preferred_language AS tenant_lang
+         FROM rent_dues d
+         JOIN properties p ON d.property_id = p.id
+         JOIN contracts c ON d.contract_id = c.id
+         JOIN tenants t ON d.tenant_id = t.id
+         WHERE d.status IN ('pending', 'partial') AND d.due_date < ? AND c.is_archived = 0
+         GROUP BY d.contract_id, d.currency, p.name, t.fullname, t.preferred_language
+         HAVING COUNT(*) > 1`
       )
       .all(today) as Array<{
-      id: number
-      end_date: string
-      rent_amount: number
+      contract_id: number
+      due_date: string
       currency: string
-      tenant_id: number
       property_name: string
       tenant_name: string
       tenant_lang: string | null
     }>
 
-    for (const contract of overdueContracts) {
+    for (const row of arrearsSummaryDues) {
+      const agg = arrearsByContract.get(row.contract_id)
       const vars: Record<string, string> = {
-        tenant_name: contract.tenant_name,
-        property_name: contract.property_name,
-        amount: `${contract.rent_amount} ${contract.currency}`,
-        due_date: contract.end_date
+        tenant_name: row.tenant_name,
+        property_name: row.property_name,
+        months_overdue: String(agg?.months_overdue ?? 0),
+        total_outstanding: `${agg?.total_outstanding ?? 0} ${row.currency}`,
+        due_date: row.due_date
       }
-      const lang = resolveLanguage(contract.tenant_lang, appLanguage)
-      const message = resolveTemplateMessage('overdue', lang, vars, templateMap)
+      const lang = resolveLanguage(row.tenant_lang, appLanguage)
+      const message = resolveTemplateMessage('arrears_summary', lang, vars, templateMap)
       insert.run(
-        'overdue',
+        'arrears_summary',
         'contract',
-        contract.id,
-        'overdue_title',
-        message ?? `Rent overdue for ${contract.property_name}`,
-        'notification.body.overdue',
+        row.contract_id,
+        'arrears_summary_title',
+        message ??
+          `${row.tenant_name} has ${agg?.months_overdue ?? 0} unpaid periods totaling ${agg?.total_outstanding ?? 0} ${row.currency}`,
+        'notification.body.arrearsSummary',
         JSON.stringify(vars),
-        contract.end_date,
-        'overdue',
+        today,
+        'arrears_summary',
         'contract',
-        contract.id,
-        contract.end_date
+        row.contract_id,
+        today
       )
     }
 

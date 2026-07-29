@@ -7,7 +7,15 @@ import eslintPluginReactRefresh from 'eslint-plugin-react-refresh'
 import eslintPluginImportX from 'eslint-plugin-import-x'
 
 export default defineConfig(
-  { ignores: ['**/node_modules', '**/dist', '**/out', '**/_guidelines', 'propmanager-website/.astro'] },
+  {
+    ignores: [
+      '**/node_modules',
+      '**/dist',
+      '**/out',
+      '**/_guidelines',
+      'propmanager-website/.astro'
+    ]
+  },
   tseslint.configs.recommended,
   eslintPluginReact.configs.flat.recommended,
   eslintPluginReact.configs.flat['jsx-runtime'],
@@ -53,8 +61,7 @@ export default defineConfig(
             'Use theme.palette.* or design tokens instead of raw hex colors (AGENTS.md: Visual Consistency).'
         },
         {
-          selector:
-            'Property[key.name=/^marginLeft$|^marginRight$|^paddingLeft$|^paddingRight$/]',
+          selector: 'Property[key.name=/^marginLeft$|^marginRight$|^paddingLeft$|^paddingRight$/]',
           message:
             'Use logical CSS properties (marginInlineStart, paddingInlineEnd) instead of physical direction properties (AGENTS.md: Logical CSS Properties).'
         },
@@ -71,6 +78,26 @@ export default defineConfig(
     files: ['**/*.d.ts'],
     rules: {
       'max-lines': 'off'
+    }
+  },
+  // Exempt theme definition (sanctioned hex location) and test files from hex color rule
+  {
+    files: ['src/renderer/theme/theme.ts', '**/*.test.ts', '**/*.spec.ts', '**/__tests__/**'],
+    rules: {
+      'no-restricted-syntax': [
+        'warn',
+        {
+          selector: 'Property[key.name=/^marginLeft$|^marginRight$|^paddingLeft$|^paddingRight$/]',
+          message:
+            'Use logical CSS properties (marginInlineStart, paddingInlineEnd) instead of physical direction properties (AGENTS.md: Logical CSS Properties).'
+        },
+        {
+          selector:
+            'Property[key.name="style"] > ObjectExpression > Property[key.name=/^left$|^right$|^top$|^bottom$/]',
+          message:
+            'Use logical CSS properties (insetInlineStart, insetInlineEnd) or MUI sx with start/end instead of physical positioning (AGENTS.md: Logical CSS Properties).'
+        }
+      ]
     }
   },
   eslintConfigPrettier

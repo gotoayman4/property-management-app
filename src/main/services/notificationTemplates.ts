@@ -6,6 +6,7 @@
 export type TriggerType =
   | 'rent_due'
   | 'overdue'
+  | 'arrears_summary'
   | 'contract_expiring'
   | 'escalation_upcoming'
   | 'recurring_expense_due'
@@ -27,14 +28,19 @@ export interface TemplateRow {
 /** Default template content — matches migration seed data (FR-SET-08 reset source). */
 export const DEFAULT_TEMPLATES: Record<TriggerType, Record<TemplateLanguage, string>> = {
   rent_due: {
-    ar: 'مرحباً {tenant_name}، نذكّرك بأن إيجار العقار "{property_name}" بقيمة {amount} مستحق في {due_date}. شكراً لك.',
-    en: 'Hello {tenant_name}, this is a reminder that rent of {amount} for "{property_name}" is due on {due_date}. Thank you.',
-    tr: 'Merhaba {tenant_name}, "{property_name}" adresindeki kiranızın {amount} tutarındaki ödemesi {due_date} tarihinde vadesi dolacaktır. Teşekkür ederiz.'
+    ar: 'مرحباً {tenant_name}، نذكّرك بأن إيجار الفترة {period} للعقار "{property_name}" بقيمة {amount_due} مستحق في {due_date}. المتبقي: {amount_outstanding}. شكراً لك.',
+    en: 'Hello {tenant_name}, this is a reminder that rent for period {period} of {amount_due} for "{property_name}" is due on {due_date}. Outstanding: {amount_outstanding}. Thank you.',
+    tr: 'Merhaba {tenant_name}, "{property_name}" için {period} dönemine ait {amount_due} tutarındaki kira {due_date} tarihinde vadesi dolacaktır. Kalan: {amount_outstanding}. Teşekkür ederiz.'
   },
   overdue: {
-    ar: 'مرحباً {tenant_name}، إيجار العقار "{property_name}" بقيمة {amount} كان مستحقاً في {due_date}. يرجى السداد في أقرب وقت.',
-    en: 'Hello {tenant_name}, the rent of {amount} for "{property_name}" was due on {due_date}. Please pay as soon as possible.',
-    tr: 'Merhaba {tenant_name}, "{property_name}" adresindeki kiranızın {amount} tutarındaki ödemesi {due_date} tarihinde vadesini doldurmuştur. Lütfen en kısa sürede ödeme yapınız.'
+    ar: 'مرحباً {tenant_name}، إيجار الفترة {period} للعقار "{property_name}" كان مستحقاً في {due_date}. المبلغ المتبقي {amount_outstanding}. يرجى السداد في أقرب وقت.',
+    en: 'Hello {tenant_name}, the rent for period {period} of "{property_name}" was due on {due_date}. Outstanding amount {amount_outstanding}. Please pay as soon as possible.',
+    tr: 'Merhaba {tenant_name}, "{property_name}" için {period} dönemine ait kira {due_date} tarihinde vadesini doldurdu. Kalan tutar {amount_outstanding}. Lütfen en kısa sürede ödeme yapınız.'
+  },
+  arrears_summary: {
+    ar: 'مرحباً {tenant_name}، لديك {months_overdue} فترة إيجار غير مسددة للعقار "{property_name}" بإجمالي {total_outstanding}. يرجى التواصل لتسوية المتأخرات.',
+    en: 'Hello {tenant_name}, you have {months_overdue} unpaid rent periods for "{property_name}" totaling {total_outstanding}. Please get in touch to settle the arrears.',
+    tr: 'Merhaba {tenant_name}, "{property_name}" için toplam {total_outstanding} tutarında {months_overdue} ödenmemiş kira döneminiz bulunmaktadır. Lütfen gecikmeleri kapatmak için iletişime geçin.'
   },
   contract_expiring: {
     ar: 'عقد إيجار العقار "{property_name}" للعميل {tenant_name} سينتهي في {due_date}.',

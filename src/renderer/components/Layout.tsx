@@ -13,6 +13,7 @@ import NotificationsIcon from '@mui/icons-material/Notifications'
 import PaymentsIcon from '@mui/icons-material/Payments'
 import PeopleIcon from '@mui/icons-material/People'
 import ReceiptLongIcon from '@mui/icons-material/ReceiptLong'
+import RequestQuoteIcon from '@mui/icons-material/RequestQuote'
 import SettingsIcon from '@mui/icons-material/Settings'
 import TranslateIcon from '@mui/icons-material/Translate'
 import {
@@ -119,6 +120,7 @@ export default function Layout({ children }: LayoutProps): React.JSX.Element {
     { text: t('sidebar.tenants'), icon: <PeopleIcon />, path: '/tenants' },
     { text: t('sidebar.contracts'), icon: <DescriptionIcon />, path: '/contracts' },
     { text: t('sidebar.payments'), icon: <PaymentsIcon />, path: '/payments' },
+    { text: t('sidebar.dues'), icon: <RequestQuoteIcon />, path: '/dues' },
     { text: t('sidebar.expenses'), icon: <ReceiptLongIcon />, path: '/expenses' },
     { text: t('sidebar.recurringExpenses'), icon: <AutorenewIcon />, path: '/recurring-expenses' },
     { text: t('sidebar.ledger'), icon: <AccountBalanceWalletIcon />, path: '/ledger' },
@@ -289,6 +291,7 @@ export default function Layout({ children }: LayoutProps): React.JSX.Element {
               {location.pathname === '/tenants' && t('sidebar.tenants')}
               {location.pathname === '/contracts' && t('sidebar.contracts')}
               {location.pathname === '/payments' && t('sidebar.payments')}
+              {location.pathname === '/dues' && t('sidebar.dues')}
               {location.pathname === '/expenses' && t('sidebar.expenses')}
               {location.pathname === '/recurring-expenses' && t('sidebar.recurringExpenses')}
               {location.pathname === '/ledger' && t('sidebar.ledger')}

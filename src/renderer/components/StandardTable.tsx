@@ -5,7 +5,8 @@ import {
   GridColDef,
   GridValidRowModel,
   GridRowId,
-  GridColumnVisibilityModel
+  GridColumnVisibilityModel,
+  GridRowSelectionModel
 } from '@mui/x-data-grid'
 import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -29,6 +30,10 @@ interface StandardTableProps {
   pageSizeOptions?: number[]
   /** Unique identifier — when provided, column visibility is persisted to localStorage. */
   tableId?: string
+  /** Enable the leading checkbox-selection column. */
+  checkboxSelection?: boolean
+  rowSelectionModel?: GridRowSelectionModel
+  onRowSelectionModelChange?: (model: GridRowSelectionModel) => void
 }
 
 function readPersistedVisibility(tableId: string): GridColumnVisibilityModel {
@@ -65,7 +70,10 @@ export default function StandardTable({
   getRowId,
   pageSize = 10,
   pageSizeOptions = [10, 25, 50],
-  tableId
+  tableId,
+  checkboxSelection = false,
+  rowSelectionModel,
+  onRowSelectionModelChange
 }: StandardTableProps): React.JSX.Element {
   const { t } = useTranslation()
   const isRtl = useDirection()
@@ -247,6 +255,9 @@ export default function StandardTable({
           }}
           pageSizeOptions={pageSizeOptions}
           getRowId={getRowId}
+          checkboxSelection={checkboxSelection}
+          rowSelectionModel={rowSelectionModel}
+          onRowSelectionModelChange={onRowSelectionModelChange}
           disableRowSelectionOnClick
           sx={{
             border: 'none',

@@ -10,6 +10,7 @@ import ContractDetail from './pages/contracts/ContractDetail'
 import { ContractList } from './pages/contracts/ContractList'
 import ExchangeRateManager from './pages/currency/ExchangeRateManager'
 import Dashboard from './pages/dashboard/Dashboard'
+import { DuesList } from './pages/dues/DuesList'
 import { ExpenseList } from './pages/expenses/ExpenseList'
 import { RecurringExpenseList } from './pages/expenses/RecurringExpenseList'
 import Ledger from './pages/ledger/Ledger'
@@ -72,6 +73,10 @@ const router = createHashRouter([
       {
         path: '/payments',
         element: <PaymentList />
+      },
+      {
+        path: '/dues',
+        element: <DuesList />
       },
       {
         path: '/expenses',

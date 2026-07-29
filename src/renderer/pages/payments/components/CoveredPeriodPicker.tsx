@@ -25,6 +25,8 @@ interface CoveredPeriodPickerProps {
   onMonthsChange: (months: number[]) => void
   yearOptions: number[]
   monthKeys: readonly string[]
+  /** Months (1-12) in the selected year with an outstanding due — surfaced as an allocation hint. */
+  openDueMonths?: number[]
   error?: FieldError
 }
 
@@ -35,9 +37,16 @@ export function CoveredPeriodPicker({
   onMonthsChange,
   yearOptions,
   monthKeys,
+  openDueMonths = [],
   error
 }: CoveredPeriodPickerProps): React.JSX.Element {
   const { t } = useTranslation()
+
+  const openMonthLabels = openDueMonths
+    .slice()
+    .sort((a, b) => a - b)
+    .map((m) => monthKeys[m - 1])
+    .filter(Boolean)
 
   return (
     <>
@@ -105,6 +114,11 @@ export function CoveredPeriodPicker({
             })}
           </Select>
           {error && <FormHelperText>{t(`payment.${error.message}`)}</FormHelperText>}
+          {!error && openMonthLabels.length > 0 && (
+            <FormHelperText>
+              {t('payment.openDuesHint', { months: openMonthLabels.join(', ') })}
+            </FormHelperText>
+          )}
         </FormControl>
       </Box>
     </>

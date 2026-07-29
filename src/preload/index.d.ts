@@ -64,6 +64,7 @@ export type ReportRequestParams = {
     | 'recurring_schedule'
     | 'document_expiry'
     | 'ledger'
+    | 'dues_schedule'
   from_date?: string
   to_date?: string
   property_id?: number
@@ -193,6 +194,41 @@ interface ExpenseRow {
   category_name_key: string
 }
 
+/** A materialized rent-due (receivable) row, enriched with joined context for lists. */
+interface DueRow {
+  id: number
+  contract_id: number
+  property_id: number
+  tenant_id: number | null
+  due_type: 'rent' | 'opening_balance'
+  period_key: string
+  period_start: string
+  period_end: string
+  due_date: string
+  amount_due: number
+  amount_paid: number
+  outstanding: number
+  currency: string
+  status: 'pending' | 'partial' | 'paid' | 'settled_before_app' | 'waived'
+  status_reason: string | null
+  status_changed_at: string | null
+  created_at: string
+  days_overdue: number
+  property_name?: string
+  contract_number?: string
+  tenant_name?: string
+}
+
+/** Per-currency arrears aging summary row (dues:summary). */
+interface DuesArrearsSummary {
+  currency: string
+  total_outstanding: number
+  bucket_0_30: number
+  bucket_31_60: number
+  bucket_61_90: number
+  bucket_90_plus: number
+}
+
 interface LedgerRow {
   id: number
   entry_date: string
@@ -304,11 +340,14 @@ interface TemplateRow {
   trigger_type:
     | 'rent_due'
     | 'overdue'
+    | 'arrears_summary'
     | 'contract_expiring'
     | 'escalation_upcoming'
     | 'recurring_expense_due'
     | 'document_expiring'
     | 'backup_failed'
+    | 'auto_renew_upcoming'
+    | 'contract_auto_renewed'
   language: 'ar' | 'tr' | 'en'
   message_body: string
 }
@@ -482,13 +521,12 @@ interface DashboardUpcomingDue {
 
 interface DashboardOverdue {
   id: number
-  payment_date: string
+  due_date: string
   amount: number
   currency: string
-  is_partial: number
   property_name: string
   tenant_name: string
-  total_paid: number
+  months_overdue: number
 }
 
 interface DashboardRecurringDue {
@@ -763,6 +801,24 @@ declare global {
           custom_exchange_rate?: number | null
         }) => Promise<{ payment_id: number; ledger_id: number; receipt_number: string }>
         void: (payload: { id: number; reason: string }) => Promise<{ ledger_id: number }>
+      }
+      dues: {
+        listByContract: (contractId: number) => Promise<DueRow[]>
+        listOutstanding: (filters?: {
+          contract_id?: number
+          property_id?: number
+          tenant_id?: number
+          only_overdue?: boolean
+        }) => Promise<DueRow[]>
+        summary: (filters?: { country?: string }) => Promise<DuesArrearsSummary[]>
+        settleBeforeApp: (data: { due_ids: number[]; note: string }) => Promise<{ changed: number }>
+        waive: (data: { due_id: number; reason: string }) => Promise<{ changed: number }>
+        createOpeningBalance: (data: {
+          contract_id: number
+          amount: number
+          as_of_date: string
+          note?: string | null
+        }) => Promise<{ due_id: number }>
       }
       expenses: {
         list: (filters?: {

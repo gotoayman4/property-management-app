@@ -182,6 +182,33 @@ export function PaymentForm({ onSuccess, onCancel }: PaymentFormProps): React.Re
 
   const selectedPropertyId = watch('property_id')
   const selectedContractId = watch('contract_id')
+
+  // Open (pending/partial) dues for the selected contract — powers the CoveredPeriodPicker hint
+  // so users allocate a payment to a period that is actually still outstanding.
+  const [openDuePeriods, setOpenDuePeriods] = useState<string[]>([])
+  useEffect(() => {
+    if (!selectedContractId) {
+      setOpenDuePeriods([])
+      return
+    }
+    window.api.dues
+      .listByContract(selectedContractId)
+      .then((rows) => {
+        const list = (rows ?? []) as unknown as Array<{ period_key: string; status: string }>
+        setOpenDuePeriods(
+          list
+            .filter((d) => d.status === 'pending' || d.status === 'partial')
+            .map((d) => d.period_key)
+        )
+      })
+      .catch(() => setOpenDuePeriods([]))
+  }, [selectedContractId])
+
+  // Months (1-12) with an open due in the currently-selected year.
+  const openDueMonths = openDuePeriods
+    .filter((key) => key.startsWith(`${periodYear}-`))
+    .map((key) => Number(key.slice(5, 7)))
+    .filter((m) => m >= 1 && m <= 12)
   const watchedAmount = watch('amount')
   const watchedCurrency = watch('currency')
   // Single conversion target = reporting currency; the hook returns one result.
@@ -409,6 +436,7 @@ export function PaymentForm({ onSuccess, onCancel }: PaymentFormProps): React.Re
               onMonthsChange={setPeriodMonths}
               yearOptions={yearOptions}
               monthKeys={monthKeys}
+              openDueMonths={openDueMonths}
               error={errors.related_period_month}
             />
             {/* Hidden RHF controller — only carries the serialised value; no UI rendered. */}

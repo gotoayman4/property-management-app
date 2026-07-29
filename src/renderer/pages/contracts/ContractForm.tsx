@@ -97,7 +97,11 @@ interface Contract {
 
 interface ContractFormProps {
   contract: Contract | null
-  onSuccess: () => void
+  /**
+   * Fired after a successful save. Receives the saved contract's id and start date so the caller
+   * can surface the "review generated dues" step for backdated contracts.
+   */
+  onSuccess: (info?: { id: number; startDate: string }) => void
   onCancel: () => void
 }
 
@@ -266,7 +270,7 @@ export function ContractForm({
         setEscalationTouched(false)
         showSuccess('common.saveSuccess')
         notifyDataChanged()
-        onSuccess()
+        onSuccess({ id: newId, startDate: data.start_date })
       } else {
         setCreatedEntity({ id: newId })
         // Re-baseline so isDirty clears; point the user at the new Documents tab.
@@ -274,7 +278,7 @@ export function ContractForm({
         setEscalationTouched(false)
         showSuccess('common.saveSuccessWithDocuments')
         notifyDataChanged()
-        onSuccess()
+        onSuccess({ id: newId, startDate: data.start_date })
       }
     } catch (err: unknown) {
       console.error(err)

@@ -38,13 +38,12 @@ export interface UpcomingDueRow {
 }
 export interface OverdueRow {
   id: number
-  payment_date: string
+  due_date: string
   amount: number
   currency: string
-  is_partial: number
   property_name: string
   tenant_name: string
-  total_paid: number
+  months_overdue: number
 }
 export interface UpcomingRecurringRow {
   id: number

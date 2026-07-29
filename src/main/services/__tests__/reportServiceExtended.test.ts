@@ -9,6 +9,7 @@
  */
 import Database from 'better-sqlite3'
 import { describe, it, expect, beforeEach } from 'vitest'
+import { generateDuesForContract } from '../../db/duesGeneration'
 import { runMigrations } from '../../db/migrations'
 import { buildReport } from '../reportService'
 
@@ -160,75 +161,136 @@ describe('reportServiceExtended', () => {
   })
 
   describe('tenant_payment_history', () => {
-    it('computes total_due, total_paid, and remaining', () => {
-      const report = buildReport(db, 'tenant_payment_history', { language: 'en' })
-      expect(report.groups.length).toBeGreaterThanOrEqual(1)
+    // Backdated contract so its dues are materialized past-due arrears for the report.
+    function seedArrears(): number {
+      const c = db
+        .prepare(
+          `INSERT INTO contracts (contract_number, property_id, tenant_id, start_date, end_date,
+             rent_amount, currency, payment_frequency, status, has_variable_escalation)
+           VALUES ('C-ARR', ?, ?, '2024-01-01', '2024-12-31', 500, 'JOD', 'monthly', 'active', 0)`
+        )
+        .run(propertyJod, tenantId)
+      const cId = Number(c.lastInsertRowid)
+      generateDuesForContract(db, cId)
+      return cId
+    }
 
+    it('computes total_due/total_paid/remaining from the materialized dues schedule', () => {
+      const cId = seedArrears()
+      // Collect two of the twelve periods.
+      db.prepare(
+        `UPDATE rent_dues SET amount_paid = 500, status = 'paid'
+         WHERE contract_id = ? AND period_key IN ('2024-01', '2024-02')`
+      ).run(cId)
+
+      const report = buildReport(db, 'tenant_payment_history', { language: 'en' })
       const jodGroup = report.groups.find((g) => g.currency === 'JOD')
       expect(jodGroup).toBeDefined()
-      const row = jodGroup?.rows[0]
-      expect(row?.['total_paid']).toBe(500)
-      expect(row?.['remaining']).toBeGreaterThanOrEqual(0)
+      const row = jodGroup?.rows.find((r) => r['tenant_name'] === 'Tenant One')
+      expect(row?.['total_due']).toBe(6000) // 12 * 500
+      expect(row?.['total_paid']).toBe(1000) // 2 * 500
+      expect(row?.['remaining']).toBe(5000)
     })
 
-    it('remaining is zero when total_paid >= total_due', () => {
+    it('remaining is clamped to zero when paid meets or exceeds due', () => {
+      const cId = seedArrears()
+      db.prepare(
+        `UPDATE rent_dues SET amount_paid = amount_due, status = 'paid' WHERE contract_id = ?`
+      ).run(cId)
       const report = buildReport(db, 'tenant_payment_history', { language: 'en' })
-      const jodGroup = report.groups.find((g) => g.currency === 'JOD')
-      const row = jodGroup?.rows[0]
-      // total_paid (500) >= monthly_rent (500), so remaining = 0
+      const row = report.groups
+        .flatMap((g) => g.rows)
+        .find((r) => r['tenant_name'] === 'Tenant One')
       expect(row?.['remaining']).toBe(0)
     })
 
-    it('filters by tenant_id', () => {
-      const report = buildReport(db, 'tenant_payment_history', { tenant_id: tenantId })
-      const allRows = report.groups.flatMap((g) => g.rows)
-      expect(allRows.length).toBeGreaterThanOrEqual(1)
-      allRows.forEach((r) => {
-        expect(r['tenant_name']).toBe('Tenant One')
-      })
-    })
-
     it('has no consolidatedGroup (intentional per design)', () => {
+      seedArrears()
       const report = buildReport(db, 'tenant_payment_history', { language: 'en' })
       expect(report.consolidatedGroup).toBeUndefined()
     })
   })
 
   describe('outstanding_balances', () => {
-    it('lists active contracts past their end_date with amount_due and days_overdue', () => {
-      // Create a contract that is active but past end_date.
-      const pastContract = db
+    function seedArrears(): number {
+      const c = db
         .prepare(
           `INSERT INTO contracts (contract_number, property_id, tenant_id, start_date, end_date,
-             rent_amount, currency, payment_frequency, status)
-           VALUES ('C-PAST', ?, ?, '2025-01-01', '2026-01-01', 500, 'JOD', 'monthly', 'active')`
+             rent_amount, currency, payment_frequency, status, has_variable_escalation)
+           VALUES ('C-ARR', ?, ?, '2024-01-01', '2024-12-31', 500, 'JOD', 'monthly', 'active', 0)`
         )
         .run(propertyJod, tenantId)
-      Number(pastContract.lastInsertRowid)
+      const cId = Number(c.lastInsertRowid)
+      generateDuesForContract(db, cId)
+      return cId
+    }
 
+    it('sums real arrears with aging buckets and a true days_overdue', () => {
+      seedArrears()
       const report = buildReport(db, 'outstanding_balances', { language: 'en' })
       const jodGroup = report.groups.find((g) => g.currency === 'JOD')
       expect(jodGroup).toBeDefined()
-
-      const row = jodGroup?.rows.find((r) => r['amount_due'] === 500)
-      expect(row).toBeDefined()
+      const row = jodGroup?.rows.find((r) => r['tenant_name'] === 'Tenant One')
+      expect(row?.['amount_due']).toBe(6000) // all 12 periods outstanding
       expect(Number(row?.['days_overdue'])).toBeGreaterThan(0)
+      // Every 2024 period is far in the past — all arrears land in the 90+ bucket.
+      expect(row?.['aging_90_plus']).toBe(6000)
     })
 
-    it('does not list contracts still within their term', () => {
-      // The seed contract C-1 ends 2027-12-31 — should not appear.
+    it('excludes dues that are already paid/settled', () => {
+      const cId = seedArrears()
+      db.prepare(`UPDATE rent_dues SET status = 'settled_before_app' WHERE contract_id = ?`).run(
+        cId
+      )
       const report = buildReport(db, 'outstanding_balances', { language: 'en' })
       const allRows = report.groups.flatMap((g) => g.rows)
-      const currentContractRow = allRows.find(
-        (r) => r['amount_due'] === 500 && Number(r['days_overdue']) <= 0
-      )
-      // C-1 is active and not past end_date — should not be in outstanding.
-      expect(currentContractRow).toBeUndefined()
+      expect(allRows.find((r) => r['tenant_name'] === 'Tenant One')).toBeUndefined()
     })
 
     it('has no consolidatedGroup', () => {
+      seedArrears()
       const report = buildReport(db, 'outstanding_balances', { language: 'en' })
       expect(report.consolidatedGroup).toBeUndefined()
+    })
+  })
+
+  describe('dues_schedule', () => {
+    function seedArrears(): number {
+      const c = db
+        .prepare(
+          `INSERT INTO contracts (contract_number, property_id, tenant_id, start_date, end_date,
+             rent_amount, currency, payment_frequency, status, has_variable_escalation)
+           VALUES ('C-ARR', ?, ?, '2024-01-01', '2024-12-31', 500, 'JOD', 'monthly', 'active', 0)`
+        )
+        .run(propertyJod, tenantId)
+      const cId = Number(c.lastInsertRowid)
+      generateDuesForContract(db, cId)
+      return cId
+    }
+
+    it('lists one row per period with localized status and outstanding', () => {
+      const cId = seedArrears()
+      db.prepare(
+        `UPDATE rent_dues SET amount_paid = 200, status = 'partial' WHERE contract_id = ? AND period_key = '2024-01'`
+      ).run(cId)
+
+      const report = buildReport(db, 'dues_schedule', { language: 'en' })
+      const jodGroup = report.groups.find((g) => g.currency === 'JOD')
+      expect(jodGroup).toBeDefined()
+      expect(jodGroup?.rows.length).toBe(12)
+
+      const jan = jodGroup?.rows.find((r) => r['period'] === '2024-01')
+      expect(jan?.['amount_due']).toBe(500)
+      expect(jan?.['amount_paid']).toBe(200)
+      expect(jan?.['outstanding']).toBe(300)
+      expect(jan?.['status']).toBe('Partial')
+    })
+
+    it('filters by property_id', () => {
+      seedArrears()
+      const report = buildReport(db, 'dues_schedule', { property_id: propertyTry })
+      const allRows = report.groups.flatMap((g) => g.rows)
+      expect(allRows.length).toBe(0)
     })
   })
 

@@ -35,6 +35,7 @@
     "tenants": "المستأجرون",
     "contracts": "عقود الإيجار",
     "payments": "المدفوعات والإيرادات",
+    "dues": "مستحقات الإيجار",
     "expenses": "المصروفات",
     "ledger": "الدفتر المالي",
     "currency": "سعر الصرف",
@@ -48,6 +49,52 @@
     "expand": "توسيع الشريط الجانبي",
     "collapse": "طي الشريط الجانبي",
     "about": "حول التطبيق"
+  },
+  "dues": {
+    "title": "مستحقات الإيجار",
+    "noDues": "لا توجد مستحقات معلقة.",
+    "totalOutstanding": "المستحق: {{amount}} {{currency}}",
+    "aging": {
+      "days": "{{days}} يوم"
+    },
+    "col": {
+      "property": "العقار",
+      "tenant": "المستأجر",
+      "period": "الفترة",
+      "dueDate": "تاريخ الاستحقاق",
+      "amountDue": "المبلغ المستحق",
+      "amountPaid": "المبلغ المدفوع",
+      "outstanding": "المتبقي",
+      "status": "الحالة",
+      "daysOverdue": "أيام التأخير"
+    },
+    "status": {
+      "pending": "معلق",
+      "partial": "جزئي",
+      "paid": "مدفوع",
+      "settled_before_app": "مسوّى قبل التطبيق",
+      "waived": "مُعفى عنه"
+    },
+    "action": {
+      "settle": "تسوية قبل التطبيق",
+      "waive": "إعفاء",
+      "openingBalance": "رصيد افتتاحي"
+    },
+    "settleTitle": "تسوية المستحقات قبل التطبيق",
+    "waiveTitle": "الإعفاء عن المستحق",
+    "openingBalanceTitle": "تسجيل رصيد افتتاحي",
+    "selectedCount": "{{n}} مستحق محدد",
+    "contract": "العقد",
+    "amount": "المبلغ",
+    "asOfDate": "اعتبارًا من تاريخ",
+    "note": "ملاحظة",
+    "reason": "السبب",
+    "settleSuccess": "تم تعليم المستحقات المحددة كمسوّاة قبل التطبيق.",
+    "waiveSuccess": "تم الإعفاء عن المستحق.",
+    "openingBalanceSuccess": "تم تسجيل الرصيد الافتتاحي.",
+    "reviewTitle": "مراجعة المستحقات المُنشأة",
+    "reviewSubtitle": "تم إنشاء فترات الإيجار هذه للعقد. يمكنك تعليم الفترات السابقة كمسوّاة قبل التطبيق، أو تسجيل رصيد افتتاحي.",
+    "reviewSettleAll": "تعليم جميع المستحقات السابقة كمسوّاة قبل التطبيق"
   },
   "common": {
     "save": "حفظ",
@@ -579,6 +626,7 @@
     "relatedPeriodYear": "السنة",
     "relatedPeriodMonths": "الشهر/الأشهر",
     "relatedPeriodPlaceholder": "اختر الأشهر",
+    "openDuesHint": "الفترات المستحقة هذا العام: {{months}}",
     "void": "إلغاء الدفعة",
     "voidConfirm": "هل تريد إلغاء هذه الدفعة؟ سيُنشأ قيد دفتر عكسي، ويبقى السجل الأصلي كما هو دون تعديل.",
     "voidReasonLabel": "سبب الإلغاء",
@@ -905,6 +953,7 @@
     "type": {
       "rent_due": "استحقاق الإيجار",
       "overdue": "متأخر",
+      "arrears_summary": "ملخص المتأخرات",
       "contract_expiry": "انتهاء العقد",
       "contract_expiring": "انتهاء العقد",
       "escalation_upcoming": "زيادة الإيجار",
@@ -922,6 +971,7 @@
     "body": {
       "rentDue": "إشعار استحقاق الإيجار",
       "overdue": "إشعار تأخر السداد",
+      "arrearsSummary": "إشعار ملخص المتأخرات",
       "contractExpiring": "إشعار انتهاء العقد",
       "escalationUpcoming": "إشعار زيادة الإيجار القادمة",
       "documentExpiring": "إشعار انتهاء المستند",
@@ -1048,6 +1098,7 @@
       "contract_expiry": "انتهاء العقود والزيادات",
       "recurring_schedule": "جدول المصروفات الدورية",
       "document_expiry": "انتهاء المستندات",
+      "dues_schedule": "جدول المستحقات",
       "ledger": "الدفتر المالي"
     },
     "filters": "عوامل التصفية",
@@ -1118,7 +1169,16 @@
       "frequency": "الدورية",
       "documentType": "نوع المستند",
       "issueDate": "تاريخ الإصدار",
-      "expiryDate": "تاريخ الانتهاء"
+      "expiryDate": "تاريخ الانتهاء",
+      "status": "الحالة",
+      "period": "الفترة",
+      "dueDate": "تاريخ الاستحقاق",
+      "amountPaid": "المبلغ المدفوع",
+      "outstanding": "المتبقي",
+      "aging0_30": "0–30 يوماً",
+      "aging31_60": "31–60 يوماً",
+      "aging61_90": "61–90 يوماً",
+      "aging90Plus": "90+ يوماً"
     },
     "presetPeriod": "فترة محددة",
     "presetCustom": "نطاق مخصص",
@@ -1140,6 +1200,13 @@
     "statusExpired": "منتهي الصلاحية",
     "statusExpiringSoon": "ينتهي قريباً",
     "statusValid": "ساري",
+    "duesStatus": {
+      "pending": "قيد الانتظار",
+      "partial": "مدفوع جزئياً",
+      "paid": "مدفوع",
+      "settled_before_app": "مسوّى قبل التطبيق",
+      "waived": "مُعفى عنه"
+    },
     "frequency": {
       "daily": "يومي",
       "weekly": "أسبوعي",

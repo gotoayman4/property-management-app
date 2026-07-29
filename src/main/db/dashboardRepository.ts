@@ -279,23 +279,34 @@ export function getUpcomingDue(db: Database, country?: string): unknown[] {
     .all(...params)
 }
 
+/**
+ * Overdue = real arrears from rent_dues (status pending/partial with a due_date in the past),
+ * aggregated per contract. Replaces the old contract-end-date proxy: this reflects true
+ * period-level debt (outstanding = amount_due - amount_paid) summed across every open past-due
+ * period, with the count of overdue periods and the oldest such due_date.
+ */
 export function getOverduePayments(db: Database, country?: string): unknown[] {
   const wc = whereCountry(country)
+  const today = toLocalISODate(new Date())
   return db
     .prepare(
-      `SELECT p.id, p.payment_date, p.amount, p.currency, p.is_partial,
-              pr.name as property_name, t.fullname as tenant_name,
-              (SELECT COALESCE(SUM(amount), 0) FROM payments
-               WHERE tenant_id = p.tenant_id AND property_id = p.property_id
-                 AND is_voided = 0) as total_paid
-       FROM payments p
-       LEFT JOIN properties pr ON p.property_id = pr.id
-       LEFT JOIN tenants t ON p.tenant_id = t.id
-       WHERE p.is_voided = 0${wc.clause}
-       ORDER BY p.payment_date ASC
+      `SELECT d.contract_id AS id,
+              MIN(d.due_date) AS due_date,
+              SUM(d.amount_due - d.amount_paid) AS amount,
+              d.currency,
+              pr.name AS property_name,
+              t.fullname AS tenant_name,
+              COUNT(*) AS months_overdue
+       FROM rent_dues d
+       JOIN properties pr ON d.property_id = pr.id
+       JOIN contracts c ON d.contract_id = c.id
+       LEFT JOIN tenants t ON d.tenant_id = t.id
+       WHERE d.status IN ('pending', 'partial') AND d.due_date < ?${wc.clause}
+       GROUP BY d.contract_id, d.currency, pr.name, t.fullname
+       ORDER BY MIN(d.due_date) ASC
        LIMIT 10`
     )
-    .all(...wc.params)
+    .all(today, ...wc.params)
 }
 
 export function getUpcomingRecurring(db: Database, country?: string): unknown[] {

@@ -38,6 +38,7 @@ export type ReportType =
   | 'contract_expiry'
   | 'recurring_schedule'
   | 'document_expiry'
+  | 'dues_schedule'
 
 export interface ReportFilters {
   from_date?: string

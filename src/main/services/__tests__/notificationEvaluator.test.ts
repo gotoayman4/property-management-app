@@ -1,5 +1,6 @@
 import Database from 'better-sqlite3'
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
+import { generateDuesForContract } from '../../db/duesGeneration'
 import { runMigrations } from '../../db/migrations'
 import { evaluateNotifications } from '../notificationEvaluator'
 
@@ -43,5 +44,35 @@ describe('notificationEvaluator', () => {
       .prepare("SELECT * FROM notifications WHERE notification_type = 'contract_expiry'")
       .all()
     expect(notifications.length).toBeGreaterThan(0)
+  })
+
+  it('fires dues-driven overdue notifications from rent_dues (not the end_date proxy)', () => {
+    // A fully backdated contract: every generated due sits in the past, so each open period
+    // must surface as an overdue notification sourced from rent_dues.
+    const todayMs = Date.now()
+    const start = new Date(todayMs - 200 * 86400000).toISOString().split('T')[0]
+    const end = new Date(todayMs - 20 * 86400000).toISOString().split('T')[0]
+
+    db.prepare(
+      "INSERT INTO properties (code, name, address, currency, type, country) VALUES ('P2', 'Property 2', 'Addr', 'USD', 'apartment', 'US')"
+    ).run()
+    db.prepare("INSERT INTO tenants (code, fullname, phone) VALUES ('T2', 'Tenant 2', '456')").run()
+    const contractId = Number(
+      db
+        .prepare(
+          `INSERT INTO contracts (contract_number, property_id, tenant_id, start_date, end_date,
+             rent_amount, currency, payment_frequency, status)
+           VALUES ('C2', 1, 1, ?, ?, 1000, 'USD', 'monthly', 'active')`
+        )
+        .run(start, end).lastInsertRowid
+    )
+    generateDuesForContract(db, contractId)
+
+    evaluateNotifications(db)
+
+    const overdue = db
+      .prepare("SELECT * FROM notifications WHERE notification_type = 'overdue' AND entity_id = ?")
+      .all(contractId)
+    expect(overdue.length).toBeGreaterThan(0)
   })
 })

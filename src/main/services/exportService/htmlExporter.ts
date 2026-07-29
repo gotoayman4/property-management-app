@@ -271,6 +271,7 @@ function renderSvgChart(data: ReportData): string {
       const x = i * (barWidth + 24) + 40
       const y = 160 - height
       const label = escapeHtml(String(r[labelKey] ?? ''))
+      // eslint-disable-next-line no-restricted-syntax -- chart colors in exported HTML document, not UI
       const color = val >= 0 ? '#10b981' : '#ef4444'
 
       return `

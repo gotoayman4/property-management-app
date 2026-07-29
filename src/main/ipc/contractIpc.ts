@@ -8,6 +8,7 @@ import {
 } from '../db/contractEscalation'
 import { checkOverlap, syncPropertyStatus, logHistory } from '../db/contractHelpers'
 import { db } from '../db/database'
+import { generateDuesForContract, regenerateFutureDues } from '../db/duesGeneration'
 import { appendLedgerEntry } from '../db/ledgerService'
 import { createPayment } from '../db/paymentRepository'
 import { logger } from '../utils/logger'
@@ -158,6 +159,9 @@ export function registerContractIpcHandlers(): void {
         insertedId = Number(res.lastInsertRowid)
         logHistory(insertedId, 'created', null)
         syncPropertyStatus(v.property_id)
+        // Materialize the receivables schedule up-front so backdated contracts immediately
+        // surface their accumulated arrears (idempotent; runs in this same transaction).
+        generateDuesForContract(db, insertedId)
       })()
       return { id: insertedId, ...v }
     } catch (error: unknown) {
@@ -222,6 +226,8 @@ export function registerContractIpcHandlers(): void {
         syncPropertyStatus(v.property_id)
         const oldProp = old.property_id as number
         if (oldProp !== v.property_id) syncPropertyStatus(oldProp)
+        // Rebuild only FUTURE pending dues from the amended terms; past/paid rows are preserved.
+        regenerateFutureDues(db, v.id)
       })()
       return v
     } catch (error: unknown) {
@@ -250,6 +256,8 @@ export function registerContractIpcHandlers(): void {
              contract_term_years = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`
         ).run(v.schedule.length, v.contract_id)
         logHistory(v.contract_id, 'amended', null, 'set escalation schedule')
+        // Escalation changes future per-period amounts; rebuild pending future dues to match.
+        regenerateFutureDues(db, v.contract_id)
       })()
       return { success: true, yearCount: v.schedule.length }
     } catch (error: unknown) {
@@ -374,6 +382,8 @@ export function registerContractIpcHandlers(): void {
           `renewed: ${v.new_start_date} → ${v.new_end_date}`
         )
         syncPropertyStatus(old.property_id as number)
+        // Generate dues for the renewed term (idempotent for any overlap with prior periods).
+        generateDuesForContract(db, v.contract_id)
       })()
       return { success: true, id: v.contract_id }
     } catch (error: unknown) {

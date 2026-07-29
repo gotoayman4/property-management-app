@@ -17,6 +17,7 @@ export type ReportType =
   | 'contract_expiry'
   | 'recurring_schedule'
   | 'document_expiry'
+  | 'dues_schedule'
   | 'ledger'
 
 export const REPORT_TYPES: ReportType[] = [
@@ -30,6 +31,7 @@ export const REPORT_TYPES: ReportType[] = [
   'contract_expiry',
   'recurring_schedule',
   'document_expiry',
+  'dues_schedule',
   'ledger'
 ]
 

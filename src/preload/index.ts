@@ -50,6 +50,15 @@ const api = {
     create: (data: unknown) => ipcRenderer.invoke('payments:create', data),
     void: (payload: { id: number; reason: string }) => ipcRenderer.invoke('payments:void', payload)
   },
+  dues: {
+    listByContract: (contractId: number) => ipcRenderer.invoke('dues:listByContract', contractId),
+    listOutstanding: (filters?: unknown) => ipcRenderer.invoke('dues:listOutstanding', filters),
+    summary: (filters?: { country?: string }) => ipcRenderer.invoke('dues:summary', filters),
+    settleBeforeApp: (data: { due_ids: number[]; note: string }) =>
+      ipcRenderer.invoke('dues:settleBeforeApp', data),
+    waive: (data: { due_id: number; reason: string }) => ipcRenderer.invoke('dues:waive', data),
+    createOpeningBalance: (data: unknown) => ipcRenderer.invoke('dues:createOpeningBalance', data)
+  },
   expenses: {
     list: (filters?: unknown) => ipcRenderer.invoke('expenses:list', filters),
     get: (id: number) => ipcRenderer.invoke('expenses:get', id),

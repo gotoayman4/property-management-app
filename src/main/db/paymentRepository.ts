@@ -1,5 +1,6 @@
 import { Database } from 'better-sqlite3'
 import { resolveReportingSnapshot } from '../utils/currencyHelper'
+import { allocatePaymentToDues, reverseAllocations } from './duesAllocation'
 import { appendLedgerEntry, generateReceiptNumber } from './ledgerService'
 
 /**
@@ -129,6 +130,16 @@ export function createPayment(db: Database, input: CreatePaymentInput): CreatedP
       ).run(input.contract_id)
     }
 
+    // Receivables side: mark the matching due period(s) paid/partial in the SAME transaction so
+    // cash (payment+ledger) and arrears (dues) can never diverge. No-op for non-rent payments.
+    allocatePaymentToDues(db, {
+      payment_id: paymentId,
+      contract_id: input.contract_id ?? null,
+      payment_type: input.payment_type,
+      amount: input.amount,
+      related_period_month: input.related_period_month ?? null
+    })
+
     return { payment_id: paymentId, ledger_id: ledgerId, receipt_number: receiptNumber }
   })()
 }
@@ -159,6 +170,10 @@ export function voidPayment(
       trimmed,
       paymentId
     )
+
+    // Undo the receivables allocation exactly (using the recorded allocation rows) so the freed
+    // dues return to pending/partial — in the same transaction as the ledger reversal.
+    reverseAllocations(db, paymentId)
 
     const ledgerId = appendLedgerEntry(db, {
       entryDate: payment.payment_date,

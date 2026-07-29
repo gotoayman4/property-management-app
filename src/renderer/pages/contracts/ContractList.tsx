@@ -20,6 +20,7 @@ import StandardDialog from '../../components/StandardDialog'
 import StandardTable from '../../components/StandardTable'
 import { useFetch } from '../../hooks/useFetch'
 import { useSnackbar } from '../../hooks/useSnackbar'
+import DuesReviewDialog from '../dues/DuesReviewDialog'
 import { ContractForm } from './ContractForm'
 import {
   ContractRenewalForm,
@@ -63,6 +64,8 @@ export function ContractList(): React.ReactElement {
     contract: RenewalSourceContract
     schedule: RenewalSourceScheduleRow[]
   } | null>(null)
+  // Contract whose freshly-generated dues should be reviewed (opened for backdated contracts).
+  const [reviewContractId, setReviewContractId] = useState<number | null>(null)
 
   const fetchContracts = useCallback(() => window.api.contracts.list(), [])
 
@@ -370,8 +373,12 @@ export function ContractList(): React.ReactElement {
       >
         <ContractForm
           contract={selectedContract}
-          onSuccess={() => {
+          onSuccess={(info) => {
             refetch()
+            // Backdated contracts materialize historical dues — offer the review/settle step.
+            if (info && daysUntil(info.startDate) < 0) {
+              setReviewContractId(info.id)
+            }
           }}
           onCancel={() => {
             setOpenDialog(false)
@@ -379,6 +386,17 @@ export function ContractList(): React.ReactElement {
           }}
         />
       </StandardDialog>
+
+      {/* Review of generated dues for a newly-saved backdated contract */}
+      {reviewContractId != null && (
+        <DuesReviewDialog
+          open
+          contractId={reviewContractId}
+          onClose={() => setReviewContractId(null)}
+          onSuccess={showSuccess}
+          onError={showError}
+        />
+      )}
 
       {/* Renewal dialog */}
       {renewalSource && (

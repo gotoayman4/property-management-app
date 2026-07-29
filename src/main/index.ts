@@ -3,6 +3,7 @@ import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import { app, shell, BrowserWindow, session } from 'electron'
 import icon from '../../resources/icon.png?asset'
 import { db, dbPath, initDatabase } from './db/database'
+import { extendDuesForActiveContracts } from './db/duesGeneration'
 import { registerAuthIpcHandlers } from './ipc/authIpc'
 import { registerBackupIpcHandlers } from './ipc/backupIpc'
 import { registerContractIpcHandlers } from './ipc/contractIpc'
@@ -10,6 +11,7 @@ import { registerDashboardIpcHandlers } from './ipc/dashboardIpc'
 import { registerDataIpcHandlers } from './ipc/dataIpc'
 import { registerDialogIpcHandlers } from './ipc/dialogIpc'
 import { registerDocumentIpcHandlers } from './ipc/documentIpc'
+import { registerDuesIpcHandlers } from './ipc/duesIpc'
 import { registerExchangeRateIpcHandlers } from './ipc/exchangeRateIpc'
 import { registerExpenseIpcHandlers } from './ipc/expenseIpc'
 import { registerLedgerIpcHandlers } from './ipc/ledgerIpc'
@@ -85,6 +87,8 @@ app.whenReady().then(() => {
   registerDocumentIpcHandlers()
   registerNotificationIpcHandlers()
   registerSearchIpcHandlers()
+  // Rent dues (receivables) — arrears tracking, settle-before-app, opening balances.
+  registerDuesIpcHandlers()
   // Reports & Export (SRS §5.7/§5.8): 5 core reports → Excel + interactive HTML.
   registerReportsIpcHandlers()
 
@@ -102,13 +106,19 @@ app.whenReady().then(() => {
   //             escalations, so downstream logic sees the renewed (current-term) contract state.
   applyDueAutoRenewals(db)
 
-  // Evaluate notifications on startup - check for rent due, contract expiry, etc.
-  evaluateNotifications()
-
   // FR-CON-11: Apply any overdue rent escalation steps before the window opens.
   // CONSTRAINT: runs after DB init but before the window shows so contracts.rent_amount
   //             is always current when the renderer first loads dashboard data.
   applyDueEscalations(db)
+
+  // Rolling dues generation: materialize any rent periods that have come due since the last
+  // launch (and backfill dues for contracts predating the dues engine). Runs AFTER escalations
+  // so each new period picks up the current escalated rent, and BEFORE notifications so the
+  // dues-based overdue/rent_due evaluation sees an up-to-date receivables schedule. Idempotent.
+  extendDuesForActiveContracts(db)
+
+  // Evaluate notifications on startup - check for rent due, contract expiry, etc.
+  evaluateNotifications()
 
   // Evaluate recurring expense templates - generates expenses for any due dates since last run
   evaluateRecurringExpenses()

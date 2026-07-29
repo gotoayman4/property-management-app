@@ -8,8 +8,15 @@
  * CONSTRAINT (AGENTS.md): normalization/mapping functions require exhaustive parameterized
  *         tests — compareVersions and parseShaSums use it.each accordingly.
  */
-
 import { describe, it, expect, vi, beforeEach } from 'vitest'
+import {
+  checkForUpdates,
+  compareVersions,
+  extractUpdateInfo,
+  getUpdateState,
+  INSTALLER_ARGS,
+  parseShaSums
+} from '../updateService'
 
 // Electron is unavailable under Vitest — provide the two APIs updateService touches.
 const netFetchMock = vi.fn()
@@ -23,15 +30,6 @@ vi.mock('electron', () => ({
     fetch: (...args: unknown[]): unknown => netFetchMock(...args)
   }
 }))
-
-import {
-  compareVersions,
-  extractUpdateInfo,
-  parseShaSums,
-  checkForUpdates,
-  getUpdateState,
-  INSTALLER_ARGS
-} from '../updateService'
 
 /** Minimal valid release payload builder for extractUpdateInfo/checkForUpdates tests. */
 function makeRelease(overrides: Record<string, unknown> = {}): Record<string, unknown> {
