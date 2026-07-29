@@ -327,6 +327,27 @@ describe('notificationIpc', () => {
     })) as Array<unknown>
     expect(after.length).toBe(0)
   })
+
+  // Regression: renderer polls notifications:unreadCount; handler was missing from main,
+  // causing "No handler registered for 'notifications:unreadCount'" at runtime.
+  it('returns the unread notification count via unreadCount IPC', async () => {
+    // Distinct entity_id per row — idx_notifications_dedup is UNIQUE on (type, entity, due_date).
+    const insert = testDb.prepare(
+      `INSERT INTO notifications (notification_type, entity_type, entity_id, title, message, due_date, is_read)
+       VALUES ('rent_due', 'contract', ?, 'Rent', 'msg', '2026-01-01', ?)`
+    )
+    insert.run(1, 0)
+    insert.run(2, 0)
+    insert.run(3, 1)
+
+    const result = (await invoke(registry, 'notifications:unreadCount')) as { count: number }
+    expect(result.count).toBe(2)
+  })
+
+  it('returns zero unread count when there are no notifications', async () => {
+    const result = (await invoke(registry, 'notifications:unreadCount')) as { count: number }
+    expect(result.count).toBe(0)
+  })
 })
 
 describe('exchangeRateIpc', () => {

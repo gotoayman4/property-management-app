@@ -37,6 +37,19 @@ export function registerNotificationIpcHandlers(): void {
     }
   })
 
+  ipcMain.handle('notifications:unreadCount', async () => {
+    try {
+      const row = db
+        .prepare('SELECT COUNT(*) AS count FROM notifications WHERE is_read = 0')
+        .get() as {
+        count: number
+      }
+      return { count: row.count }
+    } catch {
+      throw new Error('FAILED_TO_COUNT_UNREAD_NOTIFICATIONS')
+    }
+  })
+
   ipcMain.handle('notifications:markRead', async (_, data: unknown) => {
     try {
       const id = z.number().int().positive().parse(data)
