@@ -236,7 +236,9 @@ export function listDuesByContract(db: Database, contractId: number): unknown[] 
 
 /**
  * Aggregate outstanding arrears per currency with aging buckets (0-30 / 31-60 / 61-90 / 90+
- * days past due). Optional country filter narrows to one country's properties (dashboard tab).
+ * days past due). Includes dues dated today (age 0 — lands in the 0-30 bucket) so a freshly
+ * added opening balance is counted immediately. Optional country filter narrows to one
+ * country's properties (dashboard tab).
  */
 export function getArrearsSummary(db: Database, country?: string): unknown[] {
   const today = toLocalISODate(new Date())
@@ -260,7 +262,7 @@ export function getArrearsSummary(db: Database, country?: string): unknown[] {
                        THEN d.amount_due - d.amount_paid ELSE 0 END) AS bucket_90_plus
          FROM rent_dues d
          JOIN properties pr ON d.property_id = pr.id
-        WHERE d.status IN ('pending', 'partial') AND d.due_date < ?${clause}
+        WHERE d.status IN ('pending', 'partial') AND d.due_date <= ?${clause}
         GROUP BY d.currency
         ORDER BY d.currency`
     )

@@ -5,6 +5,13 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 Release notes on GitHub Releases are generated from this file (`scripts/extract-changelog.mjs`), so every release MUST have a section here before tagging.
 
+## [1.2.1] - 2026-07-29
+
+### Fixed
+
+- Rent dues list now shows every outstanding due, including ones added with today's date — previously a newly added opening balance dated today did not appear until the next day
+- The per-currency outstanding summary on the Rent Dues page now counts dues dated today as well
+
 ## [1.2.0] - 2026-07-29
 
 ### Added

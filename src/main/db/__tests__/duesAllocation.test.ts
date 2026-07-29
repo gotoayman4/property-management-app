@@ -267,5 +267,25 @@ describe('duesAllocation', () => {
       // 12 * 500 rent + 1000 opening balance = 7000 outstanding.
       expect(jod?.total_outstanding).toBe(7000)
     })
+
+    it('getArrearsSummary counts a due dated TODAY (0-30 bucket, not excluded)', () => {
+      // Regression: the boundary must be <= today, so a just-added opening balance dated
+      // today shows in the summary immediately instead of only from tomorrow.
+      const today = new Date().toISOString().split('T')[0]
+      createOpeningBalanceDue(db, {
+        contract_id: contractId,
+        amount: 250,
+        as_of_date: today
+      })
+      const summary = getArrearsSummary(db) as Array<{
+        currency: string
+        total_outstanding: number
+        bucket_0_30: number
+      }>
+      const jod = summary.find((s) => s.currency === 'JOD')
+      // 12 * 500 past-due rent + 250 today-dated opening balance.
+      expect(jod?.total_outstanding).toBe(6250)
+      expect(jod?.bucket_0_30).toBeGreaterThanOrEqual(250)
+    })
   })
 })

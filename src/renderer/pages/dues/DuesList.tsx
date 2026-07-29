@@ -46,10 +46,10 @@ export function DuesList(): React.ReactElement {
   const { t } = useTranslation()
   const { snack, showError, showSuccess, hideSnackbar } = useSnackbar()
 
-  const fetchOutstanding = useCallback(
-    () => window.api.dues.listOutstanding({ only_overdue: true }),
-    []
-  )
+  // Show ALL still-open dues (pending/partial), not only strictly-past-due ones: a due added
+  // today (e.g. an opening balance dated today) must appear immediately. Overdue emphasis comes
+  // from the per-currency arrears summary chips and the days_overdue aging column below.
+  const fetchOutstanding = useCallback(() => window.api.dues.listOutstanding({}), [])
   const fetchSummary = useCallback(() => window.api.dues.summary(), [])
 
   const { data, loading, error, refetch } = useFetch(fetchOutstanding)
