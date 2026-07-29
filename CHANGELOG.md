@@ -5,6 +5,36 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 Release notes on GitHub Releases are generated from this file (`scripts/extract-changelog.mjs`), so every release MUST have a section here before tagging.
 
+## [1.2.0] - 2026-07-29
+
+### Added
+
+- Rent dues (receivables) engine: rent obligations are now materialised into a `rent_dues` schedule per contract, with FIFO allocation against payments, reversal on payment void, and age-bucketed arrears tracking
+- Dues list page (`/dues`) with outstanding/past-due periods across all contracts, aging chip indicators (0–30, 31–60, 61–90, 90+ days), and bulk actions (settle, waive, opening balance)
+- Three dues mutation actions: settle-before-app (for periods predating the app), waive (for irrecoverable amounts), and opening balance — all non-ledger operations that adjust receivables without touching cash records
+- Dues review dialog: appears automatically when a backdated contract is saved, letting the user mark historical periods as settled
+- Arrears-summary notifications: one aggregate notification per tenant/contract when multiple periods are overdue, with `{months_overdue}` and `{total_outstanding}` variables
+- Rent-due and overdue notification templates now include `{period}`, `{amount_due}`, and `{amount_outstanding}` variables
+- Dashboard overdue section now sources real arrears from `rent_dues` instead of proxying from contract end dates, showing months-overdue count
+- `overdue_balances` and `tenant_payment_history` reports rewritten to use true dues-based arrears with aging buckets (0–30, 31–60, 61–90, 90+ days)
+- New report type `dues_schedule`: per-period per-currency rent dues schedule
+- `StandardTable` now supports checkbox row selection for bulk actions
+- `CoveredPeriodPicker` shows helper text listing months with outstanding dues to guide payment period allocation
+- ESLint: new rule banning physical `left`/`right`/`top`/`bottom` in inline styles; hex-colour exemption for `theme.ts` and test files
+
+### Changed
+
+- Payment recording and void now allocate/reverse against the dues schedule inside the same transaction — cash and receivables can never diverge
+- Contract create, edit, escalation-set, and renewal all regenerate the dues schedule automatically
+- Notification evaluator rewritten to query `rent_dues` for real overdue periods instead of the old contract-end-date proxy
+- App startup runs `extendDuesForActiveContracts()` before notification evaluation so evaluators see up-to-date arrears
+- Sidebar now includes a Rent Dues entry between Payments and Expenses
+
+### Fixed
+
+- Payment period picker: unused `isRtl` variable removed
+- ESLint config: `max-lines` rule moved to correct config object
+
 ## [1.1.3] - 2026-07-28
 
 ### Added
@@ -79,6 +109,7 @@ Release notes on GitHub Releases are generated from this file (`scripts/extract-
 - In-app auto-update system: checks GitHub Releases, verifies SHA-256 integrity, silent Inno Setup upgrade (Settings → About)
 - Bilingual (English/Arabic) Windows installer with per-user install, upgrade/downgrade handling and user-data preservation
 
+[1.2.0]: https://github.com/gotoayman4/property-management-app/releases/tag/v1.2.0
 [1.1.1]: https://github.com/gotoayman4/property-management-app/releases/tag/v1.1.1
 [1.1.0]: https://github.com/gotoayman4/property-management-app/releases/tag/v1.1.0
 [1.0.2]: https://github.com/gotoayman4/property-management-app/releases/tag/v1.0.2
