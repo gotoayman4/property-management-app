@@ -1,4 +1,5 @@
 import { zodResolver } from '@hookform/resolvers/zod'
+import { Send as SendWhatsAppIcon } from '@mui/icons-material'
 import {
   Box,
   Button,
@@ -13,6 +14,8 @@ import {
   MenuItem,
   InputLabel,
   InputAdornment,
+  IconButton,
+  Tooltip,
   Tabs,
   Tab
 } from '@mui/material'
@@ -25,6 +28,7 @@ import { FormField } from '../../components/FormField'
 import GlobalSnackbar from '../../components/GlobalSnackbar'
 import { useSnackbar } from '../../hooks/useSnackbar'
 import { notifyDataChanged } from '../../utils/eventBus'
+import { buildWhatsAppUrl } from '../../utils/whatsappUtils'
 
 const tenantFormSchema = z.object({
   code: z
@@ -137,6 +141,10 @@ export function TenantForm({ tenant, onSuccess, onCancel }: TenantFormProps): Re
   })
 
   const tenantType = watch('type')
+  // Live values so the WhatsApp action next to the phone field targets what the user
+  // currently sees (including unsaved edits), matching the TenantList row action.
+  const phoneValue = watch('phone')
+  const countryCodeValue = watch('country_code')
 
   // Auto-generate tenant code when type is selected (create only)
   useEffect(() => {
@@ -321,6 +329,37 @@ export function TenantForm({ tenant, onSuccess, onCancel }: TenantFormProps): Re
                   placeholder={t('tenant.phonePlaceholder')}
                   forceLtr
                   inputFilter={(v) => v.replace(/\D/g, '')}
+                  slotProps={{
+                    input: {
+                      endAdornment: (
+                        <InputAdornment position="end">
+                          <Tooltip title={t('common.sendWhatsApp')}>
+                            {/* span keeps the Tooltip functional while the button is disabled */}
+                            <span>
+                              <IconButton
+                                size="small"
+                                color="success"
+                                edge="end"
+                                disabled={!phoneValue}
+                                onClick={() =>
+                                  window.open(
+                                    buildWhatsAppUrl(
+                                      phoneValue ?? '',
+                                      countryCodeValue ?? undefined
+                                    ),
+                                    '_blank'
+                                  )
+                                }
+                                aria-label={t('common.sendWhatsApp')}
+                              >
+                                <SendWhatsAppIcon fontSize="small" />
+                              </IconButton>
+                            </span>
+                          </Tooltip>
+                        </InputAdornment>
+                      )
+                    }
+                  }}
                 />
               </Box>
             </Box>
