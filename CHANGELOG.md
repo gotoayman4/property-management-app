@@ -5,6 +5,27 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 Release notes on GitHub Releases are generated from this file (`scripts/extract-changelog.mjs`), so every release MUST have a section here before tagging.
 
+## [1.3.1] - 2026-07-30
+
+### Added
+
+- Delete notifications individually or in bulk from the Notification Center, plus a "Clear all" action — each behind a confirmation dialog. Deletions are soft-dismissed so the evaluator does not recreate them
+- WhatsApp share button in the notification bell popover for tenant-facing notifications (rent due, overdue, arrears, contract expiry)
+- "View all" link in the bell popover to open the full Notification Center
+- Tooltip on truncated notification messages showing the full text
+
+### Changed
+
+- Notification bell rows are now keyboard-focusable, and the unread badge refreshes when the popover closes and after marking notifications read
+- Notification Center unread count now reflects the true database total instead of the capped fetched list, and timestamps render in the active language's locale
+
+### Fixed
+
+- Notification evaluation no longer aborts mid-run: fixed a document-expiry type mismatch and a deduplication conflict that could roll back the entire notification transaction (leaving notifications ungenerated)
+- Restored the "dismiss" action, whose wiring between the UI and the main process was missing
+- `read_at` is now recorded when a notification is marked read
+- Corrected mislabeled Notification Center columns (read status, due date, created date)
+
 ## [1.3.0] - 2026-07-30
 
 ### Added
