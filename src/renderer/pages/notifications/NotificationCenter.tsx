@@ -1,18 +1,23 @@
 /**
  * INTENT: Full notification center page — filterable list of all notification types
  *         (rent_due, contract_expiry, document_expiry, recurring_expense_due) with
- *         mark-as-read, mark-all-read, and WhatsApp deep-link actions.
+ *         mark-as-read, mark-all-read, WhatsApp deep-link, and delete (single / bulk /
+ *         clear-all) actions. Deletion is a soft-dismiss via the notifications:dismiss*
+ *         IPC channels — rows stay in the DB so the evaluator dedup does not re-create them.
  * CONSTRAINT (AGENTS.md): StandardTable, PageHeader, explicit dir on dialogs, i18n keys only.
  */
 import {
+  Delete as DeleteIcon,
+  DeleteSweep as ClearAllIcon,
   MarkEmailRead as MarkAllReadIcon,
   Notifications as NotificationsIcon,
   Send as SendWhatsAppIcon
 } from '@mui/icons-material'
-import { Box, Button, Chip, IconButton, Tab, Tabs, Typography, Tooltip } from '@mui/material'
-import { GridColDef } from '@mui/x-data-grid'
-import React, { useCallback, useEffect, useState } from 'react'
+import { Box, Button, Chip, IconButton, Stack, Tab, Tabs, Typography, Tooltip } from '@mui/material'
+import { GridColDef, GridRowSelectionModel } from '@mui/x-data-grid'
+import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import ConfirmDialog from '../../components/ConfirmDialog'
 import GlobalSnackbar from '../../components/GlobalSnackbar'
 import PageHeader from '../../components/PageHeader'
 import StandardTable from '../../components/StandardTable'
@@ -42,6 +47,12 @@ export default function NotificationCenter(): React.ReactElement {
   const [notifications, setNotifications] = useState<NotificationRow[]>([])
   const [loading, setLoading] = useState<boolean>(true)
   const [error, setError] = useState<string | null>(null)
+  const [selection, setSelection] = useState<GridRowSelectionModel>({
+    type: 'include',
+    ids: new Set()
+  })
+  // Which delete confirmation is open: the selected rows or the whole list.
+  const [confirmMode, setConfirmMode] = useState<'selected' | 'all' | null>(null)
 
   const fetchNotifications = useCallback(
     async (unreadOnly = false): Promise<void> => {
@@ -62,26 +73,11 @@ export default function NotificationCenter(): React.ReactElement {
   )
 
   useEffect(() => {
-    let cancelled = false
-    async function load(): Promise<void> {
-      try {
-        setLoading(true)
-        setError(null)
-        const data = await window.api.notifications.list({
-          unread_only: tab === 1
-        })
-        if (!cancelled) setNotifications(data as NotificationRow[])
-      } catch {
-        if (!cancelled) setError(t('common.error'))
-      } finally {
-        if (!cancelled) setLoading(false)
-      }
-    }
-    load()
-    return () => {
-      cancelled = true
-    }
-  }, [tab, t])
+    /* eslint-disable react-hooks/set-state-in-effect -- async data-fetch is the standard
+       React pattern (mirrors useFetch); setState fires when the Promise resolves */
+    fetchNotifications(tab === 1)
+    /* eslint-enable react-hooks/set-state-in-effect */
+  }, [tab, fetchNotifications])
 
   const handleMarkAllRead = async (): Promise<void> => {
     try {
@@ -110,6 +106,41 @@ export default function NotificationCenter(): React.ReactElement {
     if (row.tenant_phone) {
       const url = buildWhatsAppUrl(row.tenant_phone, row.tenant_country_code, row.message)
       window.open(url, '_blank')
+    }
+  }
+
+  // Selected row ids resolved against the grid's include/exclude selection model.
+  const selectedIds = useMemo(() => {
+    const ids = selection.ids
+    return selection.type === 'include'
+      ? notifications.filter((n) => ids.has(n.id)).map((n) => n.id)
+      : notifications.filter((n) => !ids.has(n.id)).map((n) => n.id)
+  }, [notifications, selection])
+
+  const handleDismiss = async (id: number): Promise<void> => {
+    try {
+      await window.api.notifications.dismiss(id)
+      setNotifications((prev) => prev.filter((n) => n.id !== id))
+      showSuccess('notifications.deleted')
+    } catch {
+      showError('common.saveError')
+    }
+  }
+
+  const handleConfirmDelete = async (): Promise<void> => {
+    const mode = confirmMode
+    setConfirmMode(null)
+    try {
+      if (mode === 'all') {
+        await window.api.notifications.clearAll()
+      } else if (selectedIds.length > 0) {
+        await window.api.notifications.dismissMany(selectedIds)
+      }
+      setSelection({ type: 'include', ids: new Set() })
+      showSuccess('notifications.deleted')
+      fetchNotifications(tab === 1)
+    } catch {
+      showError('common.saveError')
     }
   }
 
@@ -198,18 +229,37 @@ export default function NotificationCenter(): React.ReactElement {
           <Box sx={{ display: 'flex', gap: 0.5 }}>
             {!row.is_read && (
               <Tooltip title={t('notification.markAsRead')}>
-                <IconButton size="small" onClick={() => handleMarkRead(row.id)}>
+                <IconButton
+                  size="small"
+                  aria-label={t('notification.markAsRead')}
+                  onClick={() => handleMarkRead(row.id)}
+                >
                   <MarkAllReadIcon fontSize="small" />
                 </IconButton>
               </Tooltip>
             )}
             {canWhatsApp && (
               <Tooltip title={t('common.sendWhatsApp')}>
-                <IconButton size="small" color="success" onClick={() => handleWhatsApp(row)}>
+                <IconButton
+                  size="small"
+                  color="success"
+                  aria-label={t('common.sendWhatsApp')}
+                  onClick={() => handleWhatsApp(row)}
+                >
                   <SendWhatsAppIcon fontSize="small" />
                 </IconButton>
               </Tooltip>
             )}
+            <Tooltip title={t('common.delete')}>
+              <IconButton
+                size="small"
+                color="error"
+                aria-label={t('common.delete')}
+                onClick={() => handleDismiss(row.id)}
+              >
+                <DeleteIcon fontSize="small" />
+              </IconButton>
+            </Tooltip>
           </Box>
         )
       }
@@ -223,11 +273,37 @@ export default function NotificationCenter(): React.ReactElement {
         title={t('notifications.title')}
         subtitle={`${unreadCount} ${t('notification.unread')}`}
         action={
-          unreadCount > 0 ? (
-            <Button variant="outlined" startIcon={<MarkAllReadIcon />} onClick={handleMarkAllRead}>
-              {t('notifications.markAllRead')}
-            </Button>
-          ) : undefined
+          <Stack direction="row" spacing={1}>
+            {selectedIds.length > 0 && (
+              <Button
+                variant="outlined"
+                color="error"
+                startIcon={<DeleteIcon />}
+                onClick={() => setConfirmMode('selected')}
+              >
+                {t('notifications.deleteSelected', { count: selectedIds.length })}
+              </Button>
+            )}
+            {notifications.length > 0 && (
+              <Button
+                variant="outlined"
+                color="error"
+                startIcon={<ClearAllIcon />}
+                onClick={() => setConfirmMode('all')}
+              >
+                {t('notifications.clearAll')}
+              </Button>
+            )}
+            {unreadCount > 0 && (
+              <Button
+                variant="outlined"
+                startIcon={<MarkAllReadIcon />}
+                onClick={handleMarkAllRead}
+              >
+                {t('notifications.markAllRead')}
+              </Button>
+            )}
+          </Stack>
         }
       />
 
@@ -244,6 +320,22 @@ export default function NotificationCenter(): React.ReactElement {
         onRetry={() => fetchNotifications(tab === 1)}
         emptyMessage={t('notifications.empty')}
         tableId="notifications"
+        checkboxSelection
+        rowSelectionModel={selection}
+        onRowSelectionModelChange={setSelection}
+      />
+
+      <ConfirmDialog
+        open={confirmMode !== null}
+        title={t('notifications.deleteConfirmTitle')}
+        message={
+          confirmMode === 'all'
+            ? t('notifications.clearAllConfirmMessage')
+            : t('notifications.deleteConfirmMessage', { count: selectedIds.length })
+        }
+        confirmLabel={t('common.delete')}
+        onConfirm={handleConfirmDelete}
+        onCancel={() => setConfirmMode(null)}
       />
 
       <GlobalSnackbar state={snack} onClose={hideSnackbar} />
