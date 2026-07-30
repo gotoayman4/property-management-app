@@ -51,3 +51,19 @@ export function formatDate(dateStr: string | null | undefined): string {
   if (!dateStr) return '—'
   return dateStr
 }
+
+/**
+ * Format a timestamp (SQLite `CURRENT_TIMESTAMP` — "YYYY-MM-DD HH:MM:SS" in UTC, or ISO 8601)
+ * as a locale-aware date + time string keyed to the active UI language.
+ * Example: formatDateTime('2026-07-27 10:00:00', 'en') → "Jul 27, 2026, 1:00 PM" (local zone).
+ * Falls back to the raw string when the input cannot be parsed.
+ */
+export function formatDateTime(dateStr: string | null | undefined, language: string): string {
+  if (!dateStr) return '—'
+  // SQLite timestamps are UTC without a zone marker — normalise to ISO + Z before parsing.
+  const normalised = dateStr.includes('T') ? dateStr : `${dateStr.replace(' ', 'T')}Z`
+  const date = new Date(normalised)
+  if (Number.isNaN(date.getTime())) return dateStr
+  const locale = LOCALE_MAP[language] || 'en'
+  return new Intl.DateTimeFormat(locale, { dateStyle: 'medium', timeStyle: 'short' }).format(date)
+}

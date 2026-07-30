@@ -29,6 +29,13 @@ vi.mock('react-i18next', () => ({
   })
 }))
 
+// Spy on useNavigate so the view-all test can assert the target route.
+const mockNavigate = vi.fn()
+vi.mock('react-router-dom', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('react-router-dom')>()
+  return { ...actual, useNavigate: () => mockNavigate }
+})
+
 vi.mock('../../hooks/useDirection', () => ({
   useDirection: () => false
 }))
@@ -54,6 +61,7 @@ beforeEach(() => {
   mockList.mockReset()
   mockMarkRead.mockReset()
   mockMarkAllRead.mockReset()
+  mockNavigate.mockReset()
   mockUnreadCount.mockResolvedValue({ count: 2 })
   mockList.mockResolvedValue([
     {
@@ -174,5 +182,15 @@ describe('NotificationBell', () => {
     )
     // stopPropagation: the row's mark-read handler must NOT fire.
     expect(mockMarkRead).not.toHaveBeenCalled()
+  })
+
+  it('view-all button navigates to the notification center', async () => {
+    renderBell()
+    fireEvent.click(screen.getByRole('button', { name: 'notifications.label' }))
+    await waitFor(() => {
+      expect(screen.getByText('notifications.viewAll')).toBeInTheDocument()
+    })
+    fireEvent.click(screen.getByText('notifications.viewAll'))
+    expect(mockNavigate).toHaveBeenCalledWith('/notifications')
   })
 })

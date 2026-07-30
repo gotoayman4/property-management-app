@@ -11,6 +11,7 @@ import {
   Popover,
   List,
   ListItem,
+  ListItemButton,
   ListItemText,
   Typography,
   Button,
@@ -18,7 +19,7 @@ import {
   Chip,
   Tooltip
 } from '@mui/material'
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 import { useDirection } from '../hooks/useDirection'
@@ -51,25 +52,29 @@ export default function NotificationBell(): React.JSX.Element {
   const [unreadCount, setUnreadCount] = useState(0)
   const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null)
 
-  useEffect(() => {
-    let cancelled = false
-    async function fetchCount(): Promise<void> {
-      try {
-        const result = await window.api.notifications.unreadCount()
-        if (!cancelled) setUnreadCount(result.count)
-      } catch {
-        /* silent — badge stays at 0 */
-      }
-    }
-    fetchCount()
-    const interval = setInterval(() => {
-      fetchCount()
-    }, 30_000)
-    return () => {
-      cancelled = true
-      clearInterval(interval)
+  // Reusable so the badge can be re-synced on popover close and after mark-read actions,
+  // not just by the 30s poll.
+  const fetchUnreadCount = useCallback(async (): Promise<void> => {
+    try {
+      const result = await window.api.notifications.unreadCount()
+      setUnreadCount(result.count)
+    } catch {
+      /* silent — badge keeps last value */
     }
   }, [])
+
+  useEffect(() => {
+    /* eslint-disable react-hooks/set-state-in-effect -- async data-fetch is the standard
+       React pattern (mirrors useFetch); setState fires when the Promise resolves */
+    fetchUnreadCount()
+    /* eslint-enable react-hooks/set-state-in-effect */
+    const interval = setInterval(() => {
+      fetchUnreadCount()
+    }, 30_000)
+    return () => {
+      clearInterval(interval)
+    }
+  }, [fetchUnreadCount])
 
   const handleOpen = async (event: React.MouseEvent<HTMLElement>): Promise<void> => {
     setAnchorEl(event.currentTarget)
@@ -81,13 +86,17 @@ export default function NotificationBell(): React.JSX.Element {
     }
   }
 
-  const handleClose = (): void => setAnchorEl(null)
+  const handleClose = (): void => {
+    setAnchorEl(null)
+    // Re-sync the badge — rows may have been read (or dismissed elsewhere) while open.
+    fetchUnreadCount()
+  }
 
   const handleMarkRead = async (id: number): Promise<void> => {
     try {
       await window.api.notifications.markRead(id)
       setNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, is_read: 1 } : n)))
-      setUnreadCount((prev) => Math.max(0, prev - 1))
+      fetchUnreadCount()
     } catch {
       /* silent */
     }
@@ -108,7 +117,7 @@ export default function NotificationBell(): React.JSX.Element {
     try {
       await window.api.notifications.markAllRead()
       setNotifications((prev) => prev.map((n) => ({ ...n, is_read: 1 })))
-      setUnreadCount(0)
+      fetchUnreadCount()
     } catch {
       /* silent */
     }
@@ -122,6 +131,11 @@ export default function NotificationBell(): React.JSX.Element {
       const url = buildWhatsAppUrl(n.tenant_phone, n.tenant_country_code ?? undefined, n.message)
       window.open(url, '_blank')
     }
+  }
+
+  const handleViewAll = (): void => {
+    handleClose()
+    navigate('/notifications')
   }
 
   const open = Boolean(anchorEl)
@@ -168,11 +182,7 @@ export default function NotificationBell(): React.JSX.Element {
               {notifications.map((n) => (
                 <ListItem
                   key={n.id}
-                  sx={{
-                    bgcolor: n.is_read ? 'transparent' : 'action.hover',
-                    cursor: 'pointer'
-                  }}
-                  onClick={() => handleNotificationClick(n)}
+                  disablePadding
                   secondaryAction={
                     canSendWhatsApp(n) ? (
                       <Tooltip title={t('common.sendWhatsApp')} dir={isRtl ? 'rtl' : 'ltr'}>
@@ -189,43 +199,59 @@ export default function NotificationBell(): React.JSX.Element {
                     ) : undefined
                   }
                 >
-                  <ListItemText
-                    primary={
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <Chip
-                          label={t(`notifications.type.${n.notification_type}`)}
-                          size="small"
-                          color={TYPE_COLORS[n.notification_type] ?? 'default'}
-                          aria-hidden="true"
-                        />
-                        {n.due_date && (
-                          <Typography variant="caption" color="text.secondary">
-                            {n.due_date}
+                  {/* ListItemButton (not clickable ListItem) so rows are keyboard-focusable. */}
+                  <ListItemButton
+                    sx={{
+                      bgcolor: n.is_read ? 'transparent' : 'action.hover',
+                      // Keep text clear of the absolutely-positioned secondary action.
+                      pe: canSendWhatsApp(n) ? 7 : undefined
+                    }}
+                    onClick={() => handleNotificationClick(n)}
+                  >
+                    <ListItemText
+                      primary={
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                          <Chip
+                            label={t(`notifications.type.${n.notification_type}`)}
+                            size="small"
+                            color={TYPE_COLORS[n.notification_type] ?? 'default'}
+                          />
+                          {n.due_date && (
+                            <Typography variant="caption" color="text.secondary">
+                              {n.due_date}
+                            </Typography>
+                          )}
+                        </Box>
+                      }
+                      secondary={
+                        <Tooltip title={n.message} dir={isRtl ? 'rtl' : 'ltr'}>
+                          <Typography
+                            variant="body2"
+                            color="text.secondary"
+                            sx={{
+                              display: '-webkit-box',
+                              WebkitLineClamp: 2,
+                              WebkitBoxOrient: 'vertical',
+                              overflow: 'hidden'
+                            }}
+                          >
+                            {n.message}
                           </Typography>
-                        )}
-                      </Box>
-                    }
-                    secondary={
-                      <Tooltip title={n.message} dir={isRtl ? 'rtl' : 'ltr'}>
-                        <Typography
-                          variant="body2"
-                          color="text.secondary"
-                          sx={{
-                            display: '-webkit-box',
-                            WebkitLineClamp: 2,
-                            WebkitBoxOrient: 'vertical',
-                            overflow: 'hidden'
-                          }}
-                        >
-                          {n.message}
-                        </Typography>
-                      </Tooltip>
-                    }
-                    slotProps={{ secondary: { component: 'div' } }}
-                  />
+                        </Tooltip>
+                      }
+                      slotProps={{ secondary: { component: 'div' } }}
+                    />
+                  </ListItemButton>
                 </ListItem>
               ))}
             </List>
+          )}
+          {notifications.length > 0 && (
+            <Box sx={{ p: 1, borderTop: 1, borderColor: 'divider' }}>
+              <Button size="small" fullWidth onClick={handleViewAll}>
+                {t('notifications.viewAll')}
+              </Button>
+            </Box>
           )}
         </Box>
       </Popover>

@@ -24,6 +24,7 @@ import PageHeader from '../../components/PageHeader'
 import StandardTable from '../../components/StandardTable'
 import { useDirection } from '../../hooks/useDirection'
 import { useSnackbar } from '../../hooks/useSnackbar'
+import { formatDate, formatDateTime } from '../../utils/formatUtils'
 import { canSendWhatsApp, type NotificationRow } from '../../utils/notificationUtils'
 import { buildWhatsAppUrl } from '../../utils/whatsappUtils'
 
@@ -58,7 +59,7 @@ function OverflowTooltip({
 }
 
 export default function NotificationCenter(): React.ReactElement {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
   const isRtl = useDirection()
   const { snack, showError, showSuccess, hideSnackbar } = useSnackbar()
 
@@ -72,6 +73,18 @@ export default function NotificationCenter(): React.ReactElement {
   })
   // Which delete confirmation is open: the selected rows or the whole list.
   const [confirmMode, setConfirmMode] = useState<'selected' | 'all' | null>(null)
+  // True unread total from the DB — the fetched list is capped at 50 rows, so counting
+  // rows would under-report. Refreshed together with every list fetch / row action.
+  const [totalUnread, setTotalUnread] = useState(0)
+
+  const refreshUnreadCount = useCallback(async (): Promise<void> => {
+    try {
+      const result = await window.api.notifications.unreadCount()
+      setTotalUnread(result.count)
+    } catch {
+      /* silent — count keeps last value */
+    }
+  }, [])
 
   const fetchNotifications = useCallback(
     async (unreadOnly = false): Promise<void> => {
@@ -87,8 +100,9 @@ export default function NotificationCenter(): React.ReactElement {
       } finally {
         setLoading(false)
       }
+      refreshUnreadCount()
     },
-    [t]
+    [t, refreshUnreadCount]
   )
 
   useEffect(() => {
@@ -114,6 +128,7 @@ export default function NotificationCenter(): React.ReactElement {
       setNotifications((prev) =>
         prev.map((n) => (n.id === id ? { ...n, is_read: 1, read_at: new Date().toISOString() } : n))
       )
+      refreshUnreadCount()
     } catch {
       /* silent */
     }
@@ -144,6 +159,7 @@ export default function NotificationCenter(): React.ReactElement {
     try {
       await window.api.notifications.dismiss(id)
       setNotifications((prev) => prev.filter((n) => n.id !== id))
+      refreshUnreadCount()
       showSuccess('notifications.deleted')
     } catch {
       showError('common.saveError')
@@ -167,7 +183,7 @@ export default function NotificationCenter(): React.ReactElement {
     }
   }
 
-  const unreadCount = notifications.filter((n) => n.is_read === 0).length
+  const unreadCount = totalUnread
 
   const columns: GridColDef[] = [
     {
@@ -210,7 +226,7 @@ export default function NotificationCenter(): React.ReactElement {
       flex: 1,
       renderCell: (params) => {
         const row = params.row as NotificationRow
-        return row.due_date ?? '—'
+        return formatDate(row.due_date)
       }
     },
     {
@@ -219,7 +235,7 @@ export default function NotificationCenter(): React.ReactElement {
       flex: 1.2,
       renderCell: (params) => {
         const row = params.row as NotificationRow
-        return row.created_at
+        return formatDateTime(row.created_at, i18n.language)
       }
     },
     {
@@ -326,6 +342,7 @@ export default function NotificationCenter(): React.ReactElement {
       />
 
       <Tabs value={tab} onChange={(_, v) => setTab(v)} sx={{ mb: 2 }}>
+        {/* "All" counts only the fetched rows (list IPC caps at LIMIT 50); unread uses the true DB total. */}
         <Tab label={`${t('common.all')} (${notifications.length})`} />
         <Tab label={`${t('notification.unread')} (${unreadCount})`} />
       </Tabs>
