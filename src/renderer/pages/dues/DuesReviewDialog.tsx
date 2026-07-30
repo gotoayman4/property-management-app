@@ -127,7 +127,9 @@ export default function DuesReviewDialog({
             <TableBody>
               {dues.map((d) => (
                 <TableRow key={d.id}>
-                  <TableCell>{d.period_key}</TableCell>
+                  <TableCell>
+                    {d.period_key === 'opening' ? t('dues.period.opening') : d.period_key}
+                  </TableCell>
                   <TableCell>{d.due_date}</TableCell>
                   <TableCell
                     sx={{ textAlign: 'end' }}

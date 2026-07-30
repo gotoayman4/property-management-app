@@ -463,6 +463,9 @@ const DUES_SCHEDULE_COLUMNS: ReportColumn[] = [
 
 function buildDuesScheduleReport(db: Database, filters: ReportFilters): ReportData {
   const params: Record<string, unknown> = {}
+  // Only periods due today or already overdue are reported — future/upcoming dues are
+  // excluded to match the Dues page (simplified view for ordinary users).
+  params.today = new Date().toISOString().split('T')[0]
   const dueCond = dateRangeClause('d.due_date', filters, params)
   const propertyFilter = filters.property_id ? 'AND d.property_id = @property_id' : ''
   const tenantFilter = filters.tenant_id ? 'AND d.tenant_id = @tenant_id' : ''
@@ -480,6 +483,7 @@ function buildDuesScheduleReport(db: Database, filters: ReportFilters): ReportDa
          JOIN contracts c ON d.contract_id = c.id
          JOIN properties pr ON d.property_id = pr.id
          WHERE ${dueCond}
+           AND d.due_date <= @today
            ${propertyFilter}
            ${tenantFilter}
          ORDER BY d.due_date ASC

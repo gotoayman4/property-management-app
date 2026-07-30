@@ -47,7 +47,9 @@ const renewalSchema = z
     rent_amount: z.number().positive('rentRequired'),
     security_deposit: z.number().nonnegative().default(0.0),
     annual_increase_percent: z.number().min(0).max(100).optional().nullable(),
-    payment_frequency: z.enum(['monthly', 'quarterly', 'semi-annual', 'annual']).default('monthly'),
+    payment_frequency: z
+      .enum(['monthly', 'quarterly', 'every_4_months', 'semi-annual', 'annual'])
+      .default('monthly'),
     payment_method: z.string().optional().nullable(),
     auto_renew: z.number().int().min(0).max(1).default(0),
     auto_renew_increase_percent: z.number().min(0).max(100).optional().nullable(),
@@ -317,6 +319,7 @@ export function ContractRenewalForm({
                 <Select {...field} label={t('contract.frequency')}>
                   <MenuItem value="monthly">{t('contract.monthly')}</MenuItem>
                   <MenuItem value="quarterly">{t('contract.quarterly')}</MenuItem>
+                  <MenuItem value="every_4_months">{t('contract.every_4_months')}</MenuItem>
                   <MenuItem value="semi-annual">{t('contract.semiAnnual')}</MenuItem>
                   <MenuItem value="annual">{t('contract.annual')}</MenuItem>
                 </Select>

@@ -5,6 +5,25 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 Release notes on GitHub Releases are generated from this file (`scripts/extract-changelog.mjs`), so every release MUST have a section here before tagging.
 
+## [1.3.0] - 2026-07-30
+
+### Added
+
+- Per-contract "Payment Due Day": each contract can now specify which day of the month its rent falls due (1 = start of month, the default; 31 = end of month — shorter months clamp to their last day). The setting drives both dues generation and notification timing
+- New payment frequency "Every 4 months" (3 payments per year), selectable on contract creation and renewal
+
+### Changed
+
+- Rent Dues page now shows only dues due today or overdue — upcoming/future periods are hidden so the list reflects what currently needs collecting
+- Dues Schedule report applies the same filter and excludes future periods
+- Notifications simplified to one live notification per payment period: "rent due" fires only on the due date itself, and once the period is overdue the due notification is replaced by the overdue one — no more upcoming-due reminders or duplicates
+- Arrears-summary notifications are now stable per tenant/contract instead of repeating daily
+- "Opening balance" dues actions relabelled to "Opening due balance" (مستحق افتتاحي) for clarity
+
+### Fixed
+
+- Semi-annual contracts showed a raw translation key instead of "Semi-Annual" in the contract list and detail views
+
 ## [1.2.2] - 2026-07-30
 
 ### Fixed

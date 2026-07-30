@@ -26,6 +26,7 @@ import { notifyDataChanged } from '../../utils/eventBus'
 import { AutoRenewSection } from './AutoRenewSection'
 import { ContractIncreaseMode } from './ContractIncreaseMode'
 import type { EscalationRow } from './EscalationScheduleEditor'
+import { PaymentDueDayField } from './PaymentDueDayField'
 
 /**
  * INTENT: Create/edit a contract with optional multi-year variable rent escalation (FR-CON-09..13).
@@ -43,7 +44,10 @@ const contractSchema = z
     end_date: z.string().min(1, 'endDateRequired'),
     rent_amount: z.number().positive('rentRequired'),
     currency: z.string().min(3).max(3),
-    payment_frequency: z.enum(['monthly', 'quarterly', 'semi-annual', 'annual']).default('monthly'),
+    payment_frequency: z
+      .enum(['monthly', 'quarterly', 'every_4_months', 'semi-annual', 'annual'])
+      .default('monthly'),
+    payment_due_day: z.number().int().min(1, 'dueDayInvalid').max(31, 'dueDayInvalid').default(1),
     security_deposit: z.number().nonnegative().default(0.0),
     status: z.enum(['draft', 'active', 'expired', 'renewing', 'cancelled']).default('draft'),
     annual_increase_percent: z.number().min(0).max(100).optional().nullable(),
@@ -84,7 +88,8 @@ interface Contract {
   end_date: string
   rent_amount: number
   currency: string
-  payment_frequency: 'monthly' | 'quarterly' | 'semi-annual' | 'annual'
+  payment_frequency: 'monthly' | 'quarterly' | 'every_4_months' | 'semi-annual' | 'annual'
+  payment_due_day?: number
   security_deposit: number
   status: 'draft' | 'active' | 'expired' | 'renewing' | 'cancelled'
   has_variable_escalation?: number
@@ -138,6 +143,7 @@ export function ContractForm({
         rent_amount: contract.rent_amount,
         currency: contract.currency,
         payment_frequency: contract.payment_frequency,
+        payment_due_day: contract.payment_due_day ?? 1,
         security_deposit: contract.security_deposit,
         status: contract.status,
         annual_increase_percent: contract.annual_increase_percent ?? null,
@@ -153,6 +159,7 @@ export function ContractForm({
         rent_amount: 0,
         currency: 'USD',
         payment_frequency: 'monthly',
+        payment_due_day: 1,
         security_deposit: 0.0,
         status: 'draft',
         auto_renew: 0,
@@ -451,6 +458,7 @@ export function ContractForm({
                   <Select {...field} label={t('contract.frequency')}>
                     <MenuItem value="monthly">{t('contract.monthly')}</MenuItem>
                     <MenuItem value="quarterly">{t('contract.quarterly')}</MenuItem>
+                    <MenuItem value="every_4_months">{t('contract.every_4_months')}</MenuItem>
                     <MenuItem value="semi-annual">{t('contract.semiAnnual')}</MenuItem>
                     <MenuItem value="annual">{t('contract.annual')}</MenuItem>
                   </Select>
@@ -458,6 +466,7 @@ export function ContractForm({
               />
             </FormControl>
           </Grid>
+          <PaymentDueDayField control={control} hasError={!!errors.payment_due_day} />
 
           <ContractIncreaseMode
             increaseMode={increaseMode}

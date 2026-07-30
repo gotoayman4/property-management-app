@@ -292,6 +292,29 @@ describe('reportServiceExtended', () => {
       const allRows = report.groups.flatMap((g) => g.rows)
       expect(allRows.length).toBe(0)
     })
+
+    it('excludes future dues — only periods due today or overdue are reported', () => {
+      // Contract spanning the past year through next year: future periods must not appear.
+      const todayStr = new Date().toISOString().split('T')[0]
+      const todayMs = new Date(todayStr).getTime()
+      const start = new Date(todayMs - 100 * 86400000).toISOString().split('T')[0]
+      const end = new Date(todayMs + 300 * 86400000).toISOString().split('T')[0]
+      const c = db
+        .prepare(
+          `INSERT INTO contracts (contract_number, property_id, tenant_id, start_date, end_date,
+             rent_amount, currency, payment_frequency, status, has_variable_escalation)
+           VALUES ('C-FUT', ?, ?, ?, ?, 500, 'JOD', 'monthly', 'active', 0)`
+        )
+        .run(propertyJod, tenantId, start, end)
+      generateDuesForContract(db, Number(c.lastInsertRowid))
+
+      const report = buildReport(db, 'dues_schedule', { language: 'en' })
+      const allRows = report.groups.flatMap((g) => g.rows)
+      expect(allRows.length).toBeGreaterThan(0)
+      for (const row of allRows) {
+        expect(String(row['due_date']) <= todayStr).toBe(true)
+      }
+    })
   })
 
   describe('contract_expiry', () => {

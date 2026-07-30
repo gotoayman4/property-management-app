@@ -30,7 +30,16 @@ export const contractCreateSchema = z
     end_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
     rent_amount: z.number().positive(),
     currency: z.string().min(3).max(3),
-    payment_frequency: z.enum(['monthly', 'quarterly', 'semi-annual', 'semi_annual', 'annual']),
+    payment_frequency: z.enum([
+      'monthly',
+      'quarterly',
+      'every_4_months',
+      'semi-annual',
+      'semi_annual',
+      'annual'
+    ]),
+    // Day-of-month each payment period falls due (1 = start of month, 31 = clamped to month end).
+    payment_due_day: z.number().int().min(1).max(31).default(1),
     security_deposit: z.number().min(0).default(0),
     status: z.enum(['draft', 'active', 'expired', 'renewing', 'cancelled']).default('active'),
     contract_term_years: z.number().int().min(1).max(20).default(1),
@@ -53,7 +62,15 @@ export const contractUpdateSchema = z
     end_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
     rent_amount: z.number().positive(),
     currency: z.string().min(3).max(3),
-    payment_frequency: z.enum(['monthly', 'quarterly', 'semi-annual', 'semi_annual', 'annual']),
+    payment_frequency: z.enum([
+      'monthly',
+      'quarterly',
+      'every_4_months',
+      'semi-annual',
+      'semi_annual',
+      'annual'
+    ]),
+    payment_due_day: z.number().int().min(1).max(31).default(1),
     security_deposit: z.number().min(0).default(0),
     status: z.enum(['draft', 'active', 'expired', 'renewing', 'cancelled']).default('active'),
     contract_term_years: z.number().int().min(1).max(20).default(1),
@@ -78,7 +95,7 @@ export const contractRenewSchema = z
     annual_increase_percent: z.number().min(0).max(100).optional().nullable(),
     // Manual renewal may amend these; falls back to the prior values in the handler when omitted.
     payment_frequency: z
-      .enum(['monthly', 'quarterly', 'semi-annual', 'semi_annual', 'annual'])
+      .enum(['monthly', 'quarterly', 'every_4_months', 'semi-annual', 'semi_annual', 'annual'])
       .optional(),
     payment_method: z.string().optional().nullable(),
     auto_renew: z.number().int().min(0).max(1).default(0),

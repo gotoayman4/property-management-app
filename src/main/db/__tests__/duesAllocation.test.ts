@@ -1,5 +1,6 @@
 import Database from 'better-sqlite3'
 import { describe, it, expect, beforeEach } from 'vitest'
+import { toLocalISODate } from '../../utils/dateUtils'
 import {
   allocatePaymentToDues,
   reverseAllocations,
@@ -250,6 +251,20 @@ describe('duesAllocation', () => {
       const overdue = getOutstandingDues(db, { contract_id: contractId, only_overdue: true })
       // The 2024 contract is fully in the past — all 12 periods are overdue.
       expect(overdue.length).toBe(12)
+    })
+
+    it('only_overdue INCLUDES a due dated exactly today (due today or overdue semantics)', () => {
+      // Regression: an opening balance dated today must appear in the "due now" list —
+      // only_overdue means due_date <= today, not strictly past.
+      const today = toLocalISODate(new Date())
+      createOpeningBalanceDue(db, { contract_id: contractId, amount: 750, as_of_date: today })
+      const rows = getOutstandingDues(db, {
+        contract_id: contractId,
+        only_overdue: true
+      }) as Array<{ due_type: string; due_date: string }>
+      const opening = rows.find((r) => r.due_type === 'opening_balance')
+      expect(opening).toBeDefined()
+      expect(opening?.due_date).toBe(today)
     })
 
     it('getArrearsSummary aggregates outstanding per currency including opening balance', () => {

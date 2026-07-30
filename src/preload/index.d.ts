@@ -125,6 +125,7 @@ interface ContractRow {
   rent_amount: number
   currency: string
   payment_frequency: string
+  payment_due_day: number
   security_deposit: number
   status: string
   contract_term_years: number
@@ -723,7 +724,14 @@ declare global {
           rent_amount: number
           currency: string
           payment_frequency?:
-            'monthly' | 'quarterly' | 'semi_annual' | 'semi-annual' | 'annual' | 'one_time'
+            | 'monthly'
+            | 'quarterly'
+            | 'every_4_months'
+            | 'semi_annual'
+            | 'semi-annual'
+            | 'annual'
+            | 'one_time'
+          payment_due_day?: number
           deposit_amount?: number
           deposit_currency?: string | null
           terms?: string | null

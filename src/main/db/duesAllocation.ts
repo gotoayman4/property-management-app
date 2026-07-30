@@ -183,7 +183,8 @@ export interface DuesQueryFilters {
 
 /**
  * List still-open dues (outstanding = amount_due - amount_paid > 0), newest debt context first.
- * When `only_overdue` is set, restricts to periods whose due_date has already passed.
+ * When `only_overdue` is set, restricts to periods due today or already passed (due_date <= today) —
+ * future/upcoming dues are excluded so ordinary users only see what currently needs collecting.
  */
 export function getOutstandingDues(db: Database, filters: DuesQueryFilters = {}): unknown[] {
   const today = toLocalISODate(new Date())
@@ -201,7 +202,7 @@ export function getOutstandingDues(db: Database, filters: DuesQueryFilters = {})
     where += ' AND d.tenant_id = @tenant_id'
     params.tenant_id = filters.tenant_id
   }
-  if (filters.only_overdue) where += ' AND d.due_date < @today'
+  if (filters.only_overdue) where += ' AND d.due_date <= @today'
 
   return db
     .prepare(

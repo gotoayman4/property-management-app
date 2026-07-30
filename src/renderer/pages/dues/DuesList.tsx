@@ -46,10 +46,13 @@ export function DuesList(): React.ReactElement {
   const { t } = useTranslation()
   const { snack, showError, showSuccess, hideSnackbar } = useSnackbar()
 
-  // Show ALL still-open dues (pending/partial), not only strictly-past-due ones: a due added
-  // today (e.g. an opening balance dated today) must appear immediately. Overdue emphasis comes
-  // from the per-currency arrears summary chips and the days_overdue aging column below.
-  const fetchOutstanding = useCallback(() => window.api.dues.listOutstanding({}), [])
+  // Show only dues due TODAY or overdue (only_overdue => due_date <= today in the main process).
+  // Future/upcoming periods are hidden — ordinary users only need what currently needs collecting.
+  // A due added today (e.g. an opening balance dated today) still appears thanks to the <= semantics.
+  const fetchOutstanding = useCallback(
+    () => window.api.dues.listOutstanding({ only_overdue: true }),
+    []
+  )
   const fetchSummary = useCallback(() => window.api.dues.summary(), [])
 
   const { data, loading, error, refetch } = useFetch(fetchOutstanding)
@@ -83,7 +86,12 @@ export function DuesList(): React.ReactElement {
   const columns: GridColDef[] = [
     { field: 'property_name', headerName: t('dues.col.property'), flex: 1.4 },
     { field: 'tenant_name', headerName: t('dues.col.tenant'), flex: 1.4 },
-    { field: 'period_key', headerName: t('dues.col.period'), flex: 1 },
+    {
+      field: 'period_key',
+      headerName: t('dues.col.period'),
+      flex: 1,
+      renderCell: (params) => (params.value === 'opening' ? t('dues.period.opening') : params.value)
+    },
     { field: 'due_date', headerName: t('dues.col.dueDate'), flex: 1 },
     {
       field: 'amount_due',

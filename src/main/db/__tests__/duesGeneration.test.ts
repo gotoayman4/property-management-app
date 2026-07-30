@@ -3,6 +3,7 @@ import { describe, it, expect, beforeEach } from 'vitest'
 import {
   monthsPerPeriod,
   computePeriods,
+  dueDateForPeriod,
   generateDuesForContract,
   regenerateFutureDues,
   createOpeningBalanceDue,
@@ -38,6 +39,7 @@ describe('monthsPerPeriod', () => {
   it('maps every supported frequency to its month span', () => {
     expect(monthsPerPeriod('monthly')).toBe(1)
     expect(monthsPerPeriod('quarterly')).toBe(3)
+    expect(monthsPerPeriod('every_4_months')).toBe(4)
     expect(monthsPerPeriod('semi_annual')).toBe(6)
     expect(monthsPerPeriod('semi-annual')).toBe(6)
     expect(monthsPerPeriod('annual')).toBe(12)
@@ -75,6 +77,18 @@ describe('computePeriods (per frequency)', () => {
     expect(periods[1].period_start).toBe('2026-07-01')
   })
 
+  it('every_4_months: 3 periods spanning 4 months each', () => {
+    const periods = computePeriods(contract({ payment_frequency: 'every_4_months' }))
+    expect(periods).toHaveLength(3)
+    expect(periods[0].period_start).toBe('2026-01-01')
+    expect(periods[0].period_end).toBe('2026-04-30')
+    expect(periods[0].due_date).toBe('2026-01-01')
+    expect(periods[1].period_start).toBe('2026-05-01')
+    expect(periods[1].period_end).toBe('2026-08-31')
+    expect(periods[2].period_start).toBe('2026-09-01')
+    expect(periods[2].period_end).toBe('2026-12-31')
+  })
+
   it('annual: a single period spanning the whole year', () => {
     const periods = computePeriods(contract({ payment_frequency: 'annual' }))
     expect(periods).toHaveLength(1)
@@ -89,6 +103,42 @@ describe('computePeriods (per frequency)', () => {
     )
     expect(periods).toHaveLength(18)
     expect(periods[17].period_end).toBe('2027-06-30')
+  })
+
+  it('applies the contract payment_due_day to every period due_date', () => {
+    const periods = computePeriods(contract({ payment_due_day: 15 }))
+    expect(periods[0].due_date).toBe('2026-01-15')
+    expect(periods[1].due_date).toBe('2026-02-15')
+    expect(periods[11].due_date).toBe('2026-12-15')
+  })
+
+  it('never sets a due_date earlier than the period start for mid-month contracts', () => {
+    // Contract starts on the 20th with due day 1 — periods run anniversary-to-anniversary
+    // (20th→19th), so "day 1" falls before each period begins and every due clamps to the
+    // period start instead of dating the debt before the period's tenancy.
+    const periods = computePeriods(
+      contract({ start_date: '2026-01-20', end_date: '2026-12-31', payment_due_day: 1 })
+    )
+    expect(periods[0].period_start).toBe('2026-01-20')
+    expect(periods[0].due_date).toBe('2026-01-20')
+    expect(periods[1].period_start).toBe('2026-02-20')
+    expect(periods[1].due_date).toBe('2026-02-20')
+  })
+})
+
+describe('dueDateForPeriod', () => {
+  it.each([
+    ['2026-01-01', 1, '2026-01-01'], // start of month (default)
+    ['2026-01-01', 15, '2026-01-15'], // mid-month
+    ['2026-01-01', 31, '2026-01-31'], // end of month
+    ['2026-02-01', 31, '2026-02-28'], // 31 clamps to Feb 28 (non-leap)
+    ['2024-02-01', 31, '2024-02-29'], // 31 clamps to Feb 29 (leap year)
+    ['2026-04-01', 31, '2026-04-30'], // 31 clamps to 30-day month
+    ['2026-01-20', 1, '2026-01-20'], // never before the period start
+    ['2026-01-01', 0, '2026-01-01'], // invalid low input clamps to 1
+    ['2026-01-01', 99, '2026-01-31'] // invalid high input clamps to 31
+  ])('period %s + due day %i → %s', (periodStart, dueDay, expected) => {
+    expect(dueDateForPeriod(periodStart, dueDay)).toBe(expected)
   })
 })
 
@@ -170,6 +220,16 @@ describe('generateDuesForContract (DB effects)', () => {
     expect(generateDuesForContract(db, cId)).toBe(12)
     expect(generateDuesForContract(db, cId)).toBe(0)
     expect(dueCount(cId)).toBe(12)
+  })
+
+  it('every_4_months contract passes the DB CHECK and yields 3 dues per year', () => {
+    // Regression for migration 035 — the rebuilt contracts table must accept the new value.
+    const cId = seedContract({ payment_frequency: 'every_4_months' })
+    expect(generateDuesForContract(db, cId)).toBe(3)
+    const dues = db
+      .prepare(`SELECT due_date FROM rent_dues WHERE contract_id = ? ORDER BY due_date`)
+      .all(cId) as Array<{ due_date: string }>
+    expect(dues.map((d) => d.due_date)).toEqual(['2026-01-01', '2026-05-01', '2026-09-01'])
   })
 
   it('backdated contract materializes its full historical schedule', () => {

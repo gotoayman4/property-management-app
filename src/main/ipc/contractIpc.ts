@@ -127,12 +127,12 @@ export function registerContractIpcHandlers(): void {
           .prepare(
             `INSERT INTO contracts (
                contract_number, property_id, tenant_id, start_date, end_date, rent_amount, currency,
-               payment_frequency, security_deposit, status, contract_term_years,
+               payment_frequency, payment_due_day, security_deposit, status, contract_term_years,
                has_variable_escalation, annual_increase_percent, payment_method,
                auto_renew, auto_renew_increase_percent, notes
              ) VALUES (
                @contract_number, @property_id, @tenant_id, @start_date, @end_date, @rent_amount, @currency,
-               @payment_frequency, @security_deposit, @status, @contract_term_years,
+               @payment_frequency, @payment_due_day, @security_deposit, @status, @contract_term_years,
                @has_variable_escalation, @annual_increase_percent, @payment_method,
                @auto_renew, @auto_renew_increase_percent, @notes
              )`
@@ -146,6 +146,7 @@ export function registerContractIpcHandlers(): void {
             rent_amount: v.rent_amount,
             currency: v.currency,
             payment_frequency: v.payment_frequency,
+            payment_due_day: v.payment_due_day,
             security_deposit: v.security_deposit,
             status: v.status,
             contract_term_years: v.contract_term_years,
@@ -196,7 +197,8 @@ export function registerContractIpcHandlers(): void {
           `UPDATE contracts SET
              contract_number = @contract_number, property_id = @property_id, tenant_id = @tenant_id,
              start_date = @start_date, end_date = @end_date, rent_amount = @rent_amount, currency = @currency,
-             payment_frequency = @payment_frequency, security_deposit = @security_deposit, status = @status,
+             payment_frequency = @payment_frequency, payment_due_day = @payment_due_day,
+             security_deposit = @security_deposit, status = @status,
              contract_term_years = @contract_term_years, has_variable_escalation = @has_variable_escalation,
              annual_increase_percent = @annual_increase_percent, payment_method = @payment_method,
              auto_renew = @auto_renew, auto_renew_increase_percent = @auto_renew_increase_percent, notes = @notes,
@@ -212,6 +214,7 @@ export function registerContractIpcHandlers(): void {
           rent_amount: v.rent_amount,
           currency: v.currency,
           payment_frequency: v.payment_frequency,
+          payment_due_day: v.payment_due_day,
           security_deposit: v.security_deposit,
           status: v.status,
           contract_term_years: v.contract_term_years,

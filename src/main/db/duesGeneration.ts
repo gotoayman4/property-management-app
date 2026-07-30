@@ -34,6 +34,8 @@ interface ContractForDues {
   currency: string
   payment_frequency: string
   has_variable_escalation: number
+  /** Day of month rent falls due (1-31; clamps to month length). Defaults to 1. */
+  payment_due_day?: number
 }
 
 /** A single generated period before persistence. */
@@ -52,6 +54,8 @@ export function monthsPerPeriod(frequency: string): number {
       return 1
     case 'quarterly':
       return 3
+    case 'every_4_months':
+      return 4
     case 'semi_annual':
     case 'semi-annual':
       return 6
@@ -85,11 +89,25 @@ function round2(n: number): number {
 }
 
 /**
+ * Resolve a period's due date from the contract's payment_due_day: the requested day within the
+ * period's FIRST month, clamped to that month's length (31 => Feb 28/29). Never earlier than the
+ * period start itself — a contract starting mid-month keeps its first due on the start date.
+ */
+export function dueDateForPeriod(periodStartISO: string, dueDay: number): string {
+  const day = Math.min(Math.max(1, Math.trunc(dueDay || 1)), 31)
+  const d = new Date(periodStartISO + 'T00:00:00')
+  const daysInMonth = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate()
+  const due = toLocalISODate(new Date(d.getFullYear(), d.getMonth(), Math.min(day, daysInMonth)))
+  return due < periodStartISO ? periodStartISO : due
+}
+
+/**
  * Compute every billing period for a contract from start_date to end_date (inclusive of the
  * final partial period). Pure — no DB access, no escalation applied yet.
  */
 export function computePeriods(contract: ContractForDues): Omit<DuePeriod, 'amount_due'>[] {
   const step = monthsPerPeriod(contract.payment_frequency)
+  const dueDay = contract.payment_due_day ?? 1
   const periods: Omit<DuePeriod, 'amount_due'>[] = []
   const end = contract.end_date
 
@@ -104,7 +122,7 @@ export function computePeriods(contract: ContractForDues): Omit<DuePeriod, 'amou
       period_key: periodStart.slice(0, 7),
       period_start: periodStart,
       period_end: periodEnd,
-      due_date: periodStart
+      due_date: dueDateForPeriod(periodStart, dueDay)
     })
     // Safety bound: a 20-year monthly contract is 240 periods; stop well beyond any real term.
     if (i > 600) break
@@ -134,7 +152,7 @@ function loadContract(db: Database, contractId: number): ContractForDues | null 
   const c = db
     .prepare(
       `SELECT id, property_id, tenant_id, start_date, end_date, rent_amount, currency,
-              payment_frequency, has_variable_escalation
+              payment_frequency, has_variable_escalation, payment_due_day
        FROM contracts WHERE id = ?`
     )
     .get(contractId) as ContractForDues | undefined

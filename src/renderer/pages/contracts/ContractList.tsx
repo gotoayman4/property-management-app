@@ -41,7 +41,7 @@ interface Contract {
   end_date: string
   rent_amount: number
   currency: string
-  payment_frequency: 'monthly' | 'quarterly' | 'semi-annual' | 'annual'
+  payment_frequency: 'monthly' | 'quarterly' | 'every_4_months' | 'semi-annual' | 'annual'
   security_deposit: number
   status: 'draft' | 'active' | 'expired' | 'renewing' | 'cancelled'
   contract_term_years: number

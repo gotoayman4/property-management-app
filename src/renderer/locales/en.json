@@ -78,11 +78,11 @@
     "action": {
       "settle": "Settle Before App",
       "waive": "Waive",
-      "openingBalance": "Opening Balance"
+      "openingBalance": "Opening due balance"
     },
     "settleTitle": "Settle Dues Before App",
     "waiveTitle": "Waive Due",
-    "openingBalanceTitle": "Record Opening Balance",
+    "openingBalanceTitle": "Record Opening Due Balance",
     "selectedCount": "{{n}} selected dues",
     "contract": "Contract",
     "amount": "Amount",
@@ -91,10 +91,13 @@
     "reason": "Reason",
     "settleSuccess": "Selected dues marked as settled before app.",
     "waiveSuccess": "Due waived.",
-    "openingBalanceSuccess": "Opening balance recorded.",
+    "openingBalanceSuccess": "Opening due balance recorded.",
     "reviewTitle": "Review Generated Dues",
-    "reviewSubtitle": "These rent periods were generated for the contract. You can mark past periods as settled before the app, or record an opening balance.",
-    "reviewSettleAll": "Mark all past dues as settled before app"
+    "reviewSubtitle": "These rent periods were generated for the contract. You can mark past periods as settled before the app, or record an opening due balance.",
+    "reviewSettleAll": "Mark all past dues as settled before app",
+    "period": {
+      "opening": "Opening due balance"
+    }
   },
   "common": {
     "save": "Save",
@@ -506,6 +509,9 @@
     "rentAmount": "Rent Amount",
     "currency": "Currency",
     "frequency": "Payment Frequency",
+    "dueDay": "Payment Due Day (Day of Month)",
+    "dueDayHelp": "1 = start of month, 31 = end of month (shorter months use their last day)",
+    "dueDayInvalid": "Due day must be between 1 and 31",
     "securityDeposit": "Security Deposit",
     "status": "Status",
     "notes": "Notes",
@@ -519,7 +525,9 @@
     "renewing": "Renewing",
     "monthly": "Monthly",
     "quarterly": "Quarterly",
+    "every_4_months": "Every 4 Months",
     "semiAnnual": "Semi-Annual",
+    "semi-annual": "Semi-Annual",
     "annual": "Annual",
     "numberRequired": "Contract number is required",
     "numberUnique": "Contract number must be unique",

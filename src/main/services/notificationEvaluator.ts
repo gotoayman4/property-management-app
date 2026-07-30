@@ -70,10 +70,6 @@ export function evaluateNotifications(dbParam?: Database): void {
     //    end_date proxy. A per-tenant/contract arrears aggregate (months_overdue,
     //    total_outstanding) feeds the enriched template variables and the arrears_summary blast.
     const today = new Date().toISOString().split('T')[0]
-    const reminderDaysBeforeDue = settings.reminder_days_before_due || 7
-    const rentDueThreshold = new Date()
-    rentDueThreshold.setDate(rentDueThreshold.getDate() + reminderDaysBeforeDue)
-    const rentDueThresholdStr = rentDueThreshold.toISOString().split('T')[0]
 
     const insert = targetDb.prepare(`
       INSERT INTO notifications (notification_type, entity_type, entity_id, title, message, message_key, message_vars, due_date)
@@ -150,7 +146,9 @@ export function evaluateNotifications(dbParam?: Database): void {
       }
     }
 
-    // 1a. Rent Due — open dues coming due within the reminder window (not yet overdue).
+    // 1a. Rent Due — fires ONLY on the exact due day (due_date = today). No advance reminders:
+    //     upcoming dues would clutter the list for ordinary users, and if the app isn't opened on
+    //     the due day the overdue evaluator (step 2) covers it on the next launch.
     const rentDueDues = targetDb
       .prepare(
         `SELECT ${dueRowFields}
@@ -159,9 +157,9 @@ export function evaluateNotifications(dbParam?: Database): void {
          JOIN contracts c ON d.contract_id = c.id
          JOIN tenants t ON d.tenant_id = t.id
          WHERE d.status IN ('pending', 'partial') AND d.due_type = 'rent'
-           AND d.due_date >= ? AND d.due_date <= ? AND c.is_archived = 0`
+           AND d.due_date = ? AND c.is_archived = 0`
       )
-      .all(today, rentDueThresholdStr) as DueNotifyRow[]
+      .all(today) as DueNotifyRow[]
 
     for (const d of rentDueDues) {
       const vars = buildVars(d)
@@ -185,7 +183,13 @@ export function evaluateNotifications(dbParam?: Database): void {
 
     // 2. Overdue — every open due whose due_date has already passed. Using each due's own
     //    due_date as the notification due_date makes the dedup key period-specific, so multiple
-    //    unpaid periods for one contract each surface distinctly.
+    //    unpaid periods for one contract each surface distinctly. The unread rent_due notification
+    //    for the same period (if any) is removed first — ONE live notification per period.
+    const deleteStaleRentDue = targetDb.prepare(
+      `DELETE FROM notifications
+       WHERE notification_type = 'rent_due' AND entity_type = 'contract'
+         AND entity_id = ? AND due_date = ? AND is_read = 0`
+    )
     const overdueDues = targetDb
       .prepare(
         `SELECT ${dueRowFields}
@@ -202,6 +206,7 @@ export function evaluateNotifications(dbParam?: Database): void {
       const vars = buildVars(d)
       const lang = resolveLanguage(d.tenant_lang, appLanguage)
       const message = resolveTemplateMessage('overdue', lang, vars, templateMap)
+      deleteStaleRentDue.run(d.contract_id, d.due_date)
       insert.run(
         'overdue',
         'contract',
@@ -219,7 +224,14 @@ export function evaluateNotifications(dbParam?: Database): void {
     }
 
     // 2b. Arrears Summary — one aggregate reminder per contract carrying MULTIPLE open past-due
-    //     periods (the migrated pre-app debt case). Deduped per day via due_date = today.
+    //     periods (the migrated pre-app debt case). Deduped on the OLDEST open due_date (stable
+    //     across days — deduping on `today` re-created a fresh row every launch, cluttering the
+    //     list). Stale unread summaries for the same contract are replaced when that date moves.
+    const deleteStaleArrearsSummary = targetDb.prepare(
+      `DELETE FROM notifications
+       WHERE notification_type = 'arrears_summary' AND entity_type = 'contract'
+         AND entity_id = ? AND due_date <> ? AND is_read = 0`
+    )
     const arrearsSummaryDues = targetDb
       .prepare(
         `SELECT d.contract_id, MIN(d.due_date) AS due_date, d.currency,
@@ -253,6 +265,7 @@ export function evaluateNotifications(dbParam?: Database): void {
       }
       const lang = resolveLanguage(row.tenant_lang, appLanguage)
       const message = resolveTemplateMessage('arrears_summary', lang, vars, templateMap)
+      deleteStaleArrearsSummary.run(row.contract_id, row.due_date)
       insert.run(
         'arrears_summary',
         'contract',
@@ -262,11 +275,11 @@ export function evaluateNotifications(dbParam?: Database): void {
           `${row.tenant_name} has ${agg?.months_overdue ?? 0} unpaid periods totaling ${agg?.total_outstanding ?? 0} ${row.currency}`,
         'notification.body.arrearsSummary',
         JSON.stringify(vars),
-        today,
+        row.due_date,
         'arrears_summary',
         'contract',
         row.contract_id,
-        today
+        row.due_date
       )
     }
 
