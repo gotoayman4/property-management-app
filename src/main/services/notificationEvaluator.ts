@@ -71,13 +71,13 @@ export function evaluateNotifications(dbParam?: Database): void {
     //    total_outstanding) feeds the enriched template variables and the arrears_summary blast.
     const today = new Date().toISOString().split('T')[0]
 
+    // DECISION: INSERT OR IGNORE + the UNIQUE idx_notifications_dedup index (migration 033) is the
+    //           single dedup mechanism. The previous WHERE NOT EXISTS (... is_read = 0) guard let
+    //           re-inserts of already-READ rows through, which then hit the unique index and
+    //           aborted the WHOLE evaluation transaction on the next launch.
     const insert = targetDb.prepare(`
-      INSERT INTO notifications (notification_type, entity_type, entity_id, title, message, message_key, message_vars, due_date)
-      SELECT ?, ?, ?, ?, ?, ?, ?, ?
-      WHERE NOT EXISTS (
-        SELECT 1 FROM notifications
-        WHERE notification_type = ? AND entity_type = ? AND entity_id = ? AND due_date = ? AND is_read = 0
-      )
+      INSERT OR IGNORE INTO notifications (notification_type, entity_type, entity_id, title, message, message_key, message_vars, due_date)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
     `)
 
     // Per-contract arrears aggregate across all still-open past-due dues (one row per currency;
@@ -173,10 +173,6 @@ export function evaluateNotifications(dbParam?: Database): void {
         message ?? `Rent due for ${d.property_name}`,
         'notification.body.rentDue',
         JSON.stringify(vars),
-        d.due_date,
-        'rent_due',
-        'contract',
-        d.contract_id,
         d.due_date
       )
     }
@@ -215,10 +211,6 @@ export function evaluateNotifications(dbParam?: Database): void {
         message ?? `Rent overdue for ${d.property_name}`,
         'notification.body.overdue',
         JSON.stringify(vars),
-        d.due_date,
-        'overdue',
-        'contract',
-        d.contract_id,
         d.due_date
       )
     }
@@ -275,10 +267,6 @@ export function evaluateNotifications(dbParam?: Database): void {
           `${row.tenant_name} has ${agg?.months_overdue ?? 0} unpaid periods totaling ${agg?.total_outstanding ?? 0} ${row.currency}`,
         'notification.body.arrearsSummary',
         JSON.stringify(vars),
-        row.due_date,
-        'arrears_summary',
-        'contract',
-        row.contract_id,
         row.due_date
       )
     }
@@ -329,10 +317,6 @@ export function evaluateNotifications(dbParam?: Database): void {
             `Lease for "${contract.property_name}" will auto-renew on ${contract.end_date}`,
           'notification.body.autoRenewUpcoming',
           JSON.stringify(vars),
-          contract.end_date,
-          'auto_renew_upcoming',
-          'contract',
-          contract.id,
           contract.end_date
         )
       } else {
@@ -346,10 +330,6 @@ export function evaluateNotifications(dbParam?: Database): void {
             `Lease contract for "${contract.property_name}" expires on ${contract.end_date}`,
           'notification.body.contractExpiring',
           JSON.stringify(vars),
-          contract.end_date,
-          'contract_expiry',
-          'contract',
-          contract.id,
           contract.end_date
         )
       }
@@ -397,10 +377,6 @@ export function evaluateNotifications(dbParam?: Database): void {
           `Rent escalation for "${esc.property_name}" takes effect on ${esc.effective_date}`,
         'notification.body.escalationUpcoming',
         JSON.stringify(vars),
-        esc.effective_date,
-        'escalation_upcoming',
-        'contract',
-        esc.contract_id,
         esc.effective_date
       )
     }
@@ -431,18 +407,17 @@ export function evaluateNotifications(dbParam?: Database): void {
         expiry_date: docItem.expiry_date
       }
       const message = resolveTemplateMessage('document_expiring', appLanguage, vars, templateMap)
+      // CAVEAT: the notifications CHECK (migration 033) only allows 'document_expiry' — the
+      //         'document_expiring' spelling is the TEMPLATE trigger enum. Inserting the template
+      //         spelling here violated the CHECK and rolled back the whole evaluation.
       insert.run(
-        'document_expiring',
+        'document_expiry',
         'document',
         docItem.id,
         'document_expiring_title',
         message ?? `Document "${docItem.name}" expires on ${docItem.expiry_date}`,
         'notification.body.documentExpiring',
         JSON.stringify(vars),
-        docItem.expiry_date,
-        'document_expiring',
-        'document',
-        docItem.id,
         docItem.expiry_date
       )
     }
@@ -491,12 +466,17 @@ export function evaluateNotifications(dbParam?: Database): void {
         message ?? `Recurring expense "${template.name}" due on ${template.next_due_date}`,
         'notification.body.recurringExpenseDue',
         JSON.stringify(vars),
-        template.next_due_date,
-        'recurring_expense_due',
-        'recurring_expense',
-        template.id,
         template.next_due_date
       )
     }
+
+    // 7. Retention: purge dismissed notifications older than 90 days. Recent dismissed rows are
+    //    kept so idx_notifications_dedup keeps suppressing re-inserts; a purged row can only be
+    //    re-created if its trigger is STILL live (e.g. rent still unpaid), which is intentional.
+    targetDb
+      .prepare(
+        `DELETE FROM notifications WHERE status = 'dismissed' AND created_at < datetime('now', '-90 days')`
+      )
+      .run()
   })()
 }

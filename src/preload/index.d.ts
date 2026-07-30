@@ -1044,7 +1044,9 @@ declare global {
         unreadCount: () => Promise<{ count: number }>
         markRead: (id: number) => Promise<{ success: boolean }>
         markAllRead: () => Promise<{ success: true }>
-        dismiss: (id: number) => Promise<{ success: true }>
+        dismiss: (id: number) => Promise<{ success: boolean }>
+        dismissMany: (ids: number[]) => Promise<{ success: true; dismissed: number }>
+        clearAll: () => Promise<{ success: true }>
       }
       templates: {
         list: () => Promise<TemplateRow[]>

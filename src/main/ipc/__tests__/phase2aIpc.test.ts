@@ -348,6 +348,124 @@ describe('notificationIpc', () => {
     const result = (await invoke(registry, 'notifications:unreadCount')) as { count: number }
     expect(result.count).toBe(0)
   })
+
+  it('stamps read_at when marking a notification read', async () => {
+    const id = testDb
+      .prepare(
+        `INSERT INTO notifications (notification_type, entity_type, entity_id, title, message, due_date, is_read)
+         VALUES ('rent_due', 'contract', 1, 'Rent', 'msg', '2026-01-01', 0)`
+      )
+      .run().lastInsertRowid as number
+
+    await invoke(registry, 'notifications:markRead', id)
+
+    const row = testDb.prepare('SELECT read_at FROM notifications WHERE id = ?').get(id) as {
+      read_at: string | null
+    }
+    expect(row.read_at).not.toBeNull()
+  })
+
+  // Regression: preload exposed notifications:dismiss but main never registered a handler.
+  it('dismisses a single notification: hidden from list and unreadCount, row preserved', async () => {
+    const id = testDb
+      .prepare(
+        `INSERT INTO notifications (notification_type, entity_type, entity_id, title, message, due_date, is_read)
+         VALUES ('rent_due', 'contract', 1, 'Rent', 'msg', '2026-01-01', 0)`
+      )
+      .run().lastInsertRowid as number
+
+    const res = (await invoke(registry, 'notifications:dismiss', id)) as { success: boolean }
+    expect(res.success).toBe(true)
+
+    const list = (await invoke(registry, 'notifications:list', {})) as Array<unknown>
+    expect(list.length).toBe(0)
+    const count = (await invoke(registry, 'notifications:unreadCount')) as { count: number }
+    expect(count.count).toBe(0)
+    // Soft-delete: the row must remain so the evaluator dedup keeps suppressing re-inserts.
+    const row = testDb
+      .prepare('SELECT status, is_read, read_at FROM notifications WHERE id = ?')
+      .get(id) as { status: string; is_read: number; read_at: string | null }
+    expect(row.status).toBe('dismissed')
+    expect(row.is_read).toBe(1)
+    expect(row.read_at).not.toBeNull()
+  })
+
+  it('dismisses multiple notifications atomically via dismissMany', async () => {
+    const insert = testDb.prepare(
+      `INSERT INTO notifications (notification_type, entity_type, entity_id, title, message, due_date, is_read)
+       VALUES ('rent_due', 'contract', ?, 'Rent', 'msg', '2026-01-01', 0)`
+    )
+    const id1 = insert.run(1).lastInsertRowid as number
+    const id2 = insert.run(2).lastInsertRowid as number
+    insert.run(3)
+
+    const res = (await invoke(registry, 'notifications:dismissMany', [id1, id2])) as {
+      success: boolean
+      dismissed: number
+    }
+    expect(res.success).toBe(true)
+    expect(res.dismissed).toBe(2)
+
+    const list = (await invoke(registry, 'notifications:list', {})) as Array<{ id: number }>
+    expect(list.length).toBe(1)
+  })
+
+  it('rejects dismissMany with an empty or invalid payload', async () => {
+    await expect(invoke(registry, 'notifications:dismissMany', [])).rejects.toThrow()
+    await expect(invoke(registry, 'notifications:dismissMany', ['x'])).rejects.toThrow()
+  })
+
+  it('clearAll dismisses every notification without deleting rows', async () => {
+    const insert = testDb.prepare(
+      `INSERT INTO notifications (notification_type, entity_type, entity_id, title, message, due_date, is_read)
+       VALUES ('rent_due', 'contract', ?, 'Rent', 'msg', '2026-01-01', 0)`
+    )
+    insert.run(1)
+    insert.run(2)
+
+    await invoke(registry, 'notifications:clearAll')
+
+    const list = (await invoke(registry, 'notifications:list', {})) as Array<unknown>
+    expect(list.length).toBe(0)
+    const kept = testDb
+      .prepare("SELECT COUNT(*) AS c FROM notifications WHERE status = 'dismissed'")
+      .get() as { c: number }
+    expect(kept.c).toBe(2)
+  })
+
+  // Regression guard for the soft-delete design decision: a dismissed notification must NOT be
+  // re-created by the evaluator on the next launch.
+  it('does not resurrect a dismissed notification on re-evaluation', async () => {
+    const propertyId = seedProperty()
+    const tenantId = seedTenant()
+    const soon = toLocalISODate(new Date(Date.now() + 10 * 86400000))
+    testDb
+      .prepare(
+        `INSERT INTO contracts
+         (contract_number, property_id, tenant_id, start_date, end_date, rent_amount, currency, status)
+         VALUES ('C-2', ?, ?, '2020-01-01', ?, 500, 'JOD', 'active')`
+      )
+      .run(propertyId, tenantId, soon)
+
+    const { evaluateNotifications } = await import('../notificationIpc')
+    evaluateNotifications()
+
+    const created = testDb
+      .prepare("SELECT id FROM notifications WHERE notification_type = 'contract_expiry'")
+      .get() as { id: number }
+    await invoke(registry, 'notifications:dismiss', created.id)
+
+    evaluateNotifications()
+
+    const list = (await invoke(registry, 'notifications:list', {})) as Array<unknown>
+    expect(list.length).toBe(0)
+    const total = testDb
+      .prepare(
+        "SELECT COUNT(*) AS c FROM notifications WHERE notification_type = 'contract_expiry'"
+      )
+      .get() as { c: number }
+    expect(total.c).toBe(1)
+  })
 })
 
 describe('exchangeRateIpc', () => {

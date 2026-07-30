@@ -158,4 +158,71 @@ describe('notificationEvaluator', () => {
       .all(contractId)
     expect(summaries.length).toBe(1)
   })
+
+  // Regression: the evaluator inserted notification_type 'document_expiring', which violates the
+  // notifications CHECK ('document_expiry' is canonical) and rolled back the ENTIRE evaluation
+  // transaction — no notifications of ANY type were generated whenever a document was expiring.
+  it('creates a document_expiry notification without aborting the other sections', () => {
+    const todayStr = new Date().toISOString().split('T')[0]
+    const todayMs = new Date(todayStr).getTime()
+    const in3Days = new Date(todayMs + 3 * 86400000).toISOString().split('T')[0]
+    const end = new Date(todayMs + 300 * 86400000).toISOString().split('T')[0]
+    seedContract(todayStr, end)
+    db.prepare(
+      `INSERT INTO documents (entity_type, entity_id, file_name, file_path, mime_type, file_size, expiry_date)
+       VALUES ('property', 1, 'deed.pdf', '/tmp/deed.pdf', 'application/pdf', 100, ?)`
+    ).run(in3Days)
+
+    expect(() => evaluateNotifications(db)).not.toThrow()
+
+    const docRows = db
+      .prepare("SELECT * FROM notifications WHERE notification_type = 'document_expiry'")
+      .all()
+    expect(docRows.length).toBe(1)
+    // The rent_due section (runs BEFORE documents) must also have committed.
+    const rentDue = db
+      .prepare("SELECT * FROM notifications WHERE notification_type = 'rent_due'")
+      .all()
+    expect(rentDue.length).toBe(1)
+  })
+
+  // Regression: the old WHERE NOT EXISTS (... is_read = 0) guard re-inserted rows that were
+  // already READ, hitting the UNIQUE dedup index and aborting the whole evaluation transaction.
+  it('re-evaluating after notifications are marked read neither throws nor duplicates', () => {
+    const todayStr = new Date().toISOString().split('T')[0]
+    const todayMs = new Date(todayStr).getTime()
+    const in3Days = new Date(todayMs + 3 * 86400000).toISOString().split('T')[0]
+    const pastStart = new Date(todayMs - 100 * 86400000).toISOString().split('T')[0]
+    seedContract(pastStart, in3Days)
+
+    evaluateNotifications(db)
+    db.prepare('UPDATE notifications SET is_read = 1, read_at = CURRENT_TIMESTAMP').run()
+
+    expect(() => evaluateNotifications(db)).not.toThrow()
+
+    const expiry = db
+      .prepare("SELECT * FROM notifications WHERE notification_type = 'contract_expiry'")
+      .all()
+    expect(expiry.length).toBe(1)
+  })
+
+  it('purges dismissed notifications older than 90 days but keeps recent ones', () => {
+    const insert = db.prepare(
+      `INSERT INTO notifications (notification_type, entity_type, entity_id, title, message, due_date, status, is_read)
+       VALUES ('rent_due', 'contract', ?, 'Rent', 'msg', '2020-01-01', 'dismissed', 1)`
+    )
+    insert.run(101)
+    insert.run(102)
+    // Backdate one row beyond the 90-day retention window.
+    db.prepare(
+      "UPDATE notifications SET created_at = datetime('now', '-120 days') WHERE entity_id = 101"
+    ).run()
+
+    evaluateNotifications(db)
+
+    const remaining = db
+      .prepare("SELECT entity_id FROM notifications WHERE status = 'dismissed'")
+      .all() as Array<{ entity_id: number }>
+    expect(remaining.map((r) => r.entity_id)).toEqual([102])
+  })
 })

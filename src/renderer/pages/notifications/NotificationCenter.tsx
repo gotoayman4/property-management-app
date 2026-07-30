@@ -153,7 +153,7 @@ export default function NotificationCenter(): React.ReactElement {
     },
     {
       field: 'due_date',
-      headerName: t('contract.endDate'),
+      headerName: t('notifications.dueDate'),
       flex: 1,
       renderCell: (params) => {
         const row = params.row as NotificationRow
@@ -162,7 +162,7 @@ export default function NotificationCenter(): React.ReactElement {
     },
     {
       field: 'created_at',
-      headerName: t('documents.uploadedAt'),
+      headerName: t('notifications.createdAt'),
       flex: 1.2,
       renderCell: (params) => {
         const row = params.row as NotificationRow
@@ -176,7 +176,7 @@ export default function NotificationCenter(): React.ReactElement {
       renderCell: (params) => {
         const row = params.row as NotificationRow
         return row.is_read ? (
-          <Chip label={t('documents.uploadedAt')} size="small" variant="outlined" />
+          <Chip label={t('notification.read')} size="small" variant="outlined" />
         ) : (
           <Chip label={t('notification.unread')} size="small" color="warning" />
         )

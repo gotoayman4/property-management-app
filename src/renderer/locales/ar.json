@@ -958,6 +958,15 @@
     "label": "الإشعارات",
     "empty": "لا توجد إشعارات",
     "markAllRead": "تعليم الكل كمقروء",
+    "dueDate": "تاريخ الاستحقاق",
+    "createdAt": "تاريخ الإنشاء",
+    "deleteSelected": "حذف المحدد ({{count}})",
+    "clearAll": "مسح الكل",
+    "deleteConfirmTitle": "حذف الإشعارات",
+    "deleteConfirmMessage": "هل أنت متأكد من حذف {{count}} من الإشعارات المحددة؟",
+    "clearAllConfirmMessage": "هل أنت متأكد من مسح جميع الإشعارات؟",
+    "viewAll": "عرض جميع الإشعارات",
+    "deleted": "تم حذف الإشعارات",
     "type": {
       "rent_due": "استحقاق الإيجار",
       "overdue": "متأخر",
@@ -975,6 +984,7 @@
   },
   "notification": {
     "unread": "غير مقروء",
+    "read": "مقروء",
     "markAsRead": "تعليم كمقروء",
     "body": {
       "rentDue": "إشعار استحقاق الإيجار",

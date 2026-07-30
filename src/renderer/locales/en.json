@@ -958,6 +958,15 @@
     "label": "Notifications",
     "empty": "No notifications",
     "markAllRead": "Mark all read",
+    "dueDate": "Due date",
+    "createdAt": "Created",
+    "deleteSelected": "Delete selected ({{count}})",
+    "clearAll": "Clear all",
+    "deleteConfirmTitle": "Delete notifications",
+    "deleteConfirmMessage": "Are you sure you want to delete {{count}} selected notification(s)?",
+    "clearAllConfirmMessage": "Are you sure you want to clear all notifications?",
+    "viewAll": "View all notifications",
+    "deleted": "Notifications deleted",
     "type": {
       "rent_due": "Rent Due",
       "overdue": "Overdue",
@@ -975,6 +984,7 @@
   },
   "notification": {
     "unread": "Unread",
+    "read": "Read",
     "markAsRead": "Mark as read",
     "body": {
       "rentDue": "Rent due notification",

@@ -141,7 +141,9 @@ const api = {
     unreadCount: () => ipcRenderer.invoke('notifications:unreadCount'),
     markRead: (id: number) => ipcRenderer.invoke('notifications:markRead', id),
     markAllRead: () => ipcRenderer.invoke('notifications:markAllRead'),
-    dismiss: (id: number) => ipcRenderer.invoke('notifications:dismiss', id)
+    dismiss: (id: number) => ipcRenderer.invoke('notifications:dismiss', id),
+    dismissMany: (ids: number[]) => ipcRenderer.invoke('notifications:dismissMany', ids),
+    clearAll: () => ipcRenderer.invoke('notifications:clearAll')
   },
   templates: {
     list: () => ipcRenderer.invoke('templates:list'),

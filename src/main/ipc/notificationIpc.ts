@@ -1,6 +1,10 @@
 /**
  * @file notificationIpc — Notification IPC handlers and template CRUD.
- * INTENT: Registers IPC channels for notifications list, mark-as-read, clear, and template management.
+ * INTENT: Registers IPC channels for notifications list, mark-as-read, dismiss (soft-delete),
+ *         clear, and template management.
+ * CONSTRAINT: Deleting notifications is ALWAYS a soft-dismiss (status='dismissed'), never a hard
+ *             DELETE — the evaluator's dedup relies on existing rows, so a hard delete would let
+ *             the same notification be re-created on the next launch.
  */
 import { ipcMain } from 'electron'
 import { z } from 'zod'
@@ -24,7 +28,7 @@ export function registerNotificationIpcHandlers(): void {
         FROM notifications n
         LEFT JOIN contracts c ON n.entity_type = 'contract' AND n.entity_id = c.id
         LEFT JOIN tenants t ON c.tenant_id = t.id
-        WHERE 1=1`
+        WHERE n.status <> 'dismissed'`
       const params: (string | number)[] = []
       if (filters?.unread_only) {
         query += ' AND is_read = ?'
@@ -40,7 +44,9 @@ export function registerNotificationIpcHandlers(): void {
   ipcMain.handle('notifications:unreadCount', async () => {
     try {
       const row = db
-        .prepare('SELECT COUNT(*) AS count FROM notifications WHERE is_read = 0')
+        .prepare(
+          `SELECT COUNT(*) AS count FROM notifications WHERE is_read = 0 AND status <> 'dismissed'`
+        )
         .get() as {
         count: number
       }
@@ -53,7 +59,11 @@ export function registerNotificationIpcHandlers(): void {
   ipcMain.handle('notifications:markRead', async (_, data: unknown) => {
     try {
       const id = z.number().int().positive().parse(data)
-      const res = db.prepare('UPDATE notifications SET is_read = 1 WHERE id = ?').run(id)
+      const res = db
+        .prepare(
+          'UPDATE notifications SET is_read = 1, read_at = CURRENT_TIMESTAMP WHERE id = ? AND is_read = 0'
+        )
+        .run(id)
       return { success: res.changes > 0 }
     } catch {
       throw new Error('FAILED_TO_MARK_NOTIFICATION_READ')
@@ -62,16 +72,62 @@ export function registerNotificationIpcHandlers(): void {
 
   ipcMain.handle('notifications:markAllRead', async () => {
     try {
-      db.prepare('UPDATE notifications SET is_read = 1 WHERE is_read = 0').run()
+      db.prepare(
+        'UPDATE notifications SET is_read = 1, read_at = CURRENT_TIMESTAMP WHERE is_read = 0'
+      ).run()
       return { success: true }
     } catch {
       throw new Error('FAILED_TO_MARK_ALL_NOTIFICATIONS_READ')
     }
   })
 
+  // Soft-delete a single notification. read_at is preserved when already set so "read then
+  // dismissed" keeps its original read timestamp.
+  ipcMain.handle('notifications:dismiss', async (_, data: unknown) => {
+    try {
+      const id = z.number().int().positive().parse(data)
+      const res = db
+        .prepare(
+          `UPDATE notifications
+           SET status = 'dismissed', is_read = 1, read_at = COALESCE(read_at, CURRENT_TIMESTAMP)
+           WHERE id = ? AND status <> 'dismissed'`
+        )
+        .run(id)
+      return { success: res.changes > 0 }
+    } catch {
+      throw new Error('FAILED_TO_DISMISS_NOTIFICATION')
+    }
+  })
+
+  ipcMain.handle('notifications:dismissMany', async (_, data: unknown) => {
+    try {
+      const ids = z.array(z.number().int().positive()).min(1).parse(data)
+      const stmt = db.prepare(
+        `UPDATE notifications
+         SET status = 'dismissed', is_read = 1, read_at = COALESCE(read_at, CURRENT_TIMESTAMP)
+         WHERE id = ? AND status <> 'dismissed'`
+      )
+      let dismissed = 0
+      db.transaction(() => {
+        for (const id of ids) {
+          dismissed += stmt.run(id).changes
+        }
+      })()
+      return { success: true, dismissed }
+    } catch {
+      throw new Error('FAILED_TO_DISMISS_NOTIFICATIONS')
+    }
+  })
+
   ipcMain.handle('notifications:clearAll', async () => {
     try {
-      db.prepare('DELETE FROM notifications').run()
+      // DECISION: "clear all" dismisses instead of DELETE — hard-deleted rows would be resurrected
+      //           by the evaluator's dedup-driven re-inserts on the next launch.
+      db.prepare(
+        `UPDATE notifications
+         SET status = 'dismissed', is_read = 1, read_at = COALESCE(read_at, CURRENT_TIMESTAMP)
+         WHERE status <> 'dismissed'`
+      ).run()
       return { success: true }
     } catch {
       throw new Error('FAILED_TO_CLEAR_NOTIFICATIONS')
