@@ -4,6 +4,7 @@
  * CONSTRAINT (AGENTS.md): i18n keys only, logical CSS, portal dir prop.
  */
 import NotificationsIcon from '@mui/icons-material/Notifications'
+import SendWhatsAppIcon from '@mui/icons-material/Send'
 import {
   IconButton,
   Badge,
@@ -14,24 +15,15 @@ import {
   Typography,
   Button,
   Box,
-  Chip
+  Chip,
+  Tooltip
 } from '@mui/material'
 import React, { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 import { useDirection } from '../hooks/useDirection'
-
-interface Notification {
-  id: number
-  notification_type: string
-  entity_type: string
-  entity_id: number
-  title: string
-  message: string
-  due_date: string | null
-  is_read: number
-  created_at: string
-}
+import { canSendWhatsApp, type NotificationRow } from '../utils/notificationUtils'
+import { buildWhatsAppUrl } from '../utils/whatsappUtils'
 
 const TYPE_COLORS: Record<string, 'warning' | 'error' | 'info' | 'success'> = {
   rent_due: 'warning',
@@ -55,7 +47,7 @@ export default function NotificationBell(): React.JSX.Element {
   const { t } = useTranslation()
   const isRtl = useDirection()
   const navigate = useNavigate()
-  const [notifications, setNotifications] = useState<Notification[]>([])
+  const [notifications, setNotifications] = useState<NotificationRow[]>([])
   const [unreadCount, setUnreadCount] = useState(0)
   const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null)
 
@@ -83,7 +75,7 @@ export default function NotificationBell(): React.JSX.Element {
     setAnchorEl(event.currentTarget)
     try {
       const data = await window.api.notifications.list({ unread_only: false })
-      setNotifications(data as Notification[])
+      setNotifications(data as NotificationRow[])
     } catch {
       /* silent */
     }
@@ -103,7 +95,7 @@ export default function NotificationBell(): React.JSX.Element {
 
   // Mark read, then deep-link contract notifications to their detail page (renewal ones open the
   // renewal dialog via ?renew=1). Non-contract notifications just mark read in place.
-  const handleNotificationClick = (n: Notification): void => {
+  const handleNotificationClick = (n: NotificationRow): void => {
     handleMarkRead(n.id)
     if (n.entity_type === 'contract' && n.entity_id) {
       handleClose()
@@ -119,6 +111,16 @@ export default function NotificationBell(): React.JSX.Element {
       setUnreadCount(0)
     } catch {
       /* silent */
+    }
+  }
+
+  // INTENT: Forward the notification message to the tenant via WhatsApp deep-link.
+  //         stopPropagation so the row's mark-read/navigate click does not fire.
+  const handleWhatsApp = (e: React.MouseEvent, n: NotificationRow): void => {
+    e.stopPropagation()
+    if (n.tenant_phone) {
+      const url = buildWhatsAppUrl(n.tenant_phone, n.tenant_country_code ?? undefined, n.message)
+      window.open(url, '_blank')
     }
   }
 
@@ -171,6 +173,21 @@ export default function NotificationBell(): React.JSX.Element {
                     cursor: 'pointer'
                   }}
                   onClick={() => handleNotificationClick(n)}
+                  secondaryAction={
+                    canSendWhatsApp(n) ? (
+                      <Tooltip title={t('common.sendWhatsApp')} dir={isRtl ? 'rtl' : 'ltr'}>
+                        <IconButton
+                          edge="end"
+                          size="small"
+                          color="success"
+                          aria-label={t('common.sendWhatsApp')}
+                          onClick={(e) => handleWhatsApp(e, n)}
+                        >
+                          <SendWhatsAppIcon fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
+                    ) : undefined
+                  }
                 >
                   <ListItemText
                     primary={
@@ -188,7 +205,23 @@ export default function NotificationBell(): React.JSX.Element {
                         )}
                       </Box>
                     }
-                    secondary={n.message}
+                    secondary={
+                      <Tooltip title={n.message} dir={isRtl ? 'rtl' : 'ltr'}>
+                        <Typography
+                          variant="body2"
+                          color="text.secondary"
+                          sx={{
+                            display: '-webkit-box',
+                            WebkitLineClamp: 2,
+                            WebkitBoxOrient: 'vertical',
+                            overflow: 'hidden'
+                          }}
+                        >
+                          {n.message}
+                        </Typography>
+                      </Tooltip>
+                    }
+                    slotProps={{ secondary: { component: 'div' } }}
                   />
                 </ListItem>
               ))}

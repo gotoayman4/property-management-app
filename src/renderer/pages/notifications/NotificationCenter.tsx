@@ -14,33 +14,52 @@ import {
   Send as SendWhatsAppIcon
 } from '@mui/icons-material'
 import { Box, Button, Chip, IconButton, Stack, Tab, Tabs, Typography, Tooltip } from '@mui/material'
+import type { SxProps, Theme } from '@mui/material'
 import { GridColDef, GridRowSelectionModel } from '@mui/x-data-grid'
-import React, { useCallback, useEffect, useMemo, useState } from 'react'
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import ConfirmDialog from '../../components/ConfirmDialog'
 import GlobalSnackbar from '../../components/GlobalSnackbar'
 import PageHeader from '../../components/PageHeader'
 import StandardTable from '../../components/StandardTable'
+import { useDirection } from '../../hooks/useDirection'
 import { useSnackbar } from '../../hooks/useSnackbar'
+import { canSendWhatsApp, type NotificationRow } from '../../utils/notificationUtils'
 import { buildWhatsAppUrl } from '../../utils/whatsappUtils'
 
-interface NotificationRow {
-  id: number
-  notification_type: string
-  entity_type: string
-  entity_id: number
-  title: string
-  message: string
-  due_date: string | null
-  is_read: number
-  read_at: string | null
-  created_at: string
-  tenant_phone?: string
-  tenant_country_code?: string
+/**
+ * Tooltip that appears only when the wrapped text is actually truncated (ellipsis visible).
+ * Measures scrollWidth vs clientWidth at open-time, so window resizes need no listeners.
+ */
+function OverflowTooltip({
+  text,
+  dir,
+  sx
+}: {
+  text: string
+  dir: 'rtl' | 'ltr'
+  sx?: SxProps<Theme>
+}): React.ReactElement {
+  const [open, setOpen] = useState(false)
+  const ref = useRef<HTMLElement>(null)
+
+  const handleOpen = (): void => {
+    const el = ref.current
+    if (el && el.scrollWidth > el.clientWidth) setOpen(true)
+  }
+
+  return (
+    <Tooltip title={text} dir={dir} open={open} onOpen={handleOpen} onClose={() => setOpen(false)}>
+      <Typography ref={ref} variant="body2" noWrap sx={{ maxWidth: '100%', ...sx }}>
+        {text}
+      </Typography>
+    </Tooltip>
+  )
 }
 
 export default function NotificationCenter(): React.ReactElement {
   const { t } = useTranslation()
+  const isRtl = useDirection()
   const { snack, showError, showSuccess, hideSnackbar } = useSnackbar()
 
   const [tab, setTab] = useState(0)
@@ -104,7 +123,11 @@ export default function NotificationCenter(): React.ReactElement {
   //         Uses wa.me deep-link with ?text= parameter — user only needs to hit Send.
   const handleWhatsApp = (row: NotificationRow): void => {
     if (row.tenant_phone) {
-      const url = buildWhatsAppUrl(row.tenant_phone, row.tenant_country_code, row.message)
+      const url = buildWhatsAppUrl(
+        row.tenant_phone,
+        row.tenant_country_code ?? undefined,
+        row.message
+      )
       window.open(url, '_blank')
     }
   }
@@ -170,15 +193,14 @@ export default function NotificationCenter(): React.ReactElement {
       renderCell: (params) => {
         const row = params.row as NotificationRow
         return (
-          <Typography
-            variant="body2"
+          <OverflowTooltip
+            text={row.message}
+            dir={isRtl ? 'rtl' : 'ltr'}
             sx={{
               fontWeight: row.is_read ? 400 : 600,
               color: row.is_read ? 'text.secondary' : 'text.primary'
             }}
-          >
-            {row.message}
-          </Typography>
+          />
         )
       }
     },
@@ -220,11 +242,7 @@ export default function NotificationCenter(): React.ReactElement {
       sortable: false,
       renderCell: (params) => {
         const row = params.row as NotificationRow
-        const canWhatsApp =
-          !!row.tenant_phone &&
-          ['rent_due', 'overdue', 'contract_expiry', 'escalation_upcoming'].includes(
-            row.notification_type
-          )
+        const canWhatsApp = canSendWhatsApp(row)
         return (
           <Box sx={{ display: 'flex', gap: 0.5 }}>
             {!row.is_read && (

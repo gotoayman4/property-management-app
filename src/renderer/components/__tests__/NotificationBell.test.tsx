@@ -63,7 +63,9 @@ beforeEach(() => {
       message: 'Rent is due for Property A',
       due_date: '2026-08-01',
       is_read: 0,
-      created_at: '2026-07-27T10:00:00Z'
+      created_at: '2026-07-27T10:00:00Z',
+      tenant_phone: '512345678',
+      tenant_country_code: '+966'
     },
     {
       id: 2,
@@ -146,5 +148,31 @@ describe('NotificationBell', () => {
     await waitFor(() => {
       expect(mockMarkAllRead).toHaveBeenCalledTimes(1)
     })
+  })
+
+  it('renders the WhatsApp button only for eligible rows with a tenant phone', async () => {
+    renderBell()
+    fireEvent.click(screen.getByRole('button', { name: 'notifications.label' }))
+    await waitFor(() => {
+      expect(screen.getByText('Rent is due for Property A')).toBeInTheDocument()
+    })
+    // Row 1 (rent_due + phone) is eligible; row 2 (contract_expiry, no phone) is not.
+    expect(screen.getAllByRole('button', { name: 'common.sendWhatsApp' })).toHaveLength(1)
+  })
+
+  it('WhatsApp click opens a wa.me link and does not trigger the row click', async () => {
+    const openSpy = vi.spyOn(window, 'open').mockImplementation(() => null)
+    renderBell()
+    fireEvent.click(screen.getByRole('button', { name: 'notifications.label' }))
+    await waitFor(() => {
+      expect(screen.getByText('Rent is due for Property A')).toBeInTheDocument()
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'common.sendWhatsApp' }))
+    expect(openSpy).toHaveBeenCalledWith(
+      expect.stringContaining('https://wa.me/966512345678'),
+      '_blank'
+    )
+    // stopPropagation: the row's mark-read handler must NOT fire.
+    expect(mockMarkRead).not.toHaveBeenCalled()
   })
 })
