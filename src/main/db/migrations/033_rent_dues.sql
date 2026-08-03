@@ -12,6 +12,11 @@
 --     real payments (payments + ledger, in one transaction) move money.
 --   * rent_dues rows are mutable working documents (status + amount_paid change as payments
 --     arrive), but are never hard-deleted: status transitions carry an audit note.
+--     EXCEPTION: an opening_balance row (due_type='opening_balance', period_key='opening') that was
+--     NEVER collected (amount_paid = 0 AND status = 'pending') may be hard-deleted by
+--     deleteOpeningBalanceDue — these are correctable data-entry mistakes with no audit trail to
+--     preserve. Once any payment is applied (amount_paid > 0) or the status moves off 'pending',
+--     the row is immutable history again.
 --   * due_payment_allocations records exactly how much of each payment was applied to each due
 --     row, so a payment void can reverse its allocations precisely instead of guessing.
 --

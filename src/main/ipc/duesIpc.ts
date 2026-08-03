@@ -8,14 +8,21 @@ import {
   settleDuesBeforeApp,
   waiveDue
 } from '../db/duesAllocation'
-import { createOpeningBalanceDue, DuesError } from '../db/duesGeneration'
+import {
+  createOpeningBalanceDue,
+  deleteOpeningBalanceDue,
+  DuesError,
+  updateOpeningBalanceDue
+} from '../db/duesGeneration'
 import { logger } from '../utils/logger'
 import {
   createOpeningBalanceSchema,
+  deleteOpeningBalanceSchema,
   listByContractSchema,
   listOutstandingSchema,
   settleBeforeAppSchema,
   summarySchema,
+  updateOpeningBalanceSchema,
   waiveSchema
 } from './duesSchemas'
 
@@ -99,6 +106,35 @@ export function registerDuesIpcHandlers(): void {
       if (error instanceof DuesError) throw new Error(error.message)
       if (error instanceof z.ZodError) throw new Error('INVALID_INPUT')
       throw new Error('FAILED_TO_CREATE_OPENING_BALANCE')
+    }
+  })
+
+  ipcMain.handle('dues:updateOpeningBalance', async (_, data: unknown) => {
+    try {
+      const v = updateOpeningBalanceSchema.parse(data)
+      return updateOpeningBalanceDue(db, {
+        due_id: v.due_id,
+        amount: v.amount,
+        as_of_date: v.as_of_date,
+        note: v.note ?? null
+      })
+    } catch (error: unknown) {
+      logger.error('Error updating opening balance due', error)
+      if (error instanceof DuesError) throw new Error(error.message)
+      if (error instanceof z.ZodError) throw new Error('INVALID_INPUT')
+      throw new Error('FAILED_TO_UPDATE_OPENING_BALANCE')
+    }
+  })
+
+  ipcMain.handle('dues:deleteOpeningBalance', async (_, data: unknown) => {
+    try {
+      const v = deleteOpeningBalanceSchema.parse(data)
+      return deleteOpeningBalanceDue(db, v.due_id)
+    } catch (error: unknown) {
+      logger.error('Error deleting opening balance due', error)
+      if (error instanceof DuesError) throw new Error(error.message)
+      if (error instanceof z.ZodError) throw new Error('INVALID_INPUT')
+      throw new Error('FAILED_TO_DELETE_OPENING_BALANCE')
     }
   })
 }

@@ -827,6 +827,13 @@ declare global {
           as_of_date: string
           note?: string | null
         }) => Promise<{ due_id: number }>
+        updateOpeningBalance: (data: {
+          due_id: number
+          amount: number
+          as_of_date: string
+          note?: string | null
+        }) => Promise<{ changed: number }>
+        deleteOpeningBalance: (data: { due_id: number }) => Promise<{ deleted: boolean }>
       }
       expenses: {
         list: (filters?: {

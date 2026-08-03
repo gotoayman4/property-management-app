@@ -241,7 +241,14 @@ export function regenerateFutureDues(db: Database, contractId: number): number {
  * Create a single lump-sum opening-balance due for users who only know the TOTAL owed at
  * adoption time, not the per-month breakdown (requirement 4). Represented as a due_type
  * 'opening_balance' row so it flows through the same arrears/report/notification pipeline.
- * NEVER writes a ledger entry (it is not cash). Throws DUE_AMOUNT_INVALID on non-positive amount.
+ *
+ * INTENT: Record migrated/pre-app arrears as a single editable due. A contract can hold at most
+ *         ONE opening balance (UNIQUE(contract_id, due_type='opening_balance', period_key='opening')).
+ * CONSTRAINT: NEVER writes a ledger entry (it is not cash). Idempotency guard: a second add for the
+ *             same contract throws OPENING_BALANCE_ALREADY_EXISTS (carrying the existing due_id) so
+ *             the renderer can prompt the user to EDIT instead of seeing a generic SQL error.
+ * CAVEAT: The read-then-insert is wrapped in a transaction; the UNIQUE constraint remains as a
+ *         defense-in-depth safety net even though we pre-check.
  */
 export function createOpeningBalanceDue(
   db: Database,
@@ -251,16 +258,26 @@ export function createOpeningBalanceDue(
   const contract = loadContract(db, input.contract_id)
   if (!contract) throw new DuesError('CONTRACT_NOT_FOUND')
 
-  const res = db
-    .prepare(
-      `INSERT INTO rent_dues
-         (contract_id, property_id, tenant_id, due_type, period_key, period_start, period_end,
-          due_date, amount_due, amount_paid, currency, status, status_reason, status_changed_at)
-       VALUES
-         (@contract_id, @property_id, @tenant_id, 'opening_balance', 'opening', @as_of_date,
-          @as_of_date, @as_of_date, @amount, 0, @currency, 'pending', @note, CURRENT_TIMESTAMP)`
-    )
-    .run({
+  const insert = db.prepare(
+    `INSERT INTO rent_dues
+       (contract_id, property_id, tenant_id, due_type, period_key, period_start, period_end,
+        due_date, amount_due, amount_paid, currency, status, status_reason, status_changed_at)
+     VALUES
+       (@contract_id, @property_id, @tenant_id, 'opening_balance', 'opening', @as_of_date,
+        @as_of_date, @as_of_date, @amount, 0, @currency, 'pending', @note, CURRENT_TIMESTAMP)`
+  )
+
+  const run = db.transaction((): { due_id: number } => {
+    // Pre-check: surface a specific, actionable code instead of SQLite's generic UNIQUE error.
+    const existing = db
+      .prepare(
+        `SELECT id FROM rent_dues
+          WHERE contract_id = ? AND due_type = 'opening_balance' LIMIT 1`
+      )
+      .get(contract.id) as { id: number } | undefined
+    if (existing) throw new DuesError(`OPENING_BALANCE_ALREADY_EXISTS:${existing.id}`)
+
+    const res = insert.run({
       contract_id: contract.id,
       property_id: contract.property_id,
       tenant_id: contract.tenant_id,
@@ -269,7 +286,75 @@ export function createOpeningBalanceDue(
       currency: contract.currency,
       note: input.note ?? null
     })
-  return { due_id: Number(res.lastInsertRowid) }
+    return { due_id: Number(res.lastInsertRowid) }
+  })
+  return run()
+}
+
+/**
+ * Edit an existing opening-balance due's amount/date/note.
+ *
+ * INTENT: Let users correct data-entry mistakes on a migrated opening balance without re-adding.
+ * CONSTRAINT: Only editable when NOTHING has been collected against it yet — the WHERE clause
+ *             requires amount_paid = 0 AND status = 'pending'. Once a payment is allocated, the due
+ *             becomes immutable history (void the payment first, or waive the due instead).
+ * CAVEAT: If changes === 0 the row is either non-existent, not an opening balance, or already
+ *         allocated/terminal — we throw OPENING_BALANCE_NOT_EDITABLE so the renderer can explain.
+ *         NEVER writes a ledger entry.
+ */
+export function updateOpeningBalanceDue(
+  db: Database,
+  input: { due_id: number; amount: number; as_of_date: string; note?: string | null }
+): { changed: number } {
+  if (input.amount <= 0) throw new DuesError('DUE_AMOUNT_INVALID')
+  const res = db
+    .prepare(
+      `UPDATE rent_dues
+          SET amount_due = @amount,
+              due_date = @as_of_date,
+              period_start = @as_of_date,
+              period_end = @as_of_date,
+              status_reason = @note,
+              status_changed_at = CURRENT_TIMESTAMP
+        WHERE id = @due_id
+          AND due_type = 'opening_balance'
+          AND amount_paid = 0
+          AND status = 'pending'`
+    )
+    .run({
+      due_id: input.due_id,
+      amount: round2(input.amount),
+      as_of_date: input.as_of_date,
+      note: input.note ?? null
+    })
+  if (res.changes === 0) throw new DuesError('OPENING_BALANCE_NOT_EDITABLE')
+  return { changed: res.changes }
+}
+
+/**
+ * Hard-delete an opening-balance due that was never collected — a correctable data-entry mistake.
+ *
+ * INTENT: The ONLY hard-delete path on rent_dues, scoped to opening_balance rows with amount_paid = 0
+ *         AND status = 'pending'. Ordinary rent dues remain never-deleted (history); settled/waived/
+ *         partial/paid rows cannot be removed either.
+ * CONSTRAINT: Once a payment has been applied (amount_paid > 0) or the status moved off 'pending',
+ *             the row is history and MUST NOT be deleted — throw OPENING_BALANCE_NOT_DELETABLE.
+ * DECISION: Hard delete (not a soft 'voided' status) because nothing was ever collected, so there is
+ *           no audit trail to preserve. Documented as a carve-out in migration 033. Never touches
+ *           ledger_entries.
+ */
+export function deleteOpeningBalanceDue(db: Database, dueId: number): { deleted: boolean } {
+  const res = db
+    .prepare(
+      `DELETE FROM rent_dues
+        WHERE id = ?
+          AND due_type = 'opening_balance'
+          AND amount_paid = 0
+          AND status = 'pending'`
+    )
+    .run(dueId)
+  if (res.changes === 0) throw new DuesError('OPENING_BALANCE_NOT_DELETABLE')
+  return { deleted: true }
 }
 
 /** Domain error thrown by dues helpers; carries a machine-readable code for the IPC layer. */

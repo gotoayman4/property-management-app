@@ -57,7 +57,10 @@ const api = {
     settleBeforeApp: (data: { due_ids: number[]; note: string }) =>
       ipcRenderer.invoke('dues:settleBeforeApp', data),
     waive: (data: { due_id: number; reason: string }) => ipcRenderer.invoke('dues:waive', data),
-    createOpeningBalance: (data: unknown) => ipcRenderer.invoke('dues:createOpeningBalance', data)
+    createOpeningBalance: (data: unknown) => ipcRenderer.invoke('dues:createOpeningBalance', data),
+    updateOpeningBalance: (data: unknown) => ipcRenderer.invoke('dues:updateOpeningBalance', data),
+    deleteOpeningBalance: (data: { due_id: number }) =>
+      ipcRenderer.invoke('dues:deleteOpeningBalance', data)
   },
   expenses: {
     list: (filters?: unknown) => ipcRenderer.invoke('expenses:list', filters),

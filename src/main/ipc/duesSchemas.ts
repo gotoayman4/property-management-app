@@ -50,3 +50,16 @@ export const createOpeningBalanceSchema = z.object({
   as_of_date: isoDate,
   note: z.string().max(500).optional().nullable()
 })
+
+/** dues:updateOpeningBalance — correct amount/date/note on a never-collected opening balance. */
+export const updateOpeningBalanceSchema = z.object({
+  due_id: idSchema,
+  amount: z.number().positive(),
+  as_of_date: isoDate,
+  note: z.string().max(500).optional().nullable()
+})
+
+/** dues:deleteOpeningBalance — remove a never-collected opening balance (data-entry mistake). */
+export const deleteOpeningBalanceSchema = z.object({
+  due_id: idSchema
+})

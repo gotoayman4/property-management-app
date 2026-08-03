@@ -66,7 +66,8 @@
       "amountPaid": "المبلغ المدفوع",
       "outstanding": "المتبقي",
       "status": "الحالة",
-      "daysOverdue": "أيام التأخير"
+      "daysOverdue": "أيام التأخير",
+      "note": "ملاحظة"
     },
     "status": {
       "pending": "معلق",
@@ -78,11 +79,16 @@
     "action": {
       "settle": "تسوية قبل التطبيق",
       "waive": "إعفاء",
-      "openingBalance": "مستحق افتتاحي"
+      "openingBalance": "مستحق افتتاحي",
+      "edit": "تعديل",
+      "delete": "حذف"
     },
     "settleTitle": "تسوية المستحقات قبل التطبيق",
     "waiveTitle": "الإعفاء عن المستحق",
     "openingBalanceTitle": "تسجيل مستحق افتتاحي",
+    "editOpeningTitle": "تعديل المستحق الافتتاحي",
+    "deleteOpeningTitle": "حذف المستحق الافتتاحي",
+    "deleteOpeningConfirm": "حذف هذا المستحق الافتتاحي بمبلغ {{amount}} {{currency}}؟ لا يمكن التراجع عن هذا الإجراء.",
     "selectedCount": "{{n}} مستحق محدد",
     "contract": "العقد",
     "amount": "المبلغ",
@@ -92,6 +98,12 @@
     "settleSuccess": "تم تعليم المستحقات المحددة كمسوّاة قبل التطبيق.",
     "waiveSuccess": "تم الإعفاء عن المستحق.",
     "openingBalanceSuccess": "تم تسجيل المستحق الافتتاحي.",
+    "editOpeningSuccess": "تم تحديث المستحق الافتتاحي.",
+    "deleteOpeningSuccess": "تم حذف المستحق الافتتاحي.",
+    "openingBalanceAlreadyExists": "هذا العقد لديه بالفعل مستحق افتتاحي. قم بتعديله بدلاً من ذلك.",
+    "cannotEditAllocated": "لا يمكن تعديل هذا المستحق الافتتاحي لأنه تم تطبيق دفعة عليه بالفعل.",
+    "cannotDeleteAllocated": "لا يمكن حذف هذا المستحق الافتتاحي لأنه تم تطبيق دفعة عليه بالفعل.",
+    "amountInvalid": "يجب أن يكون المبلغ أكبر من صفر.",
     "reviewTitle": "مراجعة المستحقات المُنشأة",
     "reviewSubtitle": "تم إنشاء فترات الإيجار هذه للعقد. يمكنك تعليم الفترات السابقة كمسوّاة قبل التطبيق، أو تسجيل مستحق افتتاحي.",
     "reviewSettleAll": "تعليم جميع المستحقات السابقة كمسوّاة قبل التطبيق",

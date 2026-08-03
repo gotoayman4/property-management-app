@@ -7,6 +7,8 @@ import {
   generateDuesForContract,
   regenerateFutureDues,
   createOpeningBalanceDue,
+  updateOpeningBalanceDue,
+  deleteOpeningBalanceDue,
   DuesError
 } from '../duesGeneration'
 import { runMigrations } from '../migrations'
@@ -345,6 +347,134 @@ describe('generateDuesForContract (DB effects)', () => {
       expect(() =>
         createOpeningBalanceDue(db, { contract_id: 9999, amount: 100, as_of_date: '2026-01-01' })
       ).toThrow('CONTRACT_NOT_FOUND')
+    })
+
+    // REGRESSION: a second add for the same contract previously hit SQLite's generic UNIQUE
+    // constraint error (UNIQUE(contract_id, due_type, period_key)) and surfaced as an opaque
+    // "An error occurred" to the user. It must now throw a specific, actionable DuesError code.
+    it('throws OPENING_BALANCE_ALREADY_EXISTS on a second add for the same contract', () => {
+      const cId = seedContract()
+      createOpeningBalanceDue(db, {
+        contract_id: cId,
+        amount: 100,
+        as_of_date: '2026-01-01'
+      })
+      expect(() =>
+        createOpeningBalanceDue(db, {
+          contract_id: cId,
+          amount: 200,
+          as_of_date: '2026-02-01'
+        })
+      ).toThrow('OPENING_BALANCE_ALREADY_EXISTS')
+    })
+  })
+
+  describe('updateOpeningBalanceDue', () => {
+    it('updates amount/date/note on a never-collected opening balance', () => {
+      const cId = seedContract()
+      const { due_id } = createOpeningBalanceDue(db, {
+        contract_id: cId,
+        amount: 100,
+        as_of_date: '2026-01-01',
+        note: 'old note'
+      })
+      const { changed } = updateOpeningBalanceDue(db, {
+        due_id,
+        amount: 250,
+        as_of_date: '2026-03-15',
+        note: 'corrected amount'
+      })
+      expect(changed).toBe(1)
+      const row = db.prepare(`SELECT * FROM rent_dues WHERE id = ?`).get(due_id) as {
+        amount_due: number
+        due_date: string
+        period_start: string
+        status_reason: string
+      }
+      expect(row.amount_due).toBe(250)
+      expect(row.due_date).toBe('2026-03-15')
+      expect(row.period_start).toBe('2026-03-15')
+      expect(row.status_reason).toBe('corrected amount')
+    })
+
+    it('throws DUE_AMOUNT_INVALID on a non-positive amount', () => {
+      const cId = seedContract()
+      const { due_id } = createOpeningBalanceDue(db, {
+        contract_id: cId,
+        amount: 100,
+        as_of_date: '2026-01-01'
+      })
+      expect(() =>
+        updateOpeningBalanceDue(db, { due_id, amount: 0, as_of_date: '2026-01-01' })
+      ).toThrow(DuesError)
+    })
+
+    it('throws OPENING_BALANCE_NOT_EDITABLE once a payment is applied (amount_paid > 0)', () => {
+      const cId = seedContract()
+      const { due_id } = createOpeningBalanceDue(db, {
+        contract_id: cId,
+        amount: 100,
+        as_of_date: '2026-01-01'
+      })
+      // Simulate a payment allocation — the due is no longer editable.
+      db.prepare(`UPDATE rent_dues SET amount_paid = 40, status = 'partial' WHERE id = ?`).run(
+        due_id
+      )
+      expect(() =>
+        updateOpeningBalanceDue(db, { due_id, amount: 200, as_of_date: '2026-01-01' })
+      ).toThrow('OPENING_BALANCE_NOT_EDITABLE')
+    })
+
+    it('throws OPENING_BALANCE_NOT_EDITABLE for a non-existent id', () => {
+      expect(() =>
+        updateOpeningBalanceDue(db, { due_id: 9999, amount: 200, as_of_date: '2026-01-01' })
+      ).toThrow('OPENING_BALANCE_NOT_EDITABLE')
+    })
+  })
+
+  describe('deleteOpeningBalanceDue', () => {
+    it('hard-deletes a never-collected opening balance', () => {
+      const cId = seedContract()
+      const { due_id } = createOpeningBalanceDue(db, {
+        contract_id: cId,
+        amount: 100,
+        as_of_date: '2026-01-01'
+      })
+      const { deleted } = deleteOpeningBalanceDue(db, due_id)
+      expect(deleted).toBe(true)
+      const row = db.prepare(`SELECT COUNT(*) AS n FROM rent_dues WHERE id = ?`).get(due_id) as {
+        n: number
+      }
+      expect(row.n).toBe(0)
+    })
+
+    it('throws OPENING_BALANCE_NOT_DELETABLE once a payment is applied (amount_paid > 0)', () => {
+      const cId = seedContract()
+      const { due_id } = createOpeningBalanceDue(db, {
+        contract_id: cId,
+        amount: 100,
+        as_of_date: '2026-01-01'
+      })
+      db.prepare(`UPDATE rent_dues SET amount_paid = 40, status = 'partial' WHERE id = ?`).run(
+        due_id
+      )
+      expect(() => deleteOpeningBalanceDue(db, due_id)).toThrow('OPENING_BALANCE_NOT_DELETABLE')
+    })
+
+    it('throws OPENING_BALANCE_NOT_DELETABLE once the status moves off pending', () => {
+      const cId = seedContract()
+      const { due_id } = createOpeningBalanceDue(db, {
+        contract_id: cId,
+        amount: 100,
+        as_of_date: '2026-01-01'
+      })
+      // Waiving a never-collected opening balance moves it to a terminal status — not deletable.
+      db.prepare(`UPDATE rent_dues SET status = 'waived' WHERE id = ?`).run(due_id)
+      expect(() => deleteOpeningBalanceDue(db, due_id)).toThrow('OPENING_BALANCE_NOT_DELETABLE')
+    })
+
+    it('throws OPENING_BALANCE_NOT_DELETABLE for a non-existent id', () => {
+      expect(() => deleteOpeningBalanceDue(db, 9999)).toThrow('OPENING_BALANCE_NOT_DELETABLE')
     })
   })
 })

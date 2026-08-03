@@ -66,7 +66,8 @@
       "amountPaid": "Amount Paid",
       "outstanding": "Outstanding",
       "status": "Status",
-      "daysOverdue": "Days Overdue"
+      "daysOverdue": "Days Overdue",
+      "note": "Note"
     },
     "status": {
       "pending": "Pending",
@@ -78,11 +79,16 @@
     "action": {
       "settle": "Settle Before App",
       "waive": "Waive",
-      "openingBalance": "Opening due balance"
+      "openingBalance": "Opening due balance",
+      "edit": "Edit",
+      "delete": "Delete"
     },
     "settleTitle": "Settle Dues Before App",
     "waiveTitle": "Waive Due",
     "openingBalanceTitle": "Record Opening Due Balance",
+    "editOpeningTitle": "Edit Opening Due Balance",
+    "deleteOpeningTitle": "Delete Opening Due Balance",
+    "deleteOpeningConfirm": "Delete this opening due balance of {{amount}} {{currency}}? This cannot be undone.",
     "selectedCount": "{{n}} selected dues",
     "contract": "Contract",
     "amount": "Amount",
@@ -92,6 +98,12 @@
     "settleSuccess": "Selected dues marked as settled before app.",
     "waiveSuccess": "Due waived.",
     "openingBalanceSuccess": "Opening due balance recorded.",
+    "editOpeningSuccess": "Opening due balance updated.",
+    "deleteOpeningSuccess": "Opening due balance deleted.",
+    "openingBalanceAlreadyExists": "This contract already has an opening due balance. Edit it instead.",
+    "cannotEditAllocated": "This opening balance can't be edited because a payment has already been applied.",
+    "cannotDeleteAllocated": "This opening balance can't be deleted because a payment has already been applied.",
+    "amountInvalid": "Amount must be greater than zero.",
     "reviewTitle": "Review Generated Dues",
     "reviewSubtitle": "These rent periods were generated for the contract. You can mark past periods as settled before the app, or record an opening due balance.",
     "reviewSettleAll": "Mark all past dues as settled before app",

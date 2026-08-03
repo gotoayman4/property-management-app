@@ -209,6 +209,7 @@ export function getOutstandingDues(db: Database, filters: DuesQueryFilters = {})
       `SELECT d.id, d.contract_id, d.property_id, d.tenant_id, d.due_type, d.period_key,
               d.period_start, d.period_end, d.due_date, d.amount_due, d.amount_paid,
               (d.amount_due - d.amount_paid) AS outstanding, d.currency, d.status,
+              d.status_reason AS note,
               CAST(julianday(@today) - julianday(d.due_date) AS INTEGER) AS days_overdue,
               pr.name AS property_name, c.contract_number, t.fullname AS tenant_name
          FROM rent_dues d
