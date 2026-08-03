@@ -5,6 +5,23 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 Release notes on GitHub Releases are generated from this file (`scripts/extract-changelog.mjs`), so every release MUST have a section here before tagging.
 
+## [1.3.2] - 2026-08-03
+
+### Added
+
+- Edit and delete actions for opening due balances on the Rent Dues page — correct amount, date, or note mistakes on an opening balance that has not yet been collected (a confirmation dialog guards the delete)
+- The opening-balance note is now visible in a dedicated column on both the Rent Dues list and the post-save Dues Review dialog, with a hover tooltip for long notes
+- New "Edit Opening Due Balance" dialog mode that pre-fills the current amount, date, and note
+
+### Fixed
+
+- Adding a second opening due balance for the same contract no longer fails with a generic "An error occurred" — it now throws a specific, actionable message prompting the user to edit the existing balance instead (the root cause was a UNIQUE-constraint collision surfaced as an opaque error)
+
+### Changed
+
+- Opening due balances can only be edited or deleted while nothing has been collected against them (amount paid is 0 and status is pending); once a payment is applied they become immutable history
+- Documented the hard-delete carve-out for never-collected opening balances in the rent_dues schema comment
+
 ## [1.3.1] - 2026-07-30
 
 ### Added
@@ -167,6 +184,7 @@ Release notes on GitHub Releases are generated from this file (`scripts/extract-
 - In-app auto-update system: checks GitHub Releases, verifies SHA-256 integrity, silent Inno Setup upgrade (Settings → About)
 - Bilingual (English/Arabic) Windows installer with per-user install, upgrade/downgrade handling and user-data preservation
 
+[1.3.2]: https://github.com/gotoayman4/property-management-app/releases/tag/v1.3.2
 [1.2.0]: https://github.com/gotoayman4/property-management-app/releases/tag/v1.2.0
 [1.1.1]: https://github.com/gotoayman4/property-management-app/releases/tag/v1.1.1
 [1.1.0]: https://github.com/gotoayman4/property-management-app/releases/tag/v1.1.0
