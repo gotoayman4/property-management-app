@@ -5,6 +5,16 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 Release notes on GitHub Releases are generated from this file (`scripts/extract-changelog.mjs`), so every release MUST have a section here before tagging.
 
+## [1.4.0] - 2026-08-19
+
+### Added
+
+- "PAID" (مدفوع) stamp watermark on printed payment receipts — a rotated green stamp overlaid on the receipt center, fully bilingual and printed together with the receipt
+
+### Changed
+
+- The default payment method for recorded payments is now bank transfer instead of cash — applies to fresh installs and to existing databases that never changed the setting (explicit user choices are preserved)
+
 ## [1.3.2] - 2026-08-03
 
 ### Added
@@ -184,6 +194,7 @@ Release notes on GitHub Releases are generated from this file (`scripts/extract-
 - In-app auto-update system: checks GitHub Releases, verifies SHA-256 integrity, silent Inno Setup upgrade (Settings → About)
 - Bilingual (English/Arabic) Windows installer with per-user install, upgrade/downgrade handling and user-data preservation
 
+[1.4.0]: https://github.com/gotoayman4/property-management-app/releases/tag/v1.4.0
 [1.3.2]: https://github.com/gotoayman4/property-management-app/releases/tag/v1.3.2
 [1.2.0]: https://github.com/gotoayman4/property-management-app/releases/tag/v1.2.0
 [1.1.1]: https://github.com/gotoayman4/property-management-app/releases/tag/v1.1.1
