@@ -171,6 +171,50 @@ describe('htmlExporter', () => {
     expect(html).toMatch(/@media print/)
     expect(html).toMatch(/\.toolbar[^{]*\{[^}]*display:\s*none/)
   })
+
+  it('is responsive: breakpoints, scrollable table wrappers, fluid layout', () => {
+    const html = buildHtmlDocument(fixture(), 'en')
+    const css = html.slice(html.indexOf('<style>'), html.indexOf('</style>'))
+    expect(css).toMatch(/@media\s*\(max-width:/)
+    expect(css).toMatch(/@media\s*\(min-width:/)
+    expect(css).toMatch(/\.table-wrap[^{]*\{[^}]*overflow-x:\s*auto/)
+    expect(html).toMatch(/class="table-wrap"/)
+  })
+
+  it('localizes the chart title and no-JS message from i18n keys (BR-29)', () => {
+    const en = buildHtmlDocument(fixture(), 'en')
+    const ar = buildHtmlDocument(fixture(), 'ar')
+    expect(en).toMatch(/Summary Chart \(JOD\)/)
+    expect(ar).toMatch(/الرسم البياني الموجز \(JOD\)/)
+    expect(en).not.toMatch(/reports\.summaryChart/)
+    expect(en).toMatch(/Interactive sorting and filtering require JavaScript/)
+    expect(ar).toMatch(/يتطلب الفرز والتصفية التفاعلية/)
+  })
+
+  it('embeds pagination and search-feedback script with localized labels', () => {
+    const en = buildHtmlDocument(fixture(), 'en')
+    const ar = buildHtmlDocument(fixture(), 'ar')
+    expect(en).toMatch(/PAGE_SIZE = 50/)
+    expect(en).toMatch(/page-btn/)
+    expect(en).toMatch(/id="report-status"/)
+    expect(en).toMatch(/Showing/)
+    expect(ar).toMatch(/صفًا/)
+    expect(en).not.toMatch(/reports\.showingRows/)
+  })
+
+  it('print rules force-show filtered and paginated rows (FR-HTML-06)', () => {
+    const html = buildHtmlDocument(fixture(), 'en')
+    expect(html).toMatch(/\.page-hidden[^{]*\{[^}]*display:\s*table-row/)
+    expect(html).toMatch(/\.filtered-out[^{]*\{[^}]*display:\s*table-row/)
+  })
+
+  it('embedded script is syntactically valid JavaScript (BR-31)', () => {
+    const html = buildHtmlDocument(fixture(), 'en')
+    const script = html.match(/<script>([\s\S]*?)<\/script>/)?.[1]
+    expect(script).toBeTruthy()
+    // Compile without executing — a template-literal typo would throw a SyntaxError.
+    expect(() => new Function(script!)).not.toThrow()
+  })
 })
 
 describe('excelExporter', () => {
