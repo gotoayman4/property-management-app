@@ -637,6 +637,7 @@
     "paymentMethod": "Payment Method",
     "methodCash": "Cash",
     "methodBank": "Bank Transfer",
+    "methodBank_transfer": "Bank Transfer",
     "methodCheque": "Cheque",
     "methodOther": "Other",
     "receiptNumber": "Receipt Number",
@@ -669,6 +670,7 @@
     "totalPaid": "Total Amount Paid",
     "payerSignature": "Payer Signature",
     "authorizedSignature": "Authorized Receiver",
+    "paidStamp": "PAID",
     "print": "Print Receipt"
   },
   "expense": {

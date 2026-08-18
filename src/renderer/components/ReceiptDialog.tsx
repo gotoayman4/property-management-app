@@ -240,6 +240,30 @@ export function ReceiptDialog({
               </Typography>
             </Box>
           </Box>
+
+          {/* "PAID" stamp watermark */}
+          <Box
+            aria-hidden="true"
+            sx={{
+              position: 'absolute',
+              top: '45%',
+              insetInlineStart: '28%',
+              transform: 'rotate(-20deg)',
+              border: '4px solid',
+              borderColor: 'success.main',
+              color: 'success.main',
+              px: 3,
+              py: 1,
+              borderRadius: 1,
+              opacity: 0.75,
+              fontSize: 28,
+              fontWeight: 'bold',
+              pointerEvents: 'none',
+              userSelect: 'none'
+            }}
+          >
+            {t('receipt.paidStamp')}
+          </Box>
         </Paper>
       </DialogContent>
       <DialogActions sx={{ px: 3, py: 2 }}>

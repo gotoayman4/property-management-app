@@ -637,6 +637,7 @@
     "paymentMethod": "طريقة الدفع",
     "methodCash": "نقداً",
     "methodBank": "تحويل بنكي",
+    "methodBank_transfer": "تحويل بنكي",
     "methodCheque": "شيك",
     "methodOther": "أخرى",
     "receiptNumber": "رقم الإيصال",
@@ -669,6 +670,7 @@
     "totalPaid": "إجمالي المبلغ المدفوع",
     "payerSignature": "توقيع الدافع",
     "authorizedSignature": "المستلم المعتمد",
+    "paidStamp": "مدفوع",
     "print": "طباعة الإيصال"
   },
   "expense": {
