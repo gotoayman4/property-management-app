@@ -17,7 +17,7 @@ describe('Database Schema & Properties SQL Queries', () => {
   describe('Migrations & Initial Data', () => {
     it('should create the migrations log table and record migrations', () => {
       const migrations = db.prepare('SELECT * FROM migrations ORDER BY id ASC').all()
-      expect(migrations.length).toBe(35)
+      expect(migrations.length).toBe(36)
       expect(migrations[0]).toMatchObject({
         name: '001_initial_schema.sql'
       })
@@ -59,6 +59,7 @@ describe('Database Schema & Properties SQL Queries', () => {
         id: 1,
         app_language: 'ar',
         reporting_currency: 'JOD',
+        default_payment_method: 'bank_transfer',
         theme: 'light',
         font_size: 'medium'
       })

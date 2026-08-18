@@ -44,7 +44,7 @@ CREATE TABLE IF NOT EXISTS settings (
   id INTEGER PRIMARY KEY CHECK(id = 1), -- Singleton enforce
   app_language TEXT NOT NULL DEFAULT 'ar' CHECK(app_language IN ('ar', 'en')),
   reporting_currency TEXT NOT NULL DEFAULT 'JOD',
-  default_payment_method TEXT NOT NULL DEFAULT 'cash',
+  default_payment_method TEXT NOT NULL DEFAULT 'bank_transfer',
   backup_path TEXT,
   theme TEXT NOT NULL DEFAULT 'light' CHECK(theme IN ('light', 'dark')),
   font_size TEXT NOT NULL DEFAULT 'medium' CHECK(font_size IN ('small', 'medium', 'large')),
@@ -74,7 +74,7 @@ INSERT OR IGNORE INTO settings (
   reminder_days_before_due, reminder_days_before_contract_end, 
   reminder_days_before_document_expiry, reminder_days_before_recurring_expense
 ) VALUES (
-  1, 'ar', 'JOD', 'cash', 
+  1, 'ar', 'JOD', 'bank_transfer', 
   'light', 'medium', 'YYYY-MM-DD', 
   3, 30, 
   30, 3
