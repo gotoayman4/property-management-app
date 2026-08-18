@@ -5,6 +5,25 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 Release notes on GitHub Releases are generated from this file (`scripts/extract-changelog.mjs`), so every release MUST have a section here before tagging.
 
+## [1.5.0] - 2026-08-19
+
+### Added
+
+- HTML report exports are now fully responsive — fluid typography, horizontally scrollable tables, stacked header/toolbar and touch-friendly targets on small screens, sticky table headers and full-width layout on desktop
+- Client-side pagination in exported HTML reports (50 rows per page) with Previous/Next controls and a "Page X of Y" indicator
+- Live search feedback in exported HTML reports: a "Showing X of Y rows" counter while typing, and a clear "no rows match" empty state
+- Back-to-top link in the footer of long exported reports
+- Accessible report tables: column scope, sort announcements (aria-sort), live status region, and hidden captions for screen readers
+
+### Changed
+
+- The summary chart in exported HTML reports now has a localized title and tooltips with currency-formatted values, and uses the report's design tokens instead of hardcoded colors
+- Print output of exported HTML reports now force-shows filtered/paginated rows and keeps each currency group together on a page
+
+### Fixed
+
+- The chart title and the no-JavaScript notice in exported HTML reports were hardcoded English — both are now translated in Arabic and English exports (BR-29)
+
 ## [1.4.0] - 2026-08-19
 
 ### Added
@@ -194,6 +213,7 @@ Release notes on GitHub Releases are generated from this file (`scripts/extract-
 - In-app auto-update system: checks GitHub Releases, verifies SHA-256 integrity, silent Inno Setup upgrade (Settings → About)
 - Bilingual (English/Arabic) Windows installer with per-user install, upgrade/downgrade handling and user-data preservation
 
+[1.5.0]: https://github.com/gotoayman4/property-management-app/releases/tag/v1.5.0
 [1.4.0]: https://github.com/gotoayman4/property-management-app/releases/tag/v1.4.0
 [1.3.2]: https://github.com/gotoayman4/property-management-app/releases/tag/v1.3.2
 [1.2.0]: https://github.com/gotoayman4/property-management-app/releases/tag/v1.2.0
