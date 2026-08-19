@@ -10,6 +10,12 @@
   base    = "propmanager-website"
   publish = "dist"
   command = "npm run build"
+  # DECISION: Netlify's content-change check only diffs the base directory,
+  # so app-only pushes (which never touch propmanager-website/) were canceled
+  # as "no content change" and the site never auto-deployed. `/bin/false`
+  # makes the ignore check always answer "don't skip" — every push to main
+  # rebuilds the site (the documented trigger in AGENTS.md). Build is ~20s.
+  ignore = "/bin/false"
 
 [build.environment]
   NODE_VERSION = "22"
