@@ -681,6 +681,8 @@
     "authorizedSignature": "المستلم المعتمد",
     "paidStamp": "مدفوع",
     "print": "طباعة الإيصال",
+    "fullscreen": "عرض كامل الشاشة",
+    "exitFullscreen": "الخروج من ملء الشاشة",
     "voidedBanner": "تم إلغاء هذه الدفعة",
     "voidReason": "السبب: {{reason}}"
   },

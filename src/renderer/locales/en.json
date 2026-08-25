@@ -681,6 +681,8 @@
     "authorizedSignature": "Authorized Signature",
     "paidStamp": "PAID",
     "print": "Print Receipt",
+    "fullscreen": "Full Screen View",
+    "exitFullscreen": "Exit Full Screen",
     "voidedBanner": "This payment has been voided",
     "voidReason": "Reason: {{reason}}"
   },
