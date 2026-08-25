@@ -446,6 +446,7 @@ interface SystemSettings {
   last_full_backup_at: string | null
   company_name: string | null
   company_logo: string | null
+  company_signature: string | null
   company_address: string | null
   company_phone: string | null
   company_email: string | null

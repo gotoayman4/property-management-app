@@ -67,6 +67,7 @@ interface ReceiptDialogProps {
 interface CompanySettings {
   company_name: string | null
   company_logo: string | null
+  company_signature: string | null
   company_address: string | null
   company_phone: string | null
   company_email: string | null
@@ -98,6 +99,7 @@ export function ReceiptDialog({
           setCompanySettings({
             company_name: s?.company_name ?? null,
             company_logo: s?.company_logo ?? null,
+            company_signature: s?.company_signature ?? null,
             company_address: s?.company_address ?? null,
             company_phone: s?.company_phone ?? null,
             company_email: s?.company_email ?? null

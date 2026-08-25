@@ -1,6 +1,7 @@
 /**
- * INTENT: Company information card (FR-SET-12) — lets the user set the company name
- *         and upload/remove a logo that appears on exported reports and receipts.
+ * INTENT: Company information card (FR-SET-12) — lets the user set the company name,
+ *         upload/remove a logo (reports + receipt header) and an authorized-signature
+ *         image that appears automatically on payment receipts.
  * CONSTRAINT (AGENTS.md): i18n keys only, theme.palette tokens, logical CSS.
  * DECISION: Extracted from Settings.tsx to keep it under the 500-line limit.
  */
@@ -12,6 +13,7 @@ import { useSnackbar } from '../hooks/useSnackbar'
 interface CompanyData {
   company_name?: string | null
   company_logo?: string | null
+  company_signature?: string | null
 }
 
 interface CompanyInfoCardProps {
@@ -55,7 +57,8 @@ export default function CompanyInfoCard({
     [showSuccess, showError]
   )
 
-  const handlePickLogo = async (): Promise<void> => {
+  /** Shared image-picker flow for logo and signature. Returns the picked base64 or null. */
+  const pickImage = useCallback(async (): Promise<string | null> => {
     try {
       const result = await window.api.dialog.pickImage()
       if (result.error) {
@@ -67,14 +70,24 @@ export default function CompanyInfoCard({
           INVALID_IMAGE_TYPE: 'settings.logoErrorInvalidType'
         }
         showError(errorKey[result.error] ?? 'common.saveError')
-        return
+        return null
       }
-      if (!result.canceled && result.base64) {
-        await updateField('company_logo', result.base64)
-      }
+      if (!result.canceled && result.base64) return result.base64
+      return null
     } catch {
       showError('common.saveError')
+      return null
     }
+  }, [showError])
+
+  const handlePickLogo = async (): Promise<void> => {
+    const base64 = await pickImage()
+    if (base64) await updateField('company_logo', base64)
+  }
+
+  const handlePickSignature = async (): Promise<void> => {
+    const base64 = await pickImage()
+    if (base64) await updateField('company_signature', base64)
   }
 
   if (!data) return <></>
@@ -96,7 +109,7 @@ export default function CompanyInfoCard({
           <Box
             component="img"
             src={data.company_logo}
-            alt="Company Logo"
+            alt={t('settings.companyLogo')}
             sx={{
               width: 80,
               height: 80,
@@ -144,6 +157,68 @@ export default function CompanyInfoCard({
           )}
         </Stack>
       </Box>
+
+      {/* Authorized signature — printed on payment receipts above the signature line */}
+      <Typography variant="subtitle2" sx={{ mb: 1, mt: 3, fontWeight: 600 }}>
+        {t('settings.companySignature')}
+      </Typography>
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+        {data.company_signature ? (
+          <Box
+            component="img"
+            src={data.company_signature}
+            alt={t('settings.companySignature')}
+            sx={{
+              width: 140,
+              height: 60,
+              objectFit: 'contain',
+              objectPosition: 'bottom',
+              borderRadius: 1,
+              border: '1px solid',
+              borderColor: 'divider',
+              px: 0.5,
+              bgcolor: 'background.paper'
+            }}
+          />
+        ) : (
+          <Box
+            sx={{
+              width: 140,
+              height: 60,
+              borderRadius: 1,
+              border: '1px dashed',
+              borderColor: 'text.secondary',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: 'text.secondary',
+              fontSize: '0.8rem',
+              textAlign: 'center',
+              p: 1
+            }}
+          >
+            {t('settings.noSignature')}
+          </Box>
+        )}
+        <Stack spacing={1}>
+          <Button variant="outlined" size="small" onClick={handlePickSignature}>
+            {data.company_signature ? t('settings.changeSignature') : t('settings.uploadSignature')}
+          </Button>
+          {data.company_signature && (
+            <Button
+              variant="outlined"
+              color="error"
+              size="small"
+              onClick={() => updateField('company_signature', null)}
+            >
+              {t('common.remove')}
+            </Button>
+          )}
+        </Stack>
+      </Box>
+      <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1 }}>
+        {t('settings.signatureHint')}
+      </Typography>
     </>
   )
 

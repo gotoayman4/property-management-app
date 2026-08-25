@@ -19,6 +19,8 @@ import type { ReceiptPaymentData } from './ReceiptDialog'
 export interface ReceiptPaperCompanySettings {
   company_name: string | null
   company_logo: string | null
+  /** Base64 image of the company's authorized signature; rendered above the signature line. */
+  company_signature: string | null
   company_address: string | null
   company_phone: string | null
   company_email: string | null
@@ -364,6 +366,24 @@ export function ReceiptPaper({
           </Typography>
         </Box>
         <Box sx={{ width: 160, textAlign: 'center' }}>
+          {/* Uploaded authorized-signature image sits above the line when configured */}
+          {companySettings?.company_signature ? (
+            <Box
+              component="img"
+              src={companySettings.company_signature}
+              alt={rt('receipt.authorizedSignature')}
+              className="signature-image"
+              sx={{
+                height: 44,
+                maxWidth: 150,
+                objectFit: 'contain',
+                objectPosition: 'bottom center',
+                mx: 'auto',
+                display: 'block',
+                pointerEvents: 'none'
+              }}
+            />
+          ) : null}
           <Divider sx={{ mb: 0.75, borderColor: 'text.secondary' }} />
           <Typography variant="caption" color="text.secondary">
             {rt('receipt.authorizedSignature')}
