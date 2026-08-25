@@ -5,6 +5,26 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 Release notes on GitHub Releases are generated from this file (`scripts/extract-changelog.mjs`), so every release MUST have a section here before tagging.
 
+## [1.6.0] - 2026-08-25
+
+### Added
+
+- Payment receipts are now far more informative: tenant phone and email, property code next to the property name, covered rent periods, and a separate receipt issue date alongside the payment date
+- Each receipt now shows small note lines with the tenant's remaining due as of that payment's date (future months are never counted) and the previous payment before it (date, receipt number, and amount)
+- Receipts can show the company address, phone, and email under the company name — set them in Settings
+
+### Changed
+
+- Every receipt is now printed in the TENANT's language: Arabic for Arabic tenants, English for everyone else — regardless of which language the app interface is currently using
+- The amount box on receipts shows only this specific payment ("Amount Paid") instead of any computed totals
+- All numbers on receipts use Western digits (0-9) even on Arabic receipts
+
+### Fixed
+
+- Opening a receipt could crash with "Cannot access 'rt' before initialization" or fail to load its context data
+- Voided payments now clearly show a red "voided" banner with the reason, and their print button is disabled
+- Date fields on Arabic receipts previously showed raw translation keys instead of month names
+
 ## [1.5.0] - 2026-08-19
 
 ### Added
@@ -213,6 +233,7 @@ Release notes on GitHub Releases are generated from this file (`scripts/extract-
 - In-app auto-update system: checks GitHub Releases, verifies SHA-256 integrity, silent Inno Setup upgrade (Settings → About)
 - Bilingual (English/Arabic) Windows installer with per-user install, upgrade/downgrade handling and user-data preservation
 
+[1.6.0]: https://github.com/gotoayman4/property-management-app/releases/tag/v1.6.0
 [1.5.0]: https://github.com/gotoayman4/property-management-app/releases/tag/v1.5.0
 [1.4.0]: https://github.com/gotoayman4/property-management-app/releases/tag/v1.4.0
 [1.3.2]: https://github.com/gotoayman4/property-management-app/releases/tag/v1.3.2
