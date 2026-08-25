@@ -5,6 +5,18 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 Release notes on GitHub Releases are generated from this file (`scripts/extract-changelog.mjs`), so every release MUST have a section here before tagging.
 
+## [1.9.0] - 2026-08-25
+
+### Added
+
+- Settings → Company Information: a new **Signer Name** field that prints automatically under the authorized signature on every receipt
+- Receipt **Save as Image** button in the footer — exports the rendered receipt as a PNG (crisp 2× resolution) for sharing or archival
+- Receipt visual polish: a brand-color top accent border, a solid green "Amount Paid" box, a calmer header divider, and refined header typography
+
+### Changed
+
+- Removed the payer (paid-by) signature line from receipts — the company is the issuing party, so only its authorized signer block remains (image + signer name), aligned to the end side
+
 ## [1.8.0] - 2026-08-25
 
 ### Added
@@ -251,6 +263,7 @@ Release notes on GitHub Releases are generated from this file (`scripts/extract-
 - In-app auto-update system: checks GitHub Releases, verifies SHA-256 integrity, silent Inno Setup upgrade (Settings → About)
 - Bilingual (English/Arabic) Windows installer with per-user install, upgrade/downgrade handling and user-data preservation
 
+[1.9.0]: https://github.com/gotoayman4/property-management-app/releases/tag/v1.9.0
 [1.8.0]: https://github.com/gotoayman4/property-management-app/releases/tag/v1.8.0
 [1.7.0]: https://github.com/gotoayman4/property-management-app/releases/tag/v1.7.0
 [1.6.0]: https://github.com/gotoayman4/property-management-app/releases/tag/v1.6.0
