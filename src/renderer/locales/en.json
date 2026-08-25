@@ -376,6 +376,9 @@
     "companyInfo": "Company Information",
     "companyName": "Company Name",
     "companyLogo": "Company Logo",
+    "companyAddress": "Company Address",
+    "companyPhone": "Company Phone",
+    "companyEmail": "Company Email",
     "noLogo": "No Logo Selected",
     "changeLogo": "Change Logo",
     "logoErrorEmpty": "The selected image file is empty.",
@@ -664,14 +667,22 @@
     "voidedBadge": "Voided"
   },
   "receipt": {
-    "title": "Payment Receipt",
+    "title": "Receipt",
     "defaultCompany": "Property Management System",
-    "receiptNumber": "Receipt No",
-    "totalPaid": "Total Amount Paid",
+    "receiptNumber": "Receipt No.",
+    "paymentDate": "Payment Date",
+    "issueDate": "Receipt Issued",
+    "totalPaid": "Amount Paid",
+    "remainingDue": "Remaining Due (as of this payment's date)",
+    "noteRemainingDue": "Remaining due as of this payment's date: {{amount}}",
+    "noteLastPayment": "Last payment before this one: {{date}} — Receipt {{receiptNo}} — {{amount}}",
+    "periodsCovered": "Periods Covered",
     "payerSignature": "Payer Signature",
-    "authorizedSignature": "Authorized Receiver",
+    "authorizedSignature": "Authorized Signature",
     "paidStamp": "PAID",
-    "print": "Print Receipt"
+    "print": "Print Receipt",
+    "voidedBanner": "This payment has been voided",
+    "voidReason": "Reason: {{reason}}"
   },
   "expense": {
     "title": "Expenses",
@@ -1255,6 +1266,20 @@
       "quarterly": "Quarterly",
       "semi_annual": "Semi-Annual",
       "annual": "Annual"
+    },
+    "months": {
+      "1": "January",
+      "2": "February",
+      "3": "March",
+      "4": "April",
+      "5": "May",
+      "6": "June",
+      "7": "July",
+      "8": "August",
+      "9": "September",
+      "10": "October",
+      "11": "November",
+      "12": "December"
     }
   },
   "search": {

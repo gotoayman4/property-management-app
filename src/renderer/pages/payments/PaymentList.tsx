@@ -50,7 +50,12 @@ interface Payment {
   property_name: string
   property_code: string
   tenant_fullname: string | null
+  tenant_phone: string | null
+  tenant_email: string | null
+  tenant_preferred_language: string | null
   contract_number: string | null
+  contract_id: number | null
+  related_period_month: string | null
 }
 
 export function PaymentList(): React.ReactElement {

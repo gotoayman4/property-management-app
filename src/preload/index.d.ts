@@ -146,6 +146,17 @@ interface ContractRow {
   tenant_code: string
 }
 
+export interface ReceiptContext {
+  /** Dues billed up to (and incl.) this payment's date minus payments through that date. */
+  outstanding: number
+  currency: string
+  last_payment: {
+    date: string
+    amount: number
+    receipt_number: string
+  } | null
+}
+
 interface PaymentRow {
   id: number
   contract_id: number | null
@@ -170,7 +181,10 @@ interface PaymentRow {
   property_code: string
   tenant_fullname: string
   tenant_code: string
-  contract_number: string
+  tenant_phone: string | null
+  tenant_email: string | null
+  tenant_preferred_language: string | null
+  contract_number: string | null
 }
 
 interface ExpenseRow {
@@ -432,6 +446,9 @@ interface SystemSettings {
   last_full_backup_at: string | null
   company_name: string | null
   company_logo: string | null
+  company_address: string | null
+  company_phone: string | null
+  company_email: string | null
   dashboard_hidden_widgets: string
   font_size: string
   auto_update_check: number
@@ -809,6 +826,7 @@ declare global {
           custom_exchange_rate?: number | null
         }) => Promise<{ payment_id: number; ledger_id: number; receipt_number: string }>
         void: (payload: { id: number; reason: string }) => Promise<{ ledger_id: number }>
+        getReceiptContext: (paymentId: number) => Promise<ReceiptContext>
       }
       dues: {
         listByContract: (contractId: number) => Promise<DueRow[]>

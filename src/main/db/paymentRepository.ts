@@ -216,6 +216,8 @@ export function listPayments(
     SELECT pay.*,
            p.name AS property_name, p.code AS property_code,
            t.fullname AS tenant_fullname, t.code AS tenant_code,
+           t.phone AS tenant_phone, t.email AS tenant_email,
+           t.preferred_language AS tenant_preferred_language,
            c.contract_number AS contract_number
     FROM payments pay
     LEFT JOIN properties p ON pay.property_id = p.id
@@ -252,6 +254,87 @@ export function listPayments(
   }
   query += ' ORDER BY pay.payment_date DESC, pay.id DESC'
   return db.prepare(query).all(params)
+}
+
+/**
+ * Gather context data needed for a payment receipt: remaining due as of THIS
+ * payment's date, and the last previous payment. Called by the receipt dialog IPC handler.
+ *
+ * DECISION: Outstanding is scoped to the CONTRACT when one exists (falling back to the
+ * property), and cut off at the payment date — dues with a due_date AFTER this payment
+ * (future periods, not-yet-billed opening balances) are excluded, so the number answers
+ * "what did the tenant still owe at the moment of this receipt".
+ */
+export interface ReceiptContext {
+  /** Dues billed up to (and incl.) this payment's date minus payments through that date. */
+  outstanding: number
+  currency: string
+  last_payment: {
+    date: string
+    amount: number
+    receipt_number: string
+  } | null
+}
+
+export function getReceiptContext(db: Database, paymentId: number): ReceiptContext {
+  const payment = db
+    .prepare(
+      `SELECT property_id, contract_id, currency, payment_date
+       FROM payments
+       WHERE id = ?`
+    )
+    .get(paymentId) as
+    | {
+        property_id: number
+        contract_id: number | null
+        currency: string
+        payment_date: string
+      }
+    | undefined
+
+  if (!payment) {
+    return { outstanding: 0, currency: '', last_payment: null }
+  }
+
+  const { property_id, contract_id, currency, payment_date } = payment
+
+  // Scope arrears to the contract when available; fall back to property-level only for
+  // payments recorded without a contract (e.g. other income).
+  const scopeColumn = contract_id ? 'contract_id' : 'property_id'
+  const scopeValue = contract_id ?? property_id
+
+  // Dues BILLED up to the payment date: includes the current period being paid but
+  // excludes every future period (upcoming rent schedule rows and future-dated opening
+  // balances) so the receipt never shows obligations that did not exist yet.
+  const dues = db
+    .prepare(
+      `SELECT COALESCE(SUM(amount_due - amount_paid), 0) AS remaining
+        FROM rent_dues
+        WHERE ${scopeColumn} = ?
+          AND status != 'waived'
+          AND due_date <= ?`
+    )
+    .get(scopeValue, payment_date) as { remaining: number } | undefined
+
+  const outstanding = Math.max(0, dues?.remaining ?? 0)
+
+  // Last previous payment before this one, within the same scope.
+  let lastPayment: ReceiptContext['last_payment'] = null
+  const lp = db
+    .prepare(
+      `SELECT payment_date, amount, receipt_number
+        FROM payments
+        WHERE ${scopeColumn} = ? AND id < ? AND is_voided = 0
+        ORDER BY payment_date DESC, id DESC
+        LIMIT 1`
+    )
+    .get(scopeValue, paymentId) as
+    { payment_date: string; amount: number; receipt_number: string } | undefined
+  if (lp) {
+    lastPayment = { date: lp.payment_date, amount: lp.amount, receipt_number: lp.receipt_number }
+  }
+
+  return { outstanding, currency, last_payment: lastPayment }
 }
 
 interface PaymentRow {

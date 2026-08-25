@@ -57,6 +57,9 @@ const settingsUpdateSchema = z.object({
     .optional(),
   company_name: z.string().max(200).nullable().optional(),
   company_logo: z.string().nullable().optional(),
+  company_address: z.string().max(500).nullable().optional(),
+  company_phone: z.string().max(50).nullable().optional(),
+  company_email: z.string().max(200).nullable().optional(),
   dashboard_hidden_widgets: z.string().optional(),
   auto_update_check: z.number().int().min(0).max(1).optional(),
   auto_update_download: z.number().int().min(0).max(1).optional()

@@ -5,6 +5,7 @@ import {
   createPayment,
   voidPayment,
   listPayments,
+  getReceiptContext,
   PaymentError,
   type CreatePaymentInput
 } from '../db/paymentRepository'
@@ -76,10 +77,14 @@ export function registerPaymentIpcHandlers(): void {
       return db
         .prepare(
           `SELECT pay.*, p.name AS property_name, p.code AS property_code,
-                  t.fullname AS tenant_fullname, t.code AS tenant_code
+                  t.fullname AS tenant_fullname, t.code AS tenant_code,
+                  t.phone AS tenant_phone, t.email AS tenant_email,
+                  t.preferred_language AS tenant_preferred_language,
+                  c.contract_number AS contract_number
            FROM payments pay
            LEFT JOIN properties p ON pay.property_id = p.id
-           LEFT JOIN tenants t ON pay.tenant_id = t.id
+           LEFT JOIN tenants   t ON pay.tenant_id   = t.id
+           LEFT JOIN contracts c ON pay.contract_id = c.id
            WHERE pay.id = ?`
         )
         .get(id)
@@ -87,6 +92,17 @@ export function registerPaymentIpcHandlers(): void {
       if (error instanceof z.ZodError) throw new Error('INVALID_INPUT')
       logger.error('Error getting payment', error)
       throw new Error('FAILED_TO_GET_PAYMENT')
+    }
+  })
+
+  ipcMain.handle('payments:getReceiptContext', async (_, data: unknown) => {
+    try {
+      const id = z.number().int().positive().parse(data)
+      return getReceiptContext(db, id)
+    } catch (error) {
+      if (error instanceof z.ZodError) throw new Error('INVALID_INPUT')
+      logger.error('Error getting receipt context', error)
+      throw new Error('FAILED_TO_GET_RECEIPT_CONTEXT')
     }
   })
 

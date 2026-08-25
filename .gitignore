@@ -63,3 +63,6 @@ propmanager-website/.astro/
 # Mirrored global guidelines and skills (do commit these if desired, but we keep guidelines and skills as local references)
 _guidelines/
 _skills/
+
+# Local Netlify folder
+.netlify

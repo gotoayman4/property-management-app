@@ -48,7 +48,9 @@ const api = {
     list: (filters?: unknown) => ipcRenderer.invoke('payments:list', filters),
     get: (id: number) => ipcRenderer.invoke('payments:get', id),
     create: (data: unknown) => ipcRenderer.invoke('payments:create', data),
-    void: (payload: { id: number; reason: string }) => ipcRenderer.invoke('payments:void', payload)
+    void: (payload: { id: number; reason: string }) => ipcRenderer.invoke('payments:void', payload),
+    getReceiptContext: (paymentId: number) =>
+      ipcRenderer.invoke('payments:getReceiptContext', paymentId)
   },
   dues: {
     listByContract: (contractId: number) => ipcRenderer.invoke('dues:listByContract', contractId),
