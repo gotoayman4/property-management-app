@@ -5,6 +5,13 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 Release notes on GitHub Releases are generated from this file (`scripts/extract-changelog.mjs`), so every release MUST have a section here before tagging.
 
+## [1.8.0] - 2026-08-25
+
+### Added
+
+- Upload the company's authorized-signature image in Settings → Company Information, and it appears automatically on every payment receipt above the authorized-signature line (on screen and in print)
+- Signature images go through the same security validation as logos: only PNG/JPG are accepted, checked by file content rather than file extension
+
 ## [1.7.0] - 2026-08-25
 
 ### Added
@@ -244,6 +251,7 @@ Release notes on GitHub Releases are generated from this file (`scripts/extract-
 - In-app auto-update system: checks GitHub Releases, verifies SHA-256 integrity, silent Inno Setup upgrade (Settings → About)
 - Bilingual (English/Arabic) Windows installer with per-user install, upgrade/downgrade handling and user-data preservation
 
+[1.8.0]: https://github.com/gotoayman4/property-management-app/releases/tag/v1.8.0
 [1.7.0]: https://github.com/gotoayman4/property-management-app/releases/tag/v1.7.0
 [1.6.0]: https://github.com/gotoayman4/property-management-app/releases/tag/v1.6.0
 [1.5.0]: https://github.com/gotoayman4/property-management-app/releases/tag/v1.5.0
