@@ -447,6 +447,7 @@ interface SystemSettings {
   company_name: string | null
   company_logo: string | null
   company_signature: string | null
+  company_signer_name: string | null
   company_address: string | null
   company_phone: string | null
   company_email: string | null
@@ -1104,6 +1105,11 @@ declare global {
           error?: string
         }>
         pickBackupFile: () => Promise<{ filePath: string | null; canceled: boolean }>
+        /** Rasterize-then-save: renderer passes a PNG data URL; main asks where to write it. */
+        saveReceiptImage: (data: {
+          dataUrl: string
+          fileName: string
+        }) => Promise<{ filePath: string | null; canceled: boolean }>
       }
       data: {
         wipeAll: (token: string) => Promise<{ success: true }>

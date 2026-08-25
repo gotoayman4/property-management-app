@@ -58,6 +58,7 @@ const settingsUpdateSchema = z.object({
   company_name: z.string().max(200).nullable().optional(),
   company_logo: z.string().nullable().optional(),
   company_signature: z.string().max(500_000).nullable().optional(),
+  company_signer_name: z.string().max(120).nullable().optional(),
   company_address: z.string().max(500).nullable().optional(),
   company_phone: z.string().max(50).nullable().optional(),
   company_email: z.string().max(200).nullable().optional(),

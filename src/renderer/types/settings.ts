@@ -15,6 +15,7 @@ export interface SystemSettings {
   company_email?: string | null
   company_logo?: string | null
   company_signature?: string | null
+  company_signer_name?: string | null
   max_backup_count: number
   backup_path?: string | null
   reminder_days_before_due: number

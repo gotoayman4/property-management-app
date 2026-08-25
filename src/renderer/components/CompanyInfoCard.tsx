@@ -14,6 +14,7 @@ interface CompanyData {
   company_name?: string | null
   company_logo?: string | null
   company_signature?: string | null
+  company_signer_name?: string | null
 }
 
 interface CompanyInfoCardProps {
@@ -219,6 +220,14 @@ export default function CompanyInfoCard({
       <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1 }}>
         {t('settings.signatureHint')}
       </Typography>
+      <TextField
+        fullWidth
+        label={t('settings.signerName')}
+        value={data.company_signer_name ?? ''}
+        onChange={(e) => updateField('company_signer_name', e.target.value.trim() || null)}
+        helperText={t('settings.signerNameHint')}
+        sx={{ mt: 2.5 }}
+      />
     </>
   )
 

@@ -24,9 +24,12 @@
  */
 
 import * as fs from 'fs'
+import { join } from 'path'
 import { dialog, BrowserWindow, ipcMain } from 'electron'
 import { fromBuffer } from 'file-type'
-import { showOpenDirectoryDialog } from '../services/fileDialogService'
+import { z } from 'zod'
+import { writeFileAtomic } from '../services/exportService/exportUtils'
+import { resolveDefaultExportDir, showOpenDirectoryDialog } from '../services/fileDialogService'
 import { logger } from '../utils/logger'
 
 /**
@@ -140,4 +143,58 @@ export function registerDialogIpcHandlers(): void {
       return { filePath: null, canceled: true }
     }
   })
+
+  /**
+   * dialog:saveReceiptImage — Save a PNG buffer of the rendered receipt to disk.
+   *
+   * INTENT: The renderer rasterizes the receipt DOM (html-to-image → PNG data URL) and hands
+   *         the bytes here; this handler is the user's consent gate for WHERE to write, and
+   *         performs the actual disk write (BR-31 discipline — no renderer filesystem access).
+   *
+   * SECURITY: payload validated with Zod; the base64 payload must be a data:image/png URI.
+   *           A hard cap mirrors MAX_LOGO_SIZE_BYTES so a renderer bug can't spill huge
+   *           buffers to disk. Write is atomic via writeFileAtomic.
+   */
+  ipcMain.handle(
+    'dialog:saveReceiptImage',
+    async (_, payload: unknown): Promise<{ filePath: string | null; canceled: boolean }> => {
+      try {
+        const parsed = z
+          .object({
+            /** data:image/png;base64,... produced by html-to-image in the renderer. */
+            dataUrl: z
+              .string()
+              .startsWith('data:image/png;base64,')
+              .max(30 * 1024 * 1024),
+            /** Suggested file name, sanitized below. */
+            fileName: z.string().min(1).max(120)
+          })
+          .parse(payload)
+
+        const safeName = parsed.fileName
+          .replace(/[<>:"/\\|?*]/g, '_')
+          .replace(/\s+/g, ' ')
+          .trim()
+        const defaultDir = resolveDefaultExportDir()
+        const focused = BrowserWindow.getFocusedWindow()
+        const options = {
+          title: 'Save receipt image',
+          defaultPath: join(defaultDir, `${safeName}.png`),
+          filters: [{ name: 'PNG', extensions: ['png'] }]
+        }
+        const result = focused
+          ? await dialog.showSaveDialog(focused, options)
+          : await dialog.showSaveDialog(options)
+        if (result.canceled || !result.filePath) return { filePath: null, canceled: true }
+
+        const base64 = parsed.dataUrl.slice('data:image/png;base64,'.length)
+        await writeFileAtomic(result.filePath, Buffer.from(base64, 'base64'))
+        return { filePath: result.filePath, canceled: false }
+      } catch (error) {
+        logger.error('Receipt image save error', error)
+        if (error instanceof z.ZodError) throw new Error('INVALID_INPUT')
+        throw new Error('EXPORT_WRITE_FAILED')
+      }
+    }
+  )
 }

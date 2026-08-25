@@ -10,6 +10,7 @@
  */
 import FullscreenIcon from '@mui/icons-material/Fullscreen'
 import FullscreenExitIcon from '@mui/icons-material/FullscreenExit'
+import ImageIcon from '@mui/icons-material/Image'
 import PrintIcon from '@mui/icons-material/Print'
 import {
   Box,
@@ -20,9 +21,11 @@ import {
   DialogTitle,
   Typography
 } from '@mui/material'
-import React, { useEffect, useState } from 'react'
+import { toPng } from 'html-to-image'
+import React, { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useDirection } from '../hooks/useDirection'
+import { useSnackbar } from '../hooks/useSnackbar'
 import ReceiptPaper from './ReceiptPaper'
 
 export interface ReceiptPaymentData {
@@ -68,6 +71,7 @@ interface CompanySettings {
   company_name: string | null
   company_logo: string | null
   company_signature: string | null
+  company_signer_name: string | null
   company_address: string | null
   company_phone: string | null
   company_email: string | null
@@ -86,6 +90,9 @@ export function ReceiptDialog({
   // CAVEAT: fullscreen state intentionally RESETS when a different payment is opened
   // so each new receipt starts in the compact default view.
   const [isFullscreen, setIsFullscreen] = useState(false)
+  const [exportingPng, setExportingPng] = useState(false)
+  const receiptRef = useRef<HTMLDivElement>(null)
+  const { showSuccess, showError } = useSnackbar()
 
   // Determine receipt language: Arabic if tenant's preferred_language is 'ar', else English
   const receiptLang = payment?.tenant_preferred_language === 'ar' ? 'ar' : 'en'
@@ -100,6 +107,7 @@ export function ReceiptDialog({
             company_name: s?.company_name ?? null,
             company_logo: s?.company_logo ?? null,
             company_signature: s?.company_signature ?? null,
+            company_signer_name: s?.company_signer_name ?? null,
             company_address: s?.company_address ?? null,
             company_phone: s?.company_phone ?? null,
             company_email: s?.company_email ?? null
@@ -154,6 +162,34 @@ export function ReceiptDialog({
   // Compact vertical rhythm: tighter paddings in the small dialog; fullscreen widens
   // (capped at 720px for readability) instead of stretching edge-to-edge.
   const padOuter = isFullscreen ? 4 : 3
+
+  if (!payment) return null
+
+  // Export the rendered receipt as PNG: rasterize the receipt DOM node in the renderer
+  // (html-to-image), then hand the data URL to the main process, which asks the user
+  // where to save it and performs the atomic disk write (no renderer filesystem access).
+  // NOTE: deliberately a plain function, NOT useCallback — this component returns early
+  // when `payment` is null, and any hook below that early return would violate the
+  // rules of hooks ("Rendered more hooks than during the previous render").
+  const handleExportPng = async (): Promise<void> => {
+    const node = receiptRef.current?.querySelector('.printable-receipt')
+    if (!node) return
+    setExportingPng(true)
+    try {
+      const dataUrl = await toPng(node as HTMLElement, {
+        pixelRatio: 2,
+        backgroundColor: '#ffffff',
+        cacheBust: true
+      })
+      const fileName = `${payment.receipt_number || `receipt-${payment.id}`}`
+      const result = await window.api.dialog.saveReceiptImage({ dataUrl, fileName })
+      if (result.filePath) showSuccess('receipt.pngSaved')
+    } catch {
+      showError('common.saveError')
+    } finally {
+      setExportingPng(false)
+    }
+  }
 
   return (
     <Dialog
@@ -212,6 +248,7 @@ export function ReceiptDialog({
         ) : null}
 
         <Box
+          ref={receiptRef}
           sx={{
             mx: isFullscreen ? 'auto' : 0,
             maxWidth: isFullscreen ? 720 : '100%'
@@ -237,6 +274,9 @@ export function ReceiptDialog({
           startIcon={isFullscreen ? <FullscreenExitIcon /> : <FullscreenIcon />}
         >
           {isFullscreen ? rt('receipt.exitFullscreen') : rt('receipt.fullscreen')}
+        </Button>
+        <Button onClick={handleExportPng} startIcon={<ImageIcon />} disabled={exportingPng}>
+          {exportingPng ? rt('receipt.exporting') : rt('receipt.exportPng')}
         </Button>
         <Button
           onClick={handlePrint}

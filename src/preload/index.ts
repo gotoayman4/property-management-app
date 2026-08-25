@@ -168,7 +168,9 @@ const api = {
   dialog: {
     pickFolder: () => ipcRenderer.invoke('dialog:pickFolder'),
     pickImage: () => ipcRenderer.invoke('dialog:pickImage'),
-    pickBackupFile: () => ipcRenderer.invoke('dialog:pickBackupFile')
+    pickBackupFile: () => ipcRenderer.invoke('dialog:pickBackupFile'),
+    saveReceiptImage: (data: { dataUrl: string; fileName: string }) =>
+      ipcRenderer.invoke('dialog:saveReceiptImage', data)
   },
   data: {
     wipeAll: (token: string) => ipcRenderer.invoke('data:wipeAll', token)

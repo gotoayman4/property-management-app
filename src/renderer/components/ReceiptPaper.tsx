@@ -21,6 +21,8 @@ export interface ReceiptPaperCompanySettings {
   company_logo: string | null
   /** Base64 image of the company's authorized signature; rendered above the signature line. */
   company_signature: string | null
+  /** Name of the person authorized to sign; printed under the signature. */
+  company_signer_name: string | null
   company_address: string | null
   company_phone: string | null
   company_email: string | null
@@ -154,6 +156,8 @@ export function ReceiptPaper({
         p: padOuter,
         border: '1px solid',
         borderColor: 'divider',
+        borderTop: '4px solid',
+        borderTopColor: 'primary.main',
         borderRadius: 2,
         bgcolor: 'background.paper',
         position: 'relative',
@@ -168,8 +172,8 @@ export function ReceiptPaper({
           alignItems: 'flex-start',
           mb: gapSection + 0.5,
           pb: 1.25,
-          borderBottom: '2px solid',
-          borderColor: 'primary.main'
+          borderBottom: '1px solid',
+          borderColor: 'divider'
         }}
       >
         <Box>
@@ -181,7 +185,7 @@ export function ReceiptPaper({
               sx={{ maxHeight: 48, maxWidth: 160, objectFit: 'contain', mb: 0.5 }}
             />
           ) : null}
-          <Typography variant="h6" color="primary" sx={{ fontWeight: 'bold' }}>
+          <Typography variant="h6" color="primary" sx={{ fontWeight: 'bold', letterSpacing: 0.2 }}>
             {companySettings?.company_name || rt('receipt.defaultCompany')}
           </Typography>
           {companySettings?.company_address && (
@@ -338,35 +342,31 @@ export function ReceiptPaper({
           px: 2,
           py: 1.25,
           borderRadius: 1.5,
-          bgcolor: 'action.hover'
+          bgcolor: 'success.main',
+          color: 'success.contrastText'
         }}
       >
         <Typography variant="subtitle1" sx={{ fontWeight: 'bold' }}>
           {rt('receipt.totalPaid')}
         </Typography>
-        <Typography variant="h5" color="success.main" sx={{ fontWeight: 'bold' }}>
+        <Typography variant="h5" sx={{ fontWeight: 'bold' }}>
           {formatAmount(payment.amount, payment.currency)}
         </Typography>
       </Box>
 
-      {/* Footer signature line — compact on screen, roomier on print via print CSS */}
+      {/* Authorized-signature block — payer line removed (v1.9): the company is the
+          issuing party, so only its authorized signer signs. Signature image and/or
+          signer name appear automatically above/under the line when configured. */}
       <Box
         className="signature-row"
         sx={{
           mt: 2.5,
           pt: 1.5,
           display: 'flex',
-          justifyContent: 'space-between'
+          justifyContent: 'flex-end'
         }}
       >
-        <Box sx={{ width: 160, textAlign: 'center' }}>
-          <Divider sx={{ mb: 0.75, borderColor: 'text.secondary' }} />
-          <Typography variant="caption" color="text.secondary">
-            {rt('receipt.payerSignature')}
-          </Typography>
-        </Box>
-        <Box sx={{ width: 160, textAlign: 'center' }}>
-          {/* Uploaded authorized-signature image sits above the line when configured */}
+        <Box sx={{ width: 200, textAlign: 'center' }}>
           {companySettings?.company_signature ? (
             <Box
               component="img"
@@ -375,7 +375,7 @@ export function ReceiptPaper({
               className="signature-image"
               sx={{
                 height: 44,
-                maxWidth: 150,
+                maxWidth: 180,
                 objectFit: 'contain',
                 objectPosition: 'bottom center',
                 mx: 'auto',
@@ -388,6 +388,11 @@ export function ReceiptPaper({
           <Typography variant="caption" color="text.secondary">
             {rt('receipt.authorizedSignature')}
           </Typography>
+          {companySettings?.company_signer_name && (
+            <Typography variant="body2" sx={{ fontWeight: 600, mt: 0.25 }}>
+              {companySettings.company_signer_name}
+            </Typography>
+          )}
         </Box>
       </Box>
 
