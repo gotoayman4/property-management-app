@@ -5,6 +5,17 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 Release notes on GitHub Releases are generated from this file (`scripts/extract-changelog.mjs`), so every release MUST have a section here before tagging.
 
+## [1.7.0] - 2026-08-25
+
+### Added
+
+- A "Full Screen View" button in the receipt dialog footer expands the receipt to fill the screen, making it easier to read everything at once — click again (or "Exit Full Screen") to return to the compact view
+
+### Changed
+
+- The receipt layout is now vertically compact — tighter spacing and smaller secondary text mean most receipts fit on screen without scrolling
+- Signatures keep generous space on the printed paper even though they are compact on screen
+
 ## [1.6.0] - 2026-08-25
 
 ### Added
@@ -233,6 +244,7 @@ Release notes on GitHub Releases are generated from this file (`scripts/extract-
 - In-app auto-update system: checks GitHub Releases, verifies SHA-256 integrity, silent Inno Setup upgrade (Settings → About)
 - Bilingual (English/Arabic) Windows installer with per-user install, upgrade/downgrade handling and user-data preservation
 
+[1.7.0]: https://github.com/gotoayman4/property-management-app/releases/tag/v1.7.0
 [1.6.0]: https://github.com/gotoayman4/property-management-app/releases/tag/v1.6.0
 [1.5.0]: https://github.com/gotoayman4/property-management-app/releases/tag/v1.5.0
 [1.4.0]: https://github.com/gotoayman4/property-management-app/releases/tag/v1.4.0
